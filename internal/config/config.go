@@ -37,3 +37,10 @@ func SetupGRPC() *GRPCConfig {
 		},
 	}
 }
+
+func SetupMixed() []any {
+	return []any{
+		SetupHTTP(),
+		SetupGRPC(),
+	}
+}
