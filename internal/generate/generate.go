@@ -2,7 +2,6 @@ package generate
 
 import (
 	"os"
-	"fmt"
 	"path/filepath"
 	"encoding/json"
 
@@ -23,7 +22,7 @@ func InitConfig(path, cfgType string) error {
 	if err != nil {return err}
 
 	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		path = fmt.Sprintf("%s/%s_%s", path, cfgType, "config.json")
+		path = filepath.Join(path, cfgType + "_config.json")
 	} else {
 		if filepath.Ext(path) != ".json" {
 			path += ".json"
