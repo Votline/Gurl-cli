@@ -22,27 +22,23 @@ curl -X POST \
 ```
 With Gurl, **just**:
 ```bash
-gurl --config=my_config.json
+gurl --config=/path/to/my_config.json
 ```
 
-## How it works
-1. Gurl-cli **generates proper commands** based on your `.json` configs
-2. **Executes** them using system's:
-   - `curl` for HTTP requests
-   - `grpcurl` for gRPC calls
+## How It Works
 
-## Requirements
-
-**Essential tools** (must be installed separately):
-- [`curl`] - for HTTP requests
-- [`grpcurl`] - for gRPC requests  
+Gurl-cli is a pure Go tool that:
+- Uses `net/http` for HTTP requests
+- Uses `google.golang.org/grpc` for gRPC calls
+- No external dependencies (curl/grpcurl not needed)
+- All configs → actual Go HTTP/gRPC calls
 
 ## Quick Start
 1. Generate config
 2. Edit the config with your actual values
 3. Run it:
 ```bash
-gurl --config=config.json
+gurl --config=/path/to/config.json
 ```
 
 ## Generating configurations
@@ -54,18 +50,18 @@ Configurations are saved in the current working directory by default. You can sp
 gurl --config-create
 
 # Custom HTTP config (auth_request.json)
-gurl --config-create --name=~/path/to/auth_request
+gurl --config-create --config=/path/to/auth_request
 
 # Generate gRPC config (user_service_lookup.json)
-gurl --config-create --type=grpc --name=user_service_lookup
+gurl --config-create --type=grpc --config=/path/to/user_service_lookup
 
 # Generate mixed config (auth_then_api.json)
-gurl --config-create --type=mixed --name=auth_then_api
+gurl --config-create --type=mixed --config=/path/to/auth_then_api
 ```
 
 ### For HTTP requests (curl-style):
 ```bash
-gurl --config-create --name=config
+gurl --config-create --config=config
 ```
 This generates config.json:
 ```json
@@ -82,7 +78,7 @@ This generates config.json:
 
 ### For gRPC requests:
 ```bash
-gurl --config-create --type=grpc --name=grpc_config
+gurl --config-create --type=grpc --config=grpc_config
 ```
 This generates grpc_config.json:
 ```json
@@ -98,7 +94,7 @@ This generates grpc_config.json:
 
 ### For Mixed requests:
 ```bash
-gurl --config-create --type=mixed --name=mixed_config
+gurl --config-create --type=mixed --config=mixed_config
 ```
 This generates mixed_config.json:
 ```json
