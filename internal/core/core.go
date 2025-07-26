@@ -11,6 +11,7 @@ import (
 func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 	if !cfgCreate {
 		handleRequest(cfgPath)
+		return
 	}
 	gen.InitConfig(cfgPath, cfgType)
 }
@@ -25,9 +26,15 @@ func handleRequest(cfgPath string) {
 	case *config.HTTPConfig:
 		switch v.Method {
 		case "GET":
-			res, err := transport.Get(v.Url);
+			res, err := transport.Get(v.Url)
 			if err != nil {
 				log.Fatalf("Error when trying to make a GET request:\n%v", err.Error())
+			}
+			log.Println(res)
+		case "POST":
+			res, err := transport.Post(v)
+			if err != nil {
+				log.Fatalf("Error when trying to make a POST request:\n%v", err.Error())
 			}
 			log.Println(res)
 		default:

@@ -9,6 +9,7 @@ func SetupHTTP() *HTTPConfig {
 			"Authorization": "Bearer -",
 			"Content-Type":  "application/json",
 		},
+		Body: map[string]any{},
 	}
 }
 
