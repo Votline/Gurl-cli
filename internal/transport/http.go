@@ -2,9 +2,11 @@ package transport
 
 import (
 	"io"
+	"log"
 	"bytes"
 	"strings"
 	"net/http"
+	"io/ioutil"
 	"encoding/json"
 
 	"Gurl-cli/internal/config"
@@ -12,18 +14,31 @@ import (
 
 type Result struct {
 	Raw *http.Response
+	RawBody []byte
 	JSON map[string]interface{}
 }
 
-func convData(res *http.Response) (map[string]interface{}, error) {
+func convData(body []byte, res *http.Response) map[string]interface{} {
 	contentType := res.Header.Get("Content-Type")
 	if !strings.Contains(contentType, "application/json") {
-		return nil, nil
+		return nil
 	}
 
 	var data map[string]interface{}
-	err := json.NewDecoder(res.Body).Decode(&data)
-	return data, err
+	err := json.Unmarshal(body, &data)
+	if err != nil {
+		log.Printf("JSON decoding error: %v", err.Error())
+	}
+	return data
+}
+
+func extBody(res *http.Response) []byte {
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Body reading error: %v", err.Error())
+		return nil
+	}
+	return body
 }
 
 func Get(url string) (Result, error) {
@@ -31,23 +46,22 @@ func Get(url string) (Result, error) {
 	if err != nil {return Result{}, err}
 	defer res.Body.Close()
 
-	data, err := convData(res)
-	if err != nil {
-		return Result{Raw: res, JSON: nil}, nil
-	}
-	return Result{Raw: res, JSON: data}, nil
+	body := extBody(res)
+	data := convData(body, res)
+
+	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
 func Post(cfg *config.HTTPConfig) (Result, error) {
-	var body io.Reader
+	var bodyReader io.Reader
 
 	if cfg.Body != nil {
 		jsonBytes, err := json.Marshal(cfg.Body)
 		if err != nil {return Result{}, err}
-		body = bytes.NewReader(jsonBytes)
+		bodyReader = bytes.NewReader(jsonBytes)
 	}
 
-	req, err := http.NewRequest(cfg.Method, cfg.Url, body)
+	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
 	if err != nil {return Result{}, err}
 
 	for header, value := range cfg.Headers {
@@ -58,9 +72,7 @@ func Post(cfg *config.HTTPConfig) (Result, error) {
 	if err != nil {return Result{}, err}
 	defer res.Body.Close()
 
-	data, err := convData(res)
-	if err != nil {
-		return Result{Raw: res, JSON: nil}, nil
-	}
-	return Result{Raw: res, JSON: data}, nil
+	body := extBody(res)
+	data := convData(body, res)
+	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }

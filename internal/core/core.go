@@ -17,28 +17,40 @@ func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 }
 
 func handleRequest(cfgPath string) {
-	cfg, err := config.Decode(cfgPath)
+	rawCfg, err := config.Decode(cfgPath)
 	if err != nil {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
 
-	switch v := cfg.(type) {
+	switch cfg := rawCfg.(type) {
 	case *config.HTTPConfig:
-		switch v.Method {
-		case "GET":
-			res, err := transport.Get(v.Url)
-			if err != nil {
-				log.Fatalf("Error when trying to make a GET request:\n%v", err.Error())
-			}
-			log.Println(res)
-		case "POST":
-			res, err := transport.Post(v)
-			if err != nil {
-				log.Fatalf("Error when trying to make a POST request:\n%v", err.Error())
-			}
-			log.Println(res)
-		default:
-			log.Fatalf("Invalid method type: %v\nValid ones: GET,POST,PUT,DELETE", v.Method)
+		handleHTTP(cfg)
+	default:
+		log.Fatalln("Invalid config type")
+	}
+}
+
+func handleHTTP(cfg *config.HTTPConfig) {
+	var err error
+	var res transport.Result
+	switch cfg.Method {
+	case "GET":
+		res, err = transport.Get(cfg.Url)
+	case "POST":
+		res, err = transport.Post(cfg)
+	}
+	if err != nil {
+		log.Fatalf("Error when trying to make a %v request:\n%v", cfg.Method, err.Error())
+	}
+
+	log.Println(res.Raw.Status)
+	if res.JSON != nil {
+		for key, value := range res.JSON {
+			log.Printf("%s: %v", key, value)
 		}
+	} else if res.RawBody != nil {
+		log.Println(string(res.RawBody))
+	} else {
+		log.Println("Empty response body")
 	}
 }

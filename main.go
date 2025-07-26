@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 
 	"Gurl-cli/internal/core"
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile)
+
 	var cfgCreate bool
 	flag.BoolVar(&cfgCreate, "config-create", false, "Creates a configuration file (.json). Default for HTTP requests")
 
