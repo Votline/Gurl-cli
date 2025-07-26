@@ -72,7 +72,8 @@ This generates config.json:
   "headers": {
     "Authorization": "Bearer -",
     "Content-Type": "application/json"
-  }
+  },
+  "data": {}
 }
 ```
 
@@ -105,7 +106,8 @@ This generates mixed_config.json:
     "method": "-",
     "headers": {
       "Content-Type": "application/json"
-    }
+    },
+    "data": {}
   },
   {
     "type": "grpc",
