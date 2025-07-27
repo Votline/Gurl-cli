@@ -76,3 +76,28 @@ func Post(cfg *config.HTTPConfig) (Result, error) {
 	data := convData(body, res)
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
+
+func Del(cfg *config.HTTPConfig) (Result, error) {
+	var bodyReader io.Reader
+
+	if cfg.Body != nil {
+		jsonBytes, err := json.Marshal(cfg.Body)
+		if err != nil {return Result{}, err}
+		bodyReader = bytes.NewReader(jsonBytes)
+	}
+
+	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
+	if err != nil {return Result{}, err}
+
+	for header, value := range cfg.Headers {
+		req.Header.Set(header, value)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {return Result{}, err}
+	defer res.Body.Close()
+
+	body := extBody(res)
+	data := convData(body, res)
+	return Result{Raw: res, RawBody: body, JSON: data}, nil
+}

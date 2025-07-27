@@ -38,6 +38,8 @@ func handleHTTP(cfg *config.HTTPConfig) {
 		res, err = transport.Get(cfg.Url)
 	case "POST":
 		res, err = transport.Post(cfg)
+	case "DELETE":
+		res, err = transport.Del(cfg)
 	}
 	if err != nil {
 		log.Fatalf("Error when trying to make a %v request:\n%v", cfg.Method, err.Error())
