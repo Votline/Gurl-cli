@@ -8,6 +8,29 @@ import (
 	gen "Gurl-cli/internal/generate"
 )
 
+func prettyPrint(data interface{}, indent string) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		log.Println(indent+"[")
+		for key, val := range v {
+			switch valTyped := val.(type) {
+			case map[string]interface{}, []interface{}:
+				log.Printf("%s    %s:", indent, key)
+				prettyPrint(valTyped, indent + "    ")
+			default:
+				log.Printf("%s    %s: %v", indent, key, valTyped)
+			}
+		}
+		log.Println(indent+"]")
+	case []interface{}:
+		for _, elem := range v {
+			prettyPrint(elem, indent+"    ")
+		}
+	default:
+		log.Printf("%s%v", indent, v)
+	}
+}
+
 func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 	if !cfgCreate {
 		handleRequest(cfgPath)
@@ -35,9 +58,11 @@ func handleHTTP(cfg *config.HTTPConfig) {
 	var res transport.Result
 	switch cfg.Method {
 	case "GET":
-		res, err = transport.Get(cfg.Url)
+		res, err = transport.Get(cfg)
 	case "POST":
 		res, err = transport.Post(cfg)
+	case "PUT":
+		res, err = transport.Put(cfg)
 	case "DELETE":
 		res, err = transport.Del(cfg)
 	}
@@ -47,9 +72,7 @@ func handleHTTP(cfg *config.HTTPConfig) {
 
 	log.Println(res.Raw.Status)
 	if res.JSON != nil {
-		for key, value := range res.JSON {
-			log.Printf("%s: %v", key, value)
-		}
+		prettyPrint(res.JSON, "    ")
 	} else if res.RawBody != nil {
 		log.Println(string(res.RawBody))
 	} else {

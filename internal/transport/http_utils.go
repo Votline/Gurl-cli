@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
+
+	"Gurl-cli/internal/config"
 )
 
 func convData(body []byte, res *http.Response) map[string]interface{} {
@@ -42,4 +44,18 @@ func prepareBody(body interface{}) (io.Reader, error) {
 		bodyReader = bytes.NewReader(jsonBytes)
 	}
 	return bodyReader, nil
+}
+
+func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
+	bodyReader, err := prepareBody(cfg.Body)
+	if err != nil {return nil, nil}
+
+	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
+	if err != nil {return nil, nil}
+
+	for header, value := range cfg.Headers {
+		req.Header.Set(header, value)
+	}
+
+	return req, nil
 }

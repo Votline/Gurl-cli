@@ -12,8 +12,11 @@ type Result struct {
 	JSON map[string]interface{}
 }
 
-func Get(url string) (Result, error) {
-	res, err := http.Get(url)
+func Get(cfg *config.HTTPConfig) (Result, error) {
+	req, err := prepareRequest(cfg)
+	if err != nil {return Result{}, err}
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {return Result{}, err}
 	defer res.Body.Close()
 
@@ -24,15 +27,21 @@ func Get(url string) (Result, error) {
 }
 
 func Post(cfg *config.HTTPConfig) (Result, error) {
-	bodyReader, err := prepareBody(cfg.Body)
+	req, err := prepareRequest(cfg)
 	if err != nil {return Result{}, err}
 
-	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {return Result{}, err}
+	defer res.Body.Close()
 
-	for header, value := range cfg.Headers {
-		req.Header.Set(header, value)
-	}
+	body := extBody(res.Body)
+	data := convData(body, res)
+	return Result{Raw: res, RawBody: body, JSON: data}, nil
+}
+
+func Put(cfg *config.HTTPConfig) (Result, error) {
+	req, err := prepareRequest(cfg)
+	if err != nil {return Result{}, err}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {return Result{}, err}
@@ -44,16 +53,9 @@ func Post(cfg *config.HTTPConfig) (Result, error) {
 }
 
 func Del(cfg *config.HTTPConfig) (Result, error) {
-	bodyReader, err := prepareBody(cfg.Body)
+	req, err := prepareRequest(cfg)
 	if err != nil {return Result{}, err}
-
-	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
-	if err != nil {return Result{}, err}
-
-	for header, value := range cfg.Headers {
-		req.Header.Set(header, value)
-	}
-
+	
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {return Result{}, err}
 	defer res.Body.Close()
