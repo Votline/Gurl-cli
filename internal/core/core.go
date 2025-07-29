@@ -31,6 +31,15 @@ func prettyPrint(data interface{}, indent string) {
 	}
 }
 
+func handleCfgType(rawCfg interface{}) {
+	switch cfg := rawCfg.(type) {
+	case *config.HTTPConfig:
+		handleHTTP(cfg)
+	default:
+		log.Fatalf("Invalid config type: %v", cfg)
+	}
+}
+
 func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 	if !cfgCreate {
 		handleRequest(cfgPath)
@@ -45,12 +54,13 @@ func handleRequest(cfgPath string) {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
 
-	switch cfg := rawCfg.(type) {
-	case *config.HTTPConfig:
-		handleHTTP(cfg)
-	default:
-		log.Fatalln("Invalid config type")
+	if cfgs, ok := rawCfg.([]interface{}); ok {
+		for _, cfg := range cfgs {
+			handleCfgType(cfg)
+		}
+		return
 	}
+	handleCfgType(rawCfg)
 }
 
 func handleHTTP(cfg *config.HTTPConfig) {
