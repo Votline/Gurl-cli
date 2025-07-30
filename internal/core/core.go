@@ -31,10 +31,10 @@ func prettyPrint(data interface{}, indent string) {
 	}
 }
 
-func handleCfgType(rawCfg interface{}) {
+func handleCfgType(rawCfg interface{}, cfgPath string) {
 	switch cfg := rawCfg.(type) {
 	case *config.HTTPConfig:
-		handleHTTP(cfg)
+		handleHTTP(cfg, cfgPath)
 	default:
 		log.Fatalf("Invalid config type: %v", cfg)
 	}
@@ -56,14 +56,14 @@ func handleRequest(cfgPath string) {
 
 	if cfgs, ok := rawCfg.([]interface{}); ok {
 		for _, cfg := range cfgs {
-			handleCfgType(cfg)
+			handleCfgType(cfg, cfgPath)
 		}
 		return
 	}
-	handleCfgType(rawCfg)
+	handleCfgType(rawCfg, cfgPath)
 }
 
-func handleHTTP(cfg *config.HTTPConfig) {
+func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
 	var err error
 	var res transport.Result
 	switch cfg.Method {
@@ -88,4 +88,7 @@ func handleHTTP(cfg *config.HTTPConfig) {
 	} else {
 		log.Println("Empty response body")
 	}
+
+	cfg.Response = string(res.RawBody)
+	config.ConfigUpd(cfg, cfgPath)
 }

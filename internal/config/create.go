@@ -1,5 +1,7 @@
 package config
 
+import "encoding/json"
+
 func SetupHTTP() *HTTPConfig {
 	return &HTTPConfig{
 		Type:   "http",
@@ -9,7 +11,8 @@ func SetupHTTP() *HTTPConfig {
 			"Authorization": "Bearer -",
 			"Content-Type":  "application/json",
 		},
-		Body: map[string]any{},
+		Body: json.RawMessage{},
+		Response: "",
 	}
 }
 
@@ -17,10 +20,11 @@ func SetupGRPC() *GRPCConfig {
 	return &GRPCConfig{
 		Type:     "grpc",
 		Endpoint: "service.Method",
-		Data:     map[string]any{},
+		Data:     json.RawMessage{},
 		Metadata: map[string]string{
 			"authorization": "bearer -",
 		},
+		Response: "",
 	}
 }
 

@@ -23,6 +23,30 @@ func findConfigPath(userPath string) (string, error) {
 	return "", errors.New("config not found in:\n" + msg)
 }
 
+func parseTypedConfig(rawCfg []byte) (interface{}, error) {
+	var cfgType struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(rawCfg, &cfgType); err != nil {
+		return nil, err
+	}
+
+	var cfg interface{}
+	switch cfgType.Type {
+	case "http":
+		cfg = &HTTPConfig{}
+	case "grpc":
+		cfg = &GRPCConfig{}
+	default:
+		return nil, errors.New("Unkown config type: "+cfgType.Type)
+	}
+	if err := json.Unmarshal(rawCfg, cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
 func Decode(cfgPath string) (interface{}, error) {
 	path, err := findConfigPath(cfgPath)
 	if err != nil {return nil, err}
@@ -35,6 +59,7 @@ func Decode(cfgPath string) (interface{}, error) {
 		configs := make([]interface{}, len(rawConfigs))
 		for i, rawCfg := range rawConfigs {
 			cfg, err := parseTypedConfig(rawCfg)
+
 			if err != nil {
 				return nil, fmt.Errorf("config: %d: %v", i, cfg)
 			}
@@ -45,25 +70,12 @@ func Decode(cfgPath string) (interface{}, error) {
 	return parseTypedConfig(data)
 }
 
-func parseTypedConfig(rawCfg []byte) (interface{}, error) {
-	var cfgType struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(rawCfg, &cfgType); err != nil {
-		return nil, err
-	}
+func ConfigUpd(cfg interface{}, cfgPath string) error {
+	jsonData, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {return err}
 
-	var cfg interface{}
-	switch cfgType.Type {
-		case "http":
-			cfg = &HTTPConfig{}
-		case "grpc":
-			cfg = &GRPCConfig{}
-		default:
-			return nil, errors.New("Unkown config type: "+cfgType.Type)
-	}
-	if err := json.Unmarshal(rawCfg, cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	err = os.WriteFile(cfgPath, jsonData, 0666)
+	if err != nil {return nil}
+
+	return nil
 }
