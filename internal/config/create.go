@@ -4,6 +4,7 @@ import "encoding/json"
 
 func SetupHTTP() *HTTPConfig {
 	return &HTTPConfig{
+		ID:     "1",
 		Type:   "http",
 		Url:    "-",
 		Method: "-",
@@ -18,6 +19,7 @@ func SetupHTTP() *HTTPConfig {
 
 func SetupGRPC() *GRPCConfig {
 	return &GRPCConfig{
+		ID:       "1",
 		Type:     "grpc",
 		Endpoint: "service.Method",
 		Data:     json.RawMessage{},

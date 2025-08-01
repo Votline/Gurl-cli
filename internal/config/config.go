@@ -3,6 +3,7 @@ package config
 import "encoding/json"
 
 type HTTPConfig struct {
+	ID       string            `json:"id"`
 	Type     string            `json:"type"`
 	Url      string            `json:"url"`
 	Method   string            `json:"method"`
@@ -12,6 +13,7 @@ type HTTPConfig struct {
 }
 
 type GRPCConfig struct {
+	ID       string            `json:"id"`
 	Type     string            `json:"type"`
 	Endpoint string            `json:"endpoint"`
 	Data     json.RawMessage   `json:"data,omitempty"`

@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"errors"
+	"reflect"
 	"encoding/json"
 	"path/filepath"
 )
@@ -71,11 +72,36 @@ func Decode(cfgPath string) (interface{}, error) {
 }
 
 func ConfigUpd(cfg interface{}, cfgPath string) error {
-	jsonData, err := json.MarshalIndent(cfg, "", "    ")
+	cfgs, err := Decode(cfgPath)
+	if err != nil {return err}
+
+	cfgVal := reflect.ValueOf(cfg)
+	if cfgVal.Kind() == reflect.Ptr {
+		cfgVal = cfgVal.Elem()
+	}
+	cfgID := cfgVal.FieldByName("ID").String()
+	if v, ok := cfgs.([]interface{}); ok {
+		for i, c := range v {
+			cVal := reflect.ValueOf(c)
+			if cVal.Kind() == reflect.Ptr {
+				cVal = cVal.Elem()
+			}
+			cID := cVal.FieldByName("ID").String()
+			if cID == cfgID {
+				v[i] = cfg
+				cfgs = v
+				break
+			}
+		}
+	} else {
+		cfgs = cfg
+	}
+
+	jsonData, err := json.MarshalIndent(cfgs, "", "    ")
 	if err != nil {return err}
 
 	err = os.WriteFile(cfgPath, jsonData, 0666)
-	if err != nil {return nil}
+	if err != nil {return err}
 
 	return nil
 }
