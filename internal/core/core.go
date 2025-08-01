@@ -8,8 +8,8 @@ import (
 	gen "Gurl-cli/internal/generate"
 )
 
-func prettyPrint(data interface{}, indent string) {
-	switch v := data.(type) {
+func prettyPrint[T any](data T, indent string) {
+	switch v := any(data).(type) {
 	case map[string]interface{}:
 		log.Println(indent+"[")
 		for key, val := range v {
@@ -29,38 +29,6 @@ func prettyPrint(data interface{}, indent string) {
 	default:
 		log.Printf("%s%v", indent, v)
 	}
-}
-
-func handleCfgType(rawCfg interface{}, cfgPath string) {
-	switch cfg := rawCfg.(type) {
-	case *config.HTTPConfig:
-		handleHTTP(cfg, cfgPath)
-	default:
-		log.Fatalf("Invalid config type: %v", cfg)
-	}
-}
-
-func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
-	if !cfgCreate {
-		handleRequest(cfgPath)
-		return
-	}
-	gen.InitConfig(cfgPath, cfgType)
-}
-
-func handleRequest(cfgPath string) {
-	rawCfg, err := config.Decode(cfgPath)
-	if err != nil {
-		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
-	}
-
-	if cfgs, ok := rawCfg.([]interface{}); ok {
-		for _, cfg := range cfgs {
-			handleCfgType(cfg, cfgPath)
-		}
-		return
-	}
-	handleCfgType(rawCfg, cfgPath)
 }
 
 func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
@@ -89,6 +57,30 @@ func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
 		log.Println("Empty response body")
 	}
 
-	cfg.Response = string(res.RawBody)
+	cfg.SetResponse(string(res.RawBody))
 	config.ConfigUpd(cfg, cfgPath)
+}
+
+func handleHTTPRequest(cfgPath string) {
+	cfgs, err := config.Decode[*config.HTTPConfig](cfgPath)
+	if err != nil {
+		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
+	}
+
+	for _, cfg := range cfgs {
+		handleHTTP(cfg, cfgPath)
+	}
+}
+
+func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
+	if !cfgCreate {
+		switch cfgType {
+		case "http":
+			handleHTTPRequest(cfgPath)
+			return
+		default:
+		return
+		}
+	}
+	gen.InitConfig(cfgPath, cfgType)
 }
