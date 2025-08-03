@@ -5,7 +5,12 @@ import "encoding/json"
 type Config interface {
 	GetID() string
 	GetType() string
+
+	GetBody() json.RawMessage
+	SetBody(json.RawMessage)
+
 	SetResponse(response string)
+	GetResponse() string
 }
 
 type HTTPConfig struct {
@@ -26,8 +31,20 @@ func (h *HTTPConfig) GetType() string {
 	return h.Type
 }
 
+func (h *HTTPConfig) GetBody() json.RawMessage {
+	return h.Body
+}
+
+func (h *HTTPConfig) SetBody(body json.RawMessage) {
+	h.Body = body
+}
+
 func (h *HTTPConfig) SetResponse(response string) {
 	h.Response = response
+}
+
+func (h *HTTPConfig) GetResponse() string {
+	return h.Response
 }
 
 type GRPCConfig struct {

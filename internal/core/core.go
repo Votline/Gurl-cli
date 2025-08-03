@@ -68,7 +68,17 @@ func handleHTTPRequest(cfgPath string) {
 	}
 
 	for _, cfg := range cfgs {
-		handleHTTP(cfg, cfgPath)
+		log.Println(string(cfg.GetBody()))
+		parsed, err := config.Parsing(cfg, cfgs)
+		if err != nil {
+			log.Printf("Parse error: %v", err)
+			continue
+		}
+		log.Println(string(parsed.GetBody()))
+		if err != nil {
+			log.Println(err)
+			handleHTTP(parsed, cfgPath)
+		}
 	}
 }
 
