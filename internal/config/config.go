@@ -6,6 +6,9 @@ type Config interface {
 	GetID() string
 	GetType() string
 
+	GetHeaders() (json.RawMessage, error)
+	SetHeaders(json.RawMessage) error
+
 	GetBody() json.RawMessage
 	SetBody(json.RawMessage)
 
@@ -18,7 +21,7 @@ type HTTPConfig struct {
 	Type     string            `json:"type"`
 	Url      string            `json:"url"`
 	Method   string            `json:"method"`
-	Headers  map[string]string `json:"headers"`
+	Headers  map[string]string `json:"headers,omitempty"`
 	Body     json.RawMessage   `json:"body,omitempty"`
 	Response string            `json:"response,omitempty"`
 }
@@ -29,6 +32,14 @@ func (h *HTTPConfig) GetID() string {
 
 func (h *HTTPConfig) GetType() string {
 	return h.Type
+}
+
+func (h *HTTPConfig) GetHeaders() (json.RawMessage, error) {
+	return json.Marshal(h.Headers)
+}
+
+func (h *HTTPConfig) SetHeaders(headers json.RawMessage) error {
+	return json.Unmarshal(headers, &h.Headers)
 }
 
 func (h *HTTPConfig) GetBody() json.RawMessage {

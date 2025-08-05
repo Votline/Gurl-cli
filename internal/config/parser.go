@@ -7,6 +7,16 @@ import (
 	"strconv"
 )
 
+func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
+	for _, cfg := range cfgs {
+		if cfg.GetID() == id {
+			*sourceCfg = cfg
+			return true
+		}
+	}
+	return false
+}
+
 func findIdx(data []byte) (startIdx, endIdx int) {
 	startIdx = bytes.Index(data, []byte("RESPONSE id="))
 	if startIdx == -1 {return -1, -1}
@@ -32,15 +42,8 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, errors.New("Invalid id in RESPONSE template.")
 	}
 
-	var found bool
 	var sourceCfg T
-	for _, cfg := range cfgs {
-		if cfg.GetID() == idPart {
-			sourceCfg = cfg
-			found = true
-		}
-	}
-	if !found {
+	if !findSource(&sourceCfg, cfgs, idPart) {
 		return nil, errors.New("Config not found. ID: " + idPart)
 	}
 
@@ -49,19 +52,45 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, errors.New("Config response is nil")
 	}
 
-	return []byte(sourceResponse), nil
+	result := make([]byte, len(data)-(len(sourceResponse)+endIdx+1) )
+	result = append(result, data[:startIdx-1]...)
+	result = append(result, sourceResponse...)
+	result = append(result, data[startIdx+endIdx+1:]...)
+	return result, nil
+}
+
+func parseField[T Config](data []byte, cfgs []T) ([]byte, error) {
+	if data == nil {
+		return nil, errors.New("Config data nil")
+	}
+	newData, err := parse(data, cfgs)
+	if err != nil {
+		return nil, err
+	}
+	return newData, nil
 }
 
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 	if cfg.GetBody() != nil {
-		newBody, err := parse(cfg.GetBody(), cfgs)
+		newBody, err := parseField(cfg.GetBody(), cfgs)
 		if err != nil {
 			var zero T
 			return zero, err
 		}
 		cfg.SetBody(newBody)
-		return cfg, nil
 	}
-	var zero T
-	return zero, nil
+	if headers, _ := cfg.GetHeaders(); headers != nil {
+		hdrs, err := cfg.GetHeaders()
+		if err != nil {
+			var zero T
+			return zero, err
+		}
+		newHeaders, err := parseField(hdrs, cfgs)
+		if err != nil {
+			var zero T
+			return zero, err
+		}
+		cfg.SetHeaders(newHeaders)
+	}
+	return cfg, nil
 }
