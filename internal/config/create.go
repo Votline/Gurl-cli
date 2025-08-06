@@ -31,8 +31,10 @@ func SetupGRPC() *GRPCConfig {
 }
 
 func SetupMixed() []any {
+	grpc := SetupGRPC()
+	grpc.ID = "2"
 	return []any{
 		SetupHTTP(),
-		SetupGRPC(),
+		grpc,
 	}
 }
