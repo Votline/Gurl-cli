@@ -6,9 +6,9 @@ Stop memorizing complex commands - just save them as reusable configs!
 ## Features
 
 - ✨ **Config-driven requests** (`.json`)
-- ⛓️ **Chain requests** (curl-to-curl, grpc-to-grpc, or mixed)
-- 🔥 **Supports both curl AND grpcurl**
-- 🛠️ **Quick config creation** (pre-made templates for both curl and grpc)
+- ⛓️ **Chain requests** (http-to-http, grpc-to-grpc, or mixed)
+- 🔥 **Supports both http AND grpc**
+- 🛠️ **Quick config creation** (pre-made templates for both http and grpc)
 
 ## Why Gurl?
 
@@ -53,10 +53,10 @@ gurl --config-create
 gurl --config-create --config=/path/to/auth_request
 
 # Generate gRPC config (user_service_lookup.json)
-gurl --config-create --type=grpc --config=/path/to/user_service_lookup
+gurl --config-create --config=/path/to/user_service_lookup --type=grpc 
 
 # Generate mixed config (auth_then_api.json)
-gurl --config-create --type=mixed --config=/path/to/auth_then_api
+gurl --config-create --config=/path/to/auth_then_api --type=mixed
 ```
 
 ### For HTTP requests (curl-style):
@@ -66,6 +66,7 @@ gurl --config-create --config=config
 This generates config.json:
 ```json
 {
+  "id": "1",
   "type": "http",
   "url": "-",
   "method": "-",
@@ -84,6 +85,7 @@ gurl --config-create --type=grpc --config=grpc_config
 This generates grpc_config.json:
 ```json
 {
+  "id": "1",
   "type": "grpc",
   "endpoint": "service.Method",
   "data": {},
@@ -101,6 +103,7 @@ This generates mixed_config.json:
 ```json
 [
   {
+    "id": "1",
     "type": "http",
     "url": "-",
     "method": "-",
@@ -110,6 +113,7 @@ This generates mixed_config.json:
     "data": {}
   },
   {
+    "id": "2",
     "type": "grpc",
     "endpoint": "-",
     "data": {},
