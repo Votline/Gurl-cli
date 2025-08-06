@@ -7,6 +7,19 @@ import (
 	"strconv"
 )
 
+func removeJsonShit(s string) string {
+	s = strings.NewReplacer(
+		`"`, "",
+		`\`, "",
+		`{`, "",
+		`}`, "",
+	).Replace(s)
+	s = strings.ReplaceAll(s, "\n", "")
+	s = strings.ReplaceAll(s, "\t", "")
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
+}
+
 func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
 	for _, cfg := range cfgs {
 		if cfg.GetID() == id {
@@ -15,6 +28,22 @@ func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
 		}
 	}
 	return false
+}
+
+func findID(data []byte, startIdx, endIdx int) (string, error) {
+	template := string(data[startIdx : endIdx+startIdx+1])
+	parts := strings.SplitN(template, " ", 3)
+	if len(parts) < 3 {
+		return "", errors.New("Invalid RESPONSE template")
+	}
+
+	idPart := strings.TrimPrefix(parts[1], "id=")
+	_, err := strconv.Atoi(idPart)
+	if err != nil {
+		return "", errors.New("Invalid id in RESPONSE template")
+	}
+
+	return idPart, nil
 }
 
 func findIdx(data []byte) (startIdx, endIdx int) {
@@ -27,20 +56,11 @@ func findIdx(data []byte) (startIdx, endIdx int) {
 func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	startIdx, endIdx := findIdx(data)
 	if startIdx == -1 || endIdx == -1 {
-		return nil, errors.New("RESPONSE template not found or invalid")
+		return nil, nil
 	}
 
-	template := string(data[startIdx : endIdx+startIdx+1])
-	parts := strings.SplitN(template, " ", 3)
-	if len(parts) < 3 {
-		return nil, errors.New("Invalid RESPONSE template.")
-	}
-
-	idPart := strings.TrimPrefix(parts[1], "id=")
-	_, err := strconv.Atoi(idPart)
-	if err != nil {
-		return nil, errors.New("Invalid id in RESPONSE template.")
-	}
+	idPart, err := findID(data, startIdx, endIdx)
+	if err != nil {return nil, err}
 
 	var sourceCfg T
 	if !findSource(&sourceCfg, cfgs, idPart) {
@@ -52,45 +72,41 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, errors.New("Config response is nil")
 	}
 
-	result := make([]byte, len(data)-(len(sourceResponse)+endIdx+1) )
-	result = append(result, data[:startIdx-1]...)
-	result = append(result, sourceResponse...)
-	result = append(result, data[startIdx+endIdx+1:]...)
-	return result, nil
-}
+	response := removeJsonShit(sourceResponse)
 
-func parseField[T Config](data []byte, cfgs []T) ([]byte, error) {
-	if data == nil {
-		return nil, errors.New("Config data nil")
-	}
-	newData, err := parse(data, cfgs)
-	if err != nil {
-		return nil, err
-	}
-	return newData, nil
+	var result bytes.Buffer
+	result.Write(data[:startIdx-1])
+	result.WriteString(response)
+	result.Write(data[startIdx+endIdx+1:])
+
+	return result.Bytes(), nil
 }
 
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
-	if cfg.GetBody() != nil {
-		newBody, err := parseField(cfg.GetBody(), cfgs)
+	var zero T
+
+	headers, err := cfg.GetHeaders()
+	if err != nil {return zero, err}
+	if headers != nil {
+		newHeaders, err := parse(headers, cfgs)
 		if err != nil {
-			var zero T
 			return zero, err
 		}
-		cfg.SetBody(newBody)
+		if newHeaders != nil {
+			cfg.SetHeaders(newHeaders)
+		}
 	}
-	if headers, _ := cfg.GetHeaders(); headers != nil {
-		hdrs, err := cfg.GetHeaders()
+
+	body := cfg.GetBody()
+	if body != nil {
+		newBody, err := parse(body, cfgs)
 		if err != nil {
-			var zero T
 			return zero, err
 		}
-		newHeaders, err := parseField(hdrs, cfgs)
-		if err != nil {
-			var zero T
-			return zero, err
+		if newBody != nil {
+			cfg.SetBody(newBody)
 		}
-		cfg.SetHeaders(newHeaders)
 	}
+
 	return cfg, nil
 }

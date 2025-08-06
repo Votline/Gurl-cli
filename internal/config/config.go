@@ -26,6 +26,11 @@ type HTTPConfig struct {
 	Response string            `json:"response,omitempty"`
 }
 
+func (h *HTTPConfig) Clone() Config {
+	copy := *h
+	return &copy
+}
+
 func (h *HTTPConfig) GetID() string {
 	return h.ID
 }

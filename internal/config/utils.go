@@ -64,16 +64,16 @@ func Decode[T Config](cfgPath string) ([]T, error) {
 	return []T{cfg}, nil
 }
 
-func ConfigUpd[T Config](cfg T, cfgPath string) error {
+func ConfigUpd[T Config](parsed T, cfgPath string) error {
 	cfgs, err := Decode[T](cfgPath)
 	if err != nil {
 		return err
 	}
 
-	cfgID := cfg.GetID()
-	for i, c := range cfgs {
+	cfgID := parsed.GetID()
+	for _, c := range cfgs {
 		if c.GetID() == cfgID {
-			cfgs[i] = cfg
+			c.SetResponse(parsed.GetResponse())
 			break
 		}
 	}

@@ -48,10 +48,10 @@ func prepareBody(body interface{}) (io.Reader, error) {
 
 func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
 	bodyReader, err := prepareBody(cfg.Body)
-	if err != nil {return nil, nil}
+	if err != nil {return nil, err}
 
 	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
-	if err != nil {return nil, nil}
+	if err != nil {return nil, err}
 
 	for header, value := range cfg.Headers {
 		req.Header.Set(header, value)

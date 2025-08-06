@@ -67,19 +67,13 @@ func handleHTTPRequest(cfgPath string) {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
 
-	for _, cfg := range cfgs {
-		log.Println(string(cfg.Body))
-		log.Println(cfg.Headers)
-		parsed, err := config.Parsing(cfg, cfgs)
+	for _, c := range cfgs {
+		cfg, err := config.Parsing(c, cfgs)
 		if err != nil {
 			log.Printf("Parse error: %v", err)
 			continue
 		}
-		log.Printf("\n\n%v%v", string(parsed.Body), parsed.Headers)
-		if err != nil {
-			log.Println(err)
-			handleHTTP(parsed, cfgPath)
-		}
+		handleHTTP(cfg, cfgPath)
 	}
 }
 
@@ -90,7 +84,7 @@ func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 			handleHTTPRequest(cfgPath)
 			return
 		default:
-		return
+			return
 		}
 	}
 	gen.InitConfig(cfgPath, cfgType)
