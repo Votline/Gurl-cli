@@ -5,7 +5,43 @@ import (
 	"errors"
 	"strings"
 	"strconv"
+	"encoding/json"
 )
+
+func handleJson(source, inst string) ([]byte, error) {
+	source = strings.Trim(source, `"`)
+	source = strings.TrimSpace(source)
+
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(source), &data); err != nil {
+		return nil, err
+	}
+
+	parts := strings.SplitN(inst, ":", 2)
+	field := parts[1]
+	value, exists := data[field]
+	if !exists {
+		return nil, errors.New("Field not found in response")
+	}
+
+	strValue, ok := value.(string)
+	if !ok {
+		return nil, errors.New("Field not string")
+	}
+
+	strValue = strings.ReplaceAll(strValue, `"`, `'`)
+	return []byte(strValue), nil
+}
+
+func handleProcType(source, procType string) ([]byte, error) {
+	if procType == "none" {
+		return []byte(removeJsonShit(source)), nil
+	}
+	if strings.Contains(procType, "json:") {
+		return handleJson(source, procType)
+	}
+	return []byte(source), nil
+}
 
 func removeJsonShit(s string) string {
 	s = strings.NewReplacer(
@@ -30,20 +66,22 @@ func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
 	return false
 }
 
-func findID(data []byte, startIdx, endIdx int) (string, error) {
+func findID(data []byte, startIdx, endIdx int) (string, string, error) {
 	template := string(data[startIdx : endIdx+startIdx+1])
 	parts := strings.SplitN(template, " ", 3)
 	if len(parts) < 3 {
-		return "", errors.New("Invalid RESPONSE template")
+		return "", "", errors.New("Invalid RESPONSE template")
 	}
 
 	idPart := strings.TrimPrefix(parts[1], "id=")
 	_, err := strconv.Atoi(idPart)
 	if err != nil {
-		return "", errors.New("Invalid id in RESPONSE template")
+		return "", "", errors.New("Invalid id in RESPONSE template")
 	}
 
-	return idPart, nil
+	procType := strings.Trim(parts[2], `}`)
+
+	return idPart, procType, nil
 }
 
 func findIdx(data []byte) (startIdx, endIdx int) {
@@ -59,7 +97,7 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, nil
 	}
 
-	idPart, err := findID(data, startIdx, endIdx)
+	idPart, procType, err := findID(data, startIdx, endIdx)
 	if err != nil {return nil, err}
 
 	var sourceCfg T
@@ -72,11 +110,12 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, errors.New("Config response is nil")
 	}
 
-	response := removeJsonShit(sourceResponse)
+	response, err := handleProcType(sourceResponse, procType)
+	if err != nil {return nil, err}
 
 	var result bytes.Buffer
 	result.Write(data[:startIdx-1])
-	result.WriteString(response)
+	result.Write(response)
 	result.Write(data[startIdx+endIdx+1:])
 
 	return result.Bytes(), nil
