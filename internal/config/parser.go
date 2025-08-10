@@ -8,6 +8,28 @@ import (
 	"encoding/json"
 )
 
+func getNested(data interface{}, path string) (interface{}, bool) {
+	keys := strings.Split(path, ".")
+	var current interface{} = data
+	for _, key := range keys {
+		switch curr := current.(type) {
+		case map[string]interface{}:
+			val, ok := curr[key]
+			if !ok {return nil, false}
+			current = val
+		case []interface{}:
+			idx, err := strconv.Atoi(key)
+			if err != nil || idx < 0 || idx >= len(curr) {
+				return nil, false
+			}
+			current = curr[idx]
+		default:
+			return nil, false
+		}
+	}
+	return current, true
+}
+
 func handleJson(source, inst string) ([]byte, error) {
 	source = strings.Trim(source, `"`)
 	source = strings.TrimSpace(source)
@@ -19,18 +41,20 @@ func handleJson(source, inst string) ([]byte, error) {
 
 	parts := strings.SplitN(inst, ":", 2)
 	field := parts[1]
-	value, exists := data[field]
+	value, exists := getNested(data, field)
 	if !exists {
 		return nil, errors.New("Field not found in response")
 	}
 
 	strValue, ok := value.(string)
-	if !ok {
-		return nil, errors.New("Field not string")
+	if ok {
+		strValue = strings.ReplaceAll(strValue, `"`, `'`)
+		return []byte(strValue), nil
 	}
-
-	strValue = strings.ReplaceAll(strValue, `"`, `'`)
-	return []byte(strValue), nil
+	
+	res, err := json.Marshal(value)
+	if err != nil {return nil, err}
+	return res, nil
 }
 
 func handleProcType(source, procType string) ([]byte, error) {
