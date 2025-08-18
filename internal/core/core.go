@@ -61,8 +61,12 @@ func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
 	config.ConfigUpd(cfg, cfgPath)
 }
 
-func handleHTTPRequest(cfgPath string) {
-	cfgs, err := config.Decode[*config.HTTPConfig](cfgPath)
+func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
+	return
+}
+
+func handleRequest(cfgPath string) {
+	cfgs, err := config.Decode[config.Config](cfgPath)
 	if err != nil {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
@@ -73,7 +77,14 @@ func handleHTTPRequest(cfgPath string) {
 			log.Printf("Parse error: %v", err)
 			continue
 		}
-		handleHTTP(cfg, cfgPath)
+		switch v := cfg.(type) {
+		case *config.HTTPConfig:
+			handleHTTP(v, cfgPath)
+		case *config.GRPCConfig:
+			handleGRPC(v, cfgPath)
+		default:
+			log.Printf("Invalid config type %v", v)
+		}
 	}
 }
 
@@ -81,8 +92,10 @@ func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 	if !cfgCreate {
 		switch cfgType {
 		case "http":
-			handleHTTPRequest(cfgPath)
+			handleRequest(cfgPath)
 			return
+		case "grpc":
+			handleRequest(cfgPath)
 		default:
 			return
 		}

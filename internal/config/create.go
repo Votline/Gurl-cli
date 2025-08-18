@@ -26,6 +26,7 @@ func SetupGRPC() *GRPCConfig {
 		Metadata: map[string]string{
 			"authorization": "bearer -",
 		},
+		ProtoFiles: []string{},
 		Response: "",
 	}
 }

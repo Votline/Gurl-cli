@@ -64,12 +64,13 @@ func (h *HTTPConfig) GetResponse() string {
 }
 
 type GRPCConfig struct {
-	ID       string            `json:"id"`
-	Type     string            `json:"type"`
-	Endpoint string            `json:"endpoint"`
-	Data     json.RawMessage   `json:"data,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-	Response string            `json:"response,omitempty"`
+	ID         string            `json:"id"`
+	Type       string            `json:"type"`
+	Endpoint   string            `json:"endpoint"`
+	Data       json.RawMessage   `json:"data,omitempty"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
+	Response   string            `json:"response,omitempty"`
+	ProtoFiles []string          `json:"protofiles,omitempty"`
 }
 
 func (g *GRPCConfig) GetID() string {
@@ -82,4 +83,24 @@ func (g *GRPCConfig) GetType() string {
 
 func (g *GRPCConfig) SetResponse(response string) {
 	g.Response = response
+}
+
+func (g *GRPCConfig) GetResponse() string {
+	return g.Response
+}
+
+func (g *GRPCConfig) SetHeaders(json.RawMessage) error {
+	return nil
+}
+
+func (g *GRPCConfig) GetHeaders() (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (g *GRPCConfig) SetBody(json.RawMessage) {
+	return
+}
+
+func (g *GRPCConfig) GetBody() json.RawMessage {
+	return nil
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"bytes"
 	"errors"
 	"strings"
@@ -36,6 +37,8 @@ func handleJson(source, inst string) ([]byte, error) {
 
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
+		log.Printf("Error unmarshalling JSON from Response: %v\nSource: %v",
+			err, source)
 		return nil, err
 	}
 
@@ -53,7 +56,10 @@ func handleJson(source, inst string) ([]byte, error) {
 	}
 	
 	res, err := json.Marshal(value)
-	if err != nil {return nil, err}
+	if err != nil {
+		log.Printf("Error marshalling response: %v", err)
+		return nil, err
+	}
 	return res, nil
 }
 
