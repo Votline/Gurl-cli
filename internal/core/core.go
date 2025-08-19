@@ -62,7 +62,22 @@ func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
 }
 
 func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
-	return
+	res, err := transport.GRPC(cfg)
+	if err != nil {
+		log.Fatalf("Error when trying to make a gRPC request:\n%v", err)
+	}
+
+	log.Println("No error")
+	if res.JSON != nil {
+		prettyPrint(res.JSON, "    ")
+	} else if res.RawBody != nil {
+		log.Println(string(res.RawBody))
+	} else {
+		log.Println("Empty resonse body")
+	}
+
+	cfg.SetResponse(string(res.RawBody))
+	config.ConfigUpd(cfg, cfgPath)
 }
 
 func handleRequest(cfgPath string) {

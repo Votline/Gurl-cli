@@ -64,13 +64,15 @@ func (h *HTTPConfig) GetResponse() string {
 }
 
 type GRPCConfig struct {
-	ID         string            `json:"id"`
-	Type       string            `json:"type"`
-	Endpoint   string            `json:"endpoint"`
-	Data       json.RawMessage   `json:"data,omitempty"`
-	Metadata   map[string]string `json:"metadata,omitempty"`
-	Response   string            `json:"response,omitempty"`
-	ProtoFiles []string          `json:"protofiles,omitempty"`
+	ID          string            `json:"id"`
+	Type        string            `json:"type"`
+	Target      string            `json:"target"`
+	Endpoint    string            `json:"endpoint"`
+	Data        json.RawMessage   `json:"data,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	Response    string            `json:"response,omitempty"`
+	ProtoFiles  []string          `json:"protofiles,omitempty"`
+	DialOptions []string          `json:"dialoptions,omitempty"`
 }
 
 func (g *GRPCConfig) GetID() string {

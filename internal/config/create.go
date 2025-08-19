@@ -21,6 +21,7 @@ func SetupGRPC() *GRPCConfig {
 	return &GRPCConfig{
 		ID:       "1",
 		Type:     "grpc",
+		Target:   "-",
 		Endpoint: "service.Method",
 		Data:     json.RawMessage{},
 		Metadata: map[string]string{
