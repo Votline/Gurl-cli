@@ -12,8 +12,8 @@ func SetupHTTP() *HTTPConfig {
 			"Authorization": "Bearer -",
 			"Content-Type":  "application/json",
 		},
-		Body: json.RawMessage{},
-		Response: "",
+		Body: json.RawMessage(`{}`),
+		Response: "-",
 	}
 }
 
@@ -23,12 +23,12 @@ func SetupGRPC() *GRPCConfig {
 		Type:     "grpc",
 		Target:   "-",
 		Endpoint: "service.Method",
-		Data:     json.RawMessage{},
+		Data:     json.RawMessage(`{}`),
 		Metadata: map[string]string{
 			"authorization": "bearer -",
 		},
-		ProtoFiles: []string{},
-		Response: "",
+		ProtoFiles: []string{"-"},
+		Response: "-",
 	}
 }
 

@@ -67,7 +67,6 @@ func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
 		log.Fatalf("Error when trying to make a gRPC request:\n%v", err)
 	}
 
-	log.Println("No error")
 	if res.JSON != nil {
 		prettyPrint(res.JSON, "    ")
 	} else if res.RawBody != nil {
@@ -81,7 +80,7 @@ func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
 }
 
 func handleRequest(cfgPath string) {
-	cfgs, err := config.Decode[config.Config](cfgPath)
+	cfgs, err := config.Decode(cfgPath)
 	if err != nil {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
@@ -106,14 +105,14 @@ func handleRequest(cfgPath string) {
 func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
 	if !cfgCreate {
 		switch cfgType {
-		case "http":
+		case "http", "grpc":
 			handleRequest(cfgPath)
 			return
-		case "grpc":
-			handleRequest(cfgPath)
 		default:
-			return
+			log.Fatalf("Invalid config type: %s", cfgType)
 		}
 	}
-	gen.InitConfig(cfgPath, cfgType)
+	if err := gen.InitConfig(cfgPath, cfgType); err != nil {
+		log.Fatalf("Generate config error: %v", err)
+	}
 }

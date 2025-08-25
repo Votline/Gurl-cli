@@ -24,37 +24,38 @@ func findConfigPath(userPath string) (string, error) {
 	return "", errors.New("config not found in:\n" + msg)
 }
 
-func parseTypedConfig[T Config](rawCfg []byte) (T, error) {
-	var zero T
-	var cfg struct {
+func parseTypedConfig(rawCfg []byte) (Config, error) {
+	var head struct {
 		Type string `json:"type"`
 	}
-	if err := json.Unmarshal(rawCfg, &cfg); err != nil {
+	if err := json.Unmarshal(rawCfg, &head); err != nil {
 		log.Printf("Error unmarshalling config: %v\nSource: %v",
 			err, string(rawCfg))
-		return zero, err
+		return nil, err
 	}
 
-	var result interface{}
-	switch cfg.Type {
+	switch head.Type {
 	case "http":
-		result = &HTTPConfig{}
+		var c HTTPConfig
+		if err := json.Unmarshal(rawCfg, &c); err != nil {
+			log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
+			return nil, errors.New("Unmarshling config error")
+		}
+		return &c, nil
 	case "grpc":
-		result = &GRPCConfig{}
+		var c GRPCConfig
+		if err := json.Unmarshal(rawCfg, &c); err != nil {
+			log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
+			return nil, errors.New("Unmarshling config error")
+		}
+		return &c, nil
 	default:
-		log.Printf("Invalid config type: %v", cfg.Type)
-		return zero, errors.New("Invalid config type")
+		log.Printf("Invalid config type: %v", head.Type)
+		return nil, errors.New("Invalid config type")
 	}
-
-	if err := json.Unmarshal(rawCfg, result); err != nil {
-		log.Printf("Error unmarshalling config into result: %v\nSource: %v",
-			err, string(rawCfg))
-	}
-
-	return result.(T), nil
 }
 
-func Decode[T Config](cfgPath string) ([]T, error) {
+func Decode(cfgPath string) ([]Config, error) {
 	path, err := findConfigPath(cfgPath)
 	if err != nil {
 		log.Printf("FindConfigPath error: %v", err)
@@ -69,9 +70,9 @@ func Decode[T Config](cfgPath string) ([]T, error) {
 	
 	var rawConfigs []json.RawMessage
 	if err := json.Unmarshal(data, &rawConfigs); err == nil {
-		configs := make([]T, len(rawConfigs))
+		configs := make([]Config, len(rawConfigs))
 		for i, rawCfg := range rawConfigs {
-			cfg, err := parseTypedConfig[T](rawCfg)
+			cfg, err := parseTypedConfig(rawCfg)
 			if err != nil {
 				log.Printf("ParseTypedConfig multi error: %v", err)
 				return nil, fmt.Errorf("config: %d: %v", i, err)
@@ -81,16 +82,16 @@ func Decode[T Config](cfgPath string) ([]T, error) {
 		return configs, nil
 	}
 	
-	cfg, err := parseTypedConfig[T](data)
+	cfg, err := parseTypedConfig(data)
 	if err != nil {
 		log.Printf("ParseTypedConfig solo error: %v", err)
 		return nil, err
 	}
-	return []T{cfg}, nil
+	return []Config{cfg}, nil
 }
 
 func ConfigUpd[T Config](parsed T, cfgPath string) error {
-	cfgs, err := Decode[T](cfgPath)
+	cfgs, err := Decode(cfgPath)
 	if err != nil {
 		log.Printf("Decode config error: %v", err)
 		return err
@@ -115,6 +116,8 @@ func ConfigUpd[T Config](parsed T, cfgPath string) error {
 		log.Printf("WriteFile error: %v", err)
 		return err
 	}
+
+	log.Printf("\n\n\n%v\n\n\n", string(jsonData))
 
 	return nil
 }

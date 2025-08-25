@@ -91,18 +91,18 @@ func (g *GRPCConfig) GetResponse() string {
 	return g.Response
 }
 
-func (g *GRPCConfig) SetHeaders(json.RawMessage) error {
-	return nil
+func (g *GRPCConfig) SetHeaders(md json.RawMessage) error {
+	return json.Unmarshal(md, &g.Metadata)
 }
 
 func (g *GRPCConfig) GetHeaders() (json.RawMessage, error) {
-	return nil, nil
+	return json.Marshal(g.Metadata)
 }
 
-func (g *GRPCConfig) SetBody(json.RawMessage) {
-	return
+func (g *GRPCConfig) SetBody(d json.RawMessage) {
+	g.Data = d
 }
 
 func (g *GRPCConfig) GetBody() json.RawMessage {
-	return nil
+	return g.Data
 }
