@@ -35,8 +35,8 @@ Gurl-cli is a pure Go tool that:
 
 ## Technologies
 - **Go** - Primary programming language
-- **[google-grpc](google.golang.org/grpc)** - for inter-service interaction
-- **[jhump-protoreflect](github.com/jhump/protoreflect)** - working with protobuf runtime introspection
+- **[google-grpc](https://google.golang.org/grpc)** - for inter-service interaction
+- **[jhump-protoreflect](https://github.com/jhump/protoreflect)** - working with protobuf runtime introspection
 
 ## Quick Start
 1. Generate config
