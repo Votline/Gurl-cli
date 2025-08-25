@@ -33,6 +33,11 @@ Gurl-cli is a pure Go tool that:
 - No external dependencies (curl/grpcurl not needed)
 - All configs → actual Go HTTP/gRPC calls
 
+## Technologies
+- **Go** - Primary programming language
+- **[google-grpc](google.golang.org/grpc)** - for inter-service interaction
+- **[jhump-protoreflect](github.com/jhump/protoreflect)** - working with protobuf runtime introspection
+
 ## Quick Start
 1. Generate config
 2. Edit the config with your actual values
@@ -123,3 +128,7 @@ This generates mixed_config.json:
   }
 ]
 ```
+## Licenses
+This project is licensed under [MIT](LICENSE).
+
+The full license texts are available in the [licenses directory](licenses/)
