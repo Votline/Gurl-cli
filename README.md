@@ -7,10 +7,13 @@ Stop memorizing complex flags — save them as small JSON configs and hit run.
 
 ## Why this exists
 
-Typing long curl/grpcurl incantations sucks. Gurl turns them into tiny, reusable configs you can chain:
+**Typing long** curl/grpcurl incantations **sucks**. Gurl turns them into **tiny**, **reusable** configs you can **chain**:
 - HTTP → HTTP, gRPC → gRPC, or mix them.
-- No external binaries required — pure Go (`net/http` + `google.golang.org/grpc` + `github.com/jhump/protoreflect`).
 - Responses from earlier steps can feed later steps via simple placeholders.
+- **No curl/grpcurl required** — native Go implementation using:
+  - `net/http` for HTTP requests  
+  - `google.golang.org/grpc` for gRPC calls
+  - `github.com/jhump/protoreflect` for protobuf introspection
 
 ---
 
@@ -157,5 +160,5 @@ Example `http_config.json` you might start from:
 ## Docs
 
 * **Full guide:** see [`GUIDE.md`](GUIDE.md) for detailed schema, chaining, and tips.
-* **License:** MIT (see `LICENSE`).
+* **License:** This project is licensed under [MIT](LICENSE)
 * **Licenses** The full license texts are available in the [licenses directory](licenses/)
