@@ -117,7 +117,5 @@ func ConfigUpd[T Config](parsed T, cfgPath string) error {
 		return err
 	}
 
-	log.Printf("\n\n\n%v\n\n\n", string(jsonData))
-
 	return nil
 }

@@ -8,6 +8,8 @@ import (
 	
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 )
 
@@ -39,21 +41,36 @@ func parseEndpoint(endpoint string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func parseOutput(dMsg *dynamic.Message) []byte {
-	out, err := dMsg.MarshalJSON()
-	if err != nil {
-		log.Printf("Marshal response error: %v", err)
-		rawOut, err := dMsg.MarshalText()
-		if err != nil {
-			log.Printf("Couldn't format the response into text: %v", err)
-			rawBytes, err := dMsg.Marshal()
-			if err != nil {
-				log.Printf("Couldn't format the response into bytes: %v", err)
-				return nil
-			}
-			return rawBytes
+func getFilesSVC(sName string, fds []*desc.FileDescriptor) *desc.ServiceDescriptor {
+	var svc *desc.ServiceDescriptor
+	for _, fd := range fds {
+		svc = fd.FindService(sName)
+		if svc != nil {
+			return svc
 		}
-		return rawOut
 	}
-	return out
+	return nil
+}
+
+func parseOutput(dMsg *dynamic.Message) []byte {
+	if jsonBytes, err := dMsg.MarshalJSON(); err == nil {
+		return jsonBytes
+	} else if err != nil {
+		log.Printf("Marshal response error: %v", err)
+	}
+
+	if textBytes, err := dMsg.MarshalText(); err == nil {
+		return textBytes
+	} else if err != nil {
+		log.Printf("Couldn't format the response into text: %v", err)
+	}
+
+	if binaryBytes, err := dMsg.Marshal(); err == nil {
+		return binaryBytes
+	} else if err != nil {
+		log.Printf("Couldn't format the response into bytes: %v", err)
+	}
+
+	log.Printf("All marshaling attempts failed")
+	return nil
 }
