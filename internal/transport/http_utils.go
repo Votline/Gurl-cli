@@ -40,7 +40,10 @@ func prepareBody(body interface{}) (io.Reader, error) {
 
 	if body != nil {
 		jsonBytes, err := json.Marshal(body)
-		if err != nil {return nil, err}
+		if err != nil {
+			log.Printf("Marshal body error: %v", err)
+			return nil, err
+		}
 		bodyReader = bytes.NewReader(jsonBytes)
 	}
 	return bodyReader, nil
@@ -48,10 +51,16 @@ func prepareBody(body interface{}) (io.Reader, error) {
 
 func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
 	bodyReader, err := prepareBody(cfg.Body)
-	if err != nil {return nil, err}
+	if err != nil {
+		log.Printf("Prepare body err: %v", err)
+		return nil, err
+	}
 
 	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
-	if err != nil {return nil, err}
+	if err != nil {
+		log.Printf("Create request error: %v", err)
+		return nil, err
+	}
 
 	for header, value := range cfg.Headers {
 		req.Header.Set(header, value)

@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"log"
 	"net/http"
 
 	"Gurl-cli/internal/config"
@@ -14,10 +15,16 @@ type Result struct {
 
 func Get(cfg *config.HTTPConfig) (Result, error) {
 	req, err := prepareRequest(cfg)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Prepare request error: %v", err)
+		return Result{}, err
+	}
 
 	res, err := http.DefaultClient.Do(req)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Couldn't get response: %v", err)
+		return Result{}, err
+	}
 	defer res.Body.Close()
 
 	body := extBody(res.Body)
@@ -28,10 +35,16 @@ func Get(cfg *config.HTTPConfig) (Result, error) {
 
 func Post(cfg *config.HTTPConfig) (Result, error) {
 	req, err := prepareRequest(cfg)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Prepare request error: %v", err)
+		return Result{}, err
+	}
 
 	res, err := http.DefaultClient.Do(req)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Couldn't get response: %v", err)
+		return Result{}, err
+	}
 	defer res.Body.Close()
 
 	body := extBody(res.Body)
@@ -41,10 +54,15 @@ func Post(cfg *config.HTTPConfig) (Result, error) {
 
 func Put(cfg *config.HTTPConfig) (Result, error) {
 	req, err := prepareRequest(cfg)
-	if err != nil {return Result{}, err}
-
+	if err != nil {
+		log.Printf("Prepare request error: %v", err)
+		return Result{}, err
+	}
 	res, err := http.DefaultClient.Do(req)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Couldn't get response: %v", err)
+		return Result{}, err
+	}
 	defer res.Body.Close()
 
 	body := extBody(res.Body)
@@ -54,10 +72,16 @@ func Put(cfg *config.HTTPConfig) (Result, error) {
 
 func Del(cfg *config.HTTPConfig) (Result, error) {
 	req, err := prepareRequest(cfg)
-	if err != nil {return Result{}, err}
-	
+	if err != nil {
+		log.Printf("Prepare request error: %v", err)
+		return Result{}, err
+	}
+
 	res, err := http.DefaultClient.Do(req)
-	if err != nil {return Result{}, err}
+	if err != nil {
+		log.Printf("Couldn't get response: %v", err)
+		return Result{}, err
+	}
 	defer res.Body.Close()
 
 	body := extBody(res.Body)
