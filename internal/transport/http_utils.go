@@ -7,6 +7,7 @@ import (
 	"strings"
 	"net/http"
 	"io/ioutil"
+	"crypto/tls"
 	"encoding/json"
 
 	"Gurl-cli/internal/config"
@@ -67,4 +68,17 @@ func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+func clientDo(req *http.Request, ic bool) (*http.Response, error) {
+	if !ic {
+		return http.DefaultClient.Do(req)
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	cl := &http.Client{Transport: tr}
+	return cl.Do(req)
 }

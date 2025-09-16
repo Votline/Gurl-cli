@@ -13,14 +13,14 @@ type Result struct {
 	JSON map[string]interface{}
 }
 
-func Get(cfg *config.HTTPConfig) (Result, error) {
+func Get(cfg *config.HTTPConfig, ic bool) (Result, error) {
 	req, err := prepareRequest(cfg)
 	if err != nil {
 		log.Printf("Prepare request error: %v", err)
 		return Result{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := clientDo(req, ic)
 	if err != nil {
 		log.Printf("Couldn't get response: %v", err)
 		return Result{}, err
@@ -33,14 +33,14 @@ func Get(cfg *config.HTTPConfig) (Result, error) {
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Post(cfg *config.HTTPConfig) (Result, error) {
+func Post(cfg *config.HTTPConfig, ic bool) (Result, error) {
 	req, err := prepareRequest(cfg)
 	if err != nil {
 		log.Printf("Prepare request error: %v", err)
 		return Result{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := clientDo(req, ic)
 	if err != nil {
 		log.Printf("Couldn't get response: %v", err)
 		return Result{}, err
@@ -52,13 +52,14 @@ func Post(cfg *config.HTTPConfig) (Result, error) {
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Put(cfg *config.HTTPConfig) (Result, error) {
+func Put(cfg *config.HTTPConfig, ic bool) (Result, error) {
 	req, err := prepareRequest(cfg)
 	if err != nil {
 		log.Printf("Prepare request error: %v", err)
 		return Result{}, err
 	}
-	res, err := http.DefaultClient.Do(req)
+	
+	res, err := clientDo(req, ic)
 	if err != nil {
 		log.Printf("Couldn't get response: %v", err)
 		return Result{}, err
@@ -70,14 +71,14 @@ func Put(cfg *config.HTTPConfig) (Result, error) {
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Del(cfg *config.HTTPConfig) (Result, error) {
+func Del(cfg *config.HTTPConfig, ic bool) (Result, error) {
 	req, err := prepareRequest(cfg)
 	if err != nil {
 		log.Printf("Prepare request error: %v", err)
 		return Result{}, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := clientDo(req, ic)
 	if err != nil {
 		log.Printf("Couldn't get response: %v", err)
 		return Result{}, err

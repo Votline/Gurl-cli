@@ -31,18 +31,18 @@ func prettyPrint[T any](data T, indent string) {
 	}
 }
 
-func handleHTTP(cfg *config.HTTPConfig, cfgPath string) {
+func handleHTTP(cfg *config.HTTPConfig, cfgPath string, ic bool) {
 	var err error
 	var res transport.Result
 	switch cfg.Method {
 	case "GET":
-		res, err = transport.Get(cfg)
+		res, err = transport.Get(cfg, ic)
 	case "POST":
-		res, err = transport.Post(cfg)
+		res, err = transport.Post(cfg, ic)
 	case "PUT":
-		res, err = transport.Put(cfg)
+		res, err = transport.Put(cfg, ic)
 	case "DELETE":
-		res, err = transport.Del(cfg)
+		res, err = transport.Del(cfg, ic)
 	}
 	if err != nil {
 		log.Fatalf("Error when trying to make a %v request:\n%v", cfg.Method, err.Error())
@@ -79,7 +79,7 @@ func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
 	config.ConfigUpd(cfg, cfgPath)
 }
 
-func handleRequest(cfgPath string) {
+func handleRequest(cfgPath string, ic bool) {
 	cfgs, err := config.Decode(cfgPath)
 	if err != nil {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
@@ -93,7 +93,7 @@ func handleRequest(cfgPath string) {
 		}
 		switch v := cfg.(type) {
 		case *config.HTTPConfig:
-			handleHTTP(v, cfgPath)
+			handleHTTP(v, cfgPath, ic)
 		case *config.GRPCConfig:
 			handleGRPC(v, cfgPath)
 		default:
@@ -102,11 +102,11 @@ func handleRequest(cfgPath string) {
 	}
 }
 
-func HandleFlags(cfgType, cfgPath string, cfgCreate bool) {
+func HandleFlags(cfgType, cfgPath string, cfgCreate, ic bool) {
 	if !cfgCreate {
 		switch cfgType {
 		case "http", "grpc":
-			handleRequest(cfgPath)
+			handleRequest(cfgPath, ic)
 			return
 		default:
 			log.Fatalf("Invalid config type: %s", cfgType)
