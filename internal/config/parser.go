@@ -143,6 +143,9 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	response, err := handleProcType(sourceResponse, procType)
 	if err != nil {return nil, err}
 
+	log.Printf("PARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
+	log.Printf("PARSER: Extracted value: %s", string(response))
+	
 	var result bytes.Buffer
 	result.Write(data[:startIdx-1])
 	result.Write(response)

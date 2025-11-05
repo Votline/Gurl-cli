@@ -120,7 +120,7 @@ func grpcFiles(cfg *config.GRPCConfig) (Result, error) {
 	parser := protoparse.Parser{}
 	fds, err := parser.ParseFiles(cfg.ProtoFiles...)
 	if err != nil {
-		log.Printf("Couldn't parse .proto files: %v", )
+		log.Printf("Couldn't parse .proto files: %v", err)
 	}
 
 	serviceName, serviceMethod, err := parseEndpoint(cfg.Endpoint)
