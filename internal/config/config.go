@@ -6,6 +6,9 @@ type Config interface {
 	GetID() string
 	GetType() string
 
+	GetUrl() (string)
+	SetUrl(string)
+
 	GetHeaders() (json.RawMessage, error)
 	SetHeaders(json.RawMessage) error
 
@@ -39,10 +42,16 @@ func (h *HTTPConfig) GetType() string {
 	return h.Type
 }
 
+func (h *HTTPConfig) GetUrl() string {
+	return h.Url
+}
+func (h *HTTPConfig) SetUrl(url string) {
+	h.Url = url
+}
+
 func (h *HTTPConfig) GetHeaders() (json.RawMessage, error) {
 	return json.Marshal(h.Headers)
 }
-
 func (h *HTTPConfig) SetHeaders(headers json.RawMessage) error {
 	return json.Unmarshal(headers, &h.Headers)
 }
@@ -50,17 +59,15 @@ func (h *HTTPConfig) SetHeaders(headers json.RawMessage) error {
 func (h *HTTPConfig) GetBody() json.RawMessage {
 	return h.Body
 }
-
 func (h *HTTPConfig) SetBody(body json.RawMessage) {
 	h.Body = body
 }
 
-func (h *HTTPConfig) SetResponse(response string) {
-	h.Response = response
-}
-
 func (h *HTTPConfig) GetResponse() string {
 	return h.Response
+}
+func (h *HTTPConfig) SetResponse(response string) {
+	h.Response = response
 }
 
 type GRPCConfig struct {
@@ -83,26 +90,30 @@ func (g *GRPCConfig) GetType() string {
 	return g.Type
 }
 
-func (g *GRPCConfig) SetResponse(response string) {
-	g.Response = response
+func (g *GRPCConfig) GetUrl() string {
+	return ""
+}
+func (g *GRPCConfig) SetUrl(url string) {
 }
 
 func (g *GRPCConfig) GetResponse() string {
 	return g.Response
 }
-
-func (g *GRPCConfig) SetHeaders(md json.RawMessage) error {
-	return json.Unmarshal(md, &g.Metadata)
+func (g *GRPCConfig) SetResponse(response string) {
+	g.Response = response
 }
 
 func (g *GRPCConfig) GetHeaders() (json.RawMessage, error) {
 	return json.Marshal(g.Metadata)
 }
-
-func (g *GRPCConfig) SetBody(d json.RawMessage) {
-	g.Data = d
+func (g *GRPCConfig) SetHeaders(md json.RawMessage) error {
+	return json.Unmarshal(md, &g.Metadata)
 }
 
 func (g *GRPCConfig) GetBody() json.RawMessage {
 	return g.Data
 }
+func (g *GRPCConfig) SetBody(d json.RawMessage) {
+	g.Data = d
+}
+

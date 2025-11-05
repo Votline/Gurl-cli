@@ -63,11 +63,22 @@ func handleJson(source, inst string) ([]byte, error) {
 	return res, nil
 }
 
+func handleString(source, inst string) ([]byte, error) {
+	parts := strings.SplitN(inst, ":", 2)
+	if len(parts) < 2 {
+		return nil, errors.New("Invalid instruction")
+	}
+	return []byte(source), nil
+}
+
 func handleProcType(source, procType string) ([]byte, error) {
 	if procType == "none" {
 		return []byte(removeJsonShit(source)), nil
 	}
 	if strings.Contains(procType, "json:") {
+		if !strings.HasPrefix(strings.TrimSpace(source), "{") {
+			return handleString(source, procType)
+		}
 		return handleJson(source, procType)
 	}
 	return []byte(source), nil
@@ -124,7 +135,7 @@ func findIdx(data []byte) (startIdx, endIdx int) {
 func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	startIdx, endIdx := findIdx(data)
 	if startIdx == -1 || endIdx == -1 {
-		return nil, nil
+		return data, nil
 	}
 
 	idPart, procType, err := findID(data, startIdx, endIdx)
@@ -156,6 +167,11 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 	var zero T
+
+	url := cfg.GetUrl()
+	newUrl, err := parse([]byte(url), cfgs)
+	if err != nil {return zero, err}
+	cfg.SetUrl(string(newUrl))
 
 	headers, err := cfg.GetHeaders()
 	if err != nil {return zero, err}
