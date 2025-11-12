@@ -11,6 +11,11 @@ import (
 	"encoding/json"
 )
 
+var instructions = map[string]int{
+	"RESPONSE": 3,
+	"REPEAT": 2,
+}
+
 func getNested(data interface{}, path string) (interface{}, bool) {
 	keys := strings.Split(path, ".")
 	var current interface{} = data
@@ -111,9 +116,12 @@ func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
 
 func findID(data []byte, startIdx, endIdx int) (string, string, error) {
 	template := string(data[startIdx : endIdx+startIdx+1])
-	parts := strings.SplitN(template, " ", 3)
-	if len(parts) < 3 {
-		return "", "", errors.New("Invalid RESPONSE template")
+
+	parts := strings.Split(template, " ")
+	minParts := instructions[parts[0]]
+
+	if len(parts) != minParts {
+		return "", "", errors.New("Invalid template")
 	}
 
 	idPart := strings.TrimPrefix(parts[1], "id=")
@@ -122,21 +130,33 @@ func findID(data []byte, startIdx, endIdx int) (string, string, error) {
 		return "", "", errors.New("Invalid id in RESPONSE template")
 	}
 
-	procType := strings.Trim(parts[2], `}`)
+	if minParts == 2 {
+		return idPart, "", nil
+	}
 
+	procType := strings.Trim(parts[2], `}`)
 	return idPart, procType, nil
 }
 
 func findIdx(data []byte) (startIdx, endIdx int) {
-	startIdx = bytes.Index(data, []byte("RESPONSE id="))
-	if startIdx == -1 {return -1, -1}
-	endIdx = bytes.Index(data[startIdx:], []byte("}"))
+	endIdx = -1
+	startIdx = -1
+	
+	for inst := range instructions {
+		if idx := bytes.Index(data, []byte(inst+" id=")); idx != -1 {
+			startIdx = idx
+			if breakIdx := bytes.Index(data[startIdx:], []byte("}")); breakIdx != - 1 {
+				endIdx = breakIdx
+				return
+			}
+		}
+	}
 	return
 }
 
 func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	startIdx, endIdx := findIdx(data)
-	if startIdx == -1 || endIdx == -1 {
+	if startIdx == -1 {
 		return data, errors.New("Parse is not needed")
 	}
 
@@ -148,20 +168,23 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 		return nil, errors.New("Config not found. ID: " + idPart)
 	}
 
-	sourceResponse := sourceCfg.GetResponse()
-	if sourceResponse == "" {
-		return nil, errors.New("Config response is nil")
+	var newData []byte
+	if procType != "" {
+		sourceResponse := sourceCfg.GetResponse()
+		if sourceResponse == "" {
+			return nil, errors.New("Config response is nil")
+		}
+
+		newData, err = handleProcType(sourceResponse, procType)
+		if err != nil {return nil, err}
 	}
 
-	response, err := handleProcType(sourceResponse, procType)
-	if err != nil {return nil, err}
-
 	log.Printf("PARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
-	log.Printf("PARSER: Extracted value: %s", string(response))
+	log.Printf("PARSER: Extracted value: %s", string(newData))
 	
 	var result bytes.Buffer
 	result.Write(data[:startIdx-1])
-	result.Write(response)
+	result.Write(newData)
 	result.Write(data[startIdx+endIdx+1:])
 
 	return result.Bytes(), nil
@@ -232,7 +255,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 
 	select{
 	case err := <-errChan:
-		log.Printf("An error was found during the operation of goroutin %v", err.Error())
+		log.Printf("Error in goroutines %v", err.Error())
 		return zero, err
 	default:
 		return cfg, nil
