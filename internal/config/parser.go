@@ -2,6 +2,8 @@ package config
 
 import (
 	"log"
+	"sync"
+	"time"
 	"bytes"
 	"errors"
 	"strings"
@@ -135,7 +137,7 @@ func findIdx(data []byte) (startIdx, endIdx int) {
 func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	startIdx, endIdx := findIdx(data)
 	if startIdx == -1 || endIdx == -1 {
-		return data, nil
+		return data, errors.New("Parse is not needed")
 	}
 
 	idPart, procType, err := findID(data, startIdx, endIdx)
@@ -167,34 +169,73 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 	var zero T
+	var wg sync.WaitGroup
+	errChan := make(chan error, 3)
 
-	url := cfg.GetUrl()
-	newUrl, err := parse([]byte(url), cfgs)
-	if err != nil {return zero, err}
-	cfg.SetUrl(string(newUrl))
+	wg.Add(1)
+	go func(){
+		defer wg.Done()
+		for {
+			url := cfg.GetUrl()
+			newUrl, err := parse([]byte(url), cfgs)
+			if err != nil {
+				if err.Error() == "Parse is not needed" {
+					break
+				} else {errChan <- err; return}
+			}
+			cfg.SetUrl(string(newUrl))
+		}
+	}()
 
-	headers, err := cfg.GetHeaders()
-	if err != nil {return zero, err}
-	if headers != nil {
-		newHeaders, err := parse(headers, cfgs)
-		if err != nil {
-			return zero, err
+	wg.Add(1)
+	go func(){
+		defer wg.Done()
+		for {
+			headers, err := cfg.GetHeaders()
+			if err != nil {errChan <- err; return}
+			if headers != nil {
+				newHeaders, err := parse(headers, cfgs)
+				if err != nil {
+					if err.Error() == "Parse is not needed" {
+						break
+					} else {errChan <- err; return}
+				}
+				if newHeaders != nil {
+					cfg.SetHeaders(newHeaders)
+				}
+			} else {break}
+			time.Sleep(100*time.Millisecond)
 		}
-		if newHeaders != nil {
-			cfg.SetHeaders(newHeaders)
+	}()
+
+	wg.Add(1)
+	go func(){
+		defer wg.Done()
+		for {
+			body := cfg.GetBody()
+			if body != nil {
+				newBody, err := parse(body, cfgs)
+				if err != nil {
+					if err.Error() == "Parse is not needed" {
+						break
+					} else {errChan <- err; return}
+				}
+				if newBody != nil {
+					cfg.SetBody(newBody)
+				}
+			} else {break}
+			time.Sleep(100*time.Millisecond)
 		}
+	}()
+
+	wg.Wait()
+
+	select{
+	case err := <-errChan:
+		log.Printf("An error was found during the operation of goroutin %v", err.Error())
+		return zero, err
+	default:
+		return cfg, nil
 	}
 
-	body := cfg.GetBody()
-	if body != nil {
-		newBody, err := parse(body, cfgs)
-		if err != nil {
-			return zero, err
-		}
-		if newBody != nil {
-			cfg.SetBody(newBody)
-		}
-	}
-
-	return cfg, nil
 }
