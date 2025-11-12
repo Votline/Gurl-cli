@@ -32,6 +32,14 @@ func SetupGRPC() *GRPCConfig {
 	}
 }
 
+func SetupRepeated() *RepeatedConfig {
+	return &RepeatedConfig{
+		Type: "repeated",
+		RepID: "1",
+		Replace: map[string]string{"-":"-"},
+	}
+}
+
 func SetupMixed() []any {
 	grpc := SetupGRPC()
 	grpc.ID = "2"

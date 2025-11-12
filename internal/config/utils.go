@@ -34,25 +34,24 @@ func parseTypedConfig(rawCfg []byte) (Config, error) {
 		return nil, err
 	}
 
+	var c Config
 	switch head.Type {
 	case "http":
-		var c HTTPConfig
-		if err := json.Unmarshal(rawCfg, &c); err != nil {
-			log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
-			return nil, errors.New("Unmarshling config error")
-		}
-		return &c, nil
+		c = &HTTPConfig{}
 	case "grpc":
-		var c GRPCConfig
-		if err := json.Unmarshal(rawCfg, &c); err != nil {
-			log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
-			return nil, errors.New("Unmarshling config error")
-		}
-		return &c, nil
+		c = &GRPCConfig{}
+	case "repeated":
+		c = &RepeatedConfig{}
 	default:
 		log.Printf("Invalid config type: %v", head.Type)
 		return nil, errors.New("Invalid config type")
 	}
+
+	if err := json.Unmarshal(rawCfg, c); err != nil {
+		log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
+		return nil, errors.New("Unmarshling config error")
+	}
+	return c, nil
 }
 
 func Decode(cfgPath string) ([]Config, error) {

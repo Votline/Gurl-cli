@@ -117,3 +117,49 @@ func (g *GRPCConfig) SetBody(d json.RawMessage) {
 	g.Data = d
 }
 
+type RepeatedConfig struct {
+	Type      string            `json:"type"`
+	RepID     string           `json:"repeated_id"`
+	Replace   map[string]string `json:"replace,omitempty"`
+}
+
+func (r *RepeatedConfig) GetID() string {
+	return ""
+}
+
+func (r *RepeatedConfig) GetType() string {
+	return r.Type
+}
+
+func (r *RepeatedConfig) GetUrl() string {
+	return ""
+}
+
+func (r *RepeatedConfig) SetUrl(url string) {
+}
+
+func (r *RepeatedConfig) GetHeaders() (json.RawMessage, error) {
+	return json.RawMessage(`{}`), nil
+}
+
+func (r *RepeatedConfig) SetHeaders(headers json.RawMessage) error {
+	return nil
+}
+
+func (r *RepeatedConfig) GetBody() json.RawMessage {
+	return json.RawMessage(`{}`)
+}
+
+func (r *RepeatedConfig) SetBody(body json.RawMessage) {
+}
+
+func (r *RepeatedConfig) GetResponse() string {
+	return ""
+}
+
+func (r *RepeatedConfig) SetResponse(response string) {
+}
+
+func (r *RepeatedConfig) GetReplace() map[string]string {
+	return r.Replace
+}

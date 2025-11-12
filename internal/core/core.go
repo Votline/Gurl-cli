@@ -105,7 +105,7 @@ func handleRequest(cfgPath string, ic bool) {
 func HandleFlags(cfgType, cfgPath string, cfgCreate, ic bool) {
 	if !cfgCreate {
 		switch cfgType {
-		case "http", "grpc":
+		case "http", "grpc", "repeated":
 			handleRequest(cfgPath, ic)
 			return
 		default:

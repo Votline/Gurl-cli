@@ -10,13 +10,14 @@ import (
 )
 
 func InitConfig(path, cfgType string) error {
-	var cfg interface{}
-	if cfgType == "grpc" {
+	var cfg any
+	switch cfgType {
+	case "grpc":
 		cfg = config.SetupGRPC()
-	} else if cfgType == "mixed" {
-		cfg = config.SetupMixed()
-	} else {
+	case "http":
 		cfg = config.SetupHTTP()
+	default:
+		cfg = config.SetupRepeated()
 	}
 
 	json, err := json.MarshalIndent(cfg, "", "    ")
