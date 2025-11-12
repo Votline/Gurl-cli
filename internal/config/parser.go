@@ -194,10 +194,60 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, bool, T, error) {
 	return result.Bytes(), false, zero, nil
 }
 
+func applyReplace[T Config](baseCfg T, repeatedCfg T) T {
+	replacements := repeatedCfg.GetReplace()
+	if len(replacements) == 0 {
+		return baseCfg
+	}
+
+	body := baseCfg.GetBody()
+	if len(body) > 0 {
+		var bodyMap map[string]any
+		if err := json.Unmarshal(body, &bodyMap); err == nil {
+			for k, v := range replacements {
+				bodyMap[k] = v
+			}
+			newBody, _ := json.Marshal(bodyMap)
+			baseCfg.SetBody(newBody)
+		}
+	}
+
+	headersRaw, _ := baseCfg.GetHeaders()
+	if len(headersRaw) > 0 {
+		var headers map[string]any
+		if err := json.Unmarshal(headersRaw, &headers); err == nil {
+			for k, v := range replacements {
+				if _, ok := headers[k]; ok {
+					headers[k] = v
+				}
+			}
+			newHeaders, _ := json.Marshal(headers)
+			baseCfg.SetHeaders(newHeaders)
+		}
+	}
+
+	if val, ok := replacements["url"]; ok {
+		if s, ok := val.(string); ok {
+			baseCfg.SetUrl(s)
+		}
+	}
+
+	return baseCfg
+}
+
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 	var zero T
 	var wg sync.WaitGroup
 	errChan := make(chan error, 3)
+
+
+	if cfg.GetType() == "repeated" {
+		id, err := strconv.Atoi(cfg.GetID())
+		if err != nil {return zero, err}
+		baseCfg := cfgs[id-1]
+		finalCfg := applyReplace(baseCfg, cfg)
+		return Parsing(finalCfg, cfgs)
+	}
 
 	wg.Add(1)
 	go func(){

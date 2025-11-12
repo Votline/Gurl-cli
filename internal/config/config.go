@@ -4,6 +4,8 @@ import "encoding/json"
 
 type Config interface {
 	GetID() string
+	SetID(string)
+
 	GetType() string
 
 	GetUrl() (string)
@@ -15,8 +17,10 @@ type Config interface {
 	GetBody() json.RawMessage
 	SetBody(json.RawMessage)
 
-	SetResponse(response string)
 	GetResponse() string
+	SetResponse(response string)
+
+	GetReplace() map[string]any
 }
 
 type HTTPConfig struct {
@@ -36,6 +40,9 @@ func (h *HTTPConfig) Clone() Config {
 
 func (h *HTTPConfig) GetID() string {
 	return h.ID
+}
+func (h *HTTPConfig) SetID(newID string) {
+	h.ID = newID
 }
 
 func (h *HTTPConfig) GetType() string {
@@ -70,6 +77,10 @@ func (h *HTTPConfig) SetResponse(response string) {
 	h.Response = response
 }
 
+func (h *HTTPConfig) GetReplace() map[string]any {
+	return nil
+}
+
 type GRPCConfig struct {
 	ID          string            `json:"id"`
 	Type        string            `json:"type"`
@@ -84,6 +95,9 @@ type GRPCConfig struct {
 
 func (g *GRPCConfig) GetID() string {
 	return g.ID
+}
+func (g *GRPCConfig) SetID(newID string) {
+	g.ID = newID
 }
 
 func (g *GRPCConfig) GetType() string {
@@ -117,14 +131,20 @@ func (g *GRPCConfig) SetBody(d json.RawMessage) {
 	g.Data = d
 }
 
+func (g *GRPCConfig) GetReplace() map[string]any {
+	return nil
+}
+
 type RepeatedConfig struct {
-	Type      string            `json:"type"`
-	RepID     string           `json:"repeated_id"`
-	Replace   map[string]string `json:"replace,omitempty"`
+	Type      string         `json:"type"`
+	RepID     string         `json:"repeated_id"`
+	Replace   map[string]any `json:"replace,omitempty"`
 }
 
 func (r *RepeatedConfig) GetID() string {
-	return ""
+	return r.RepID
+}
+func (r *RepeatedConfig) SetID(string){
 }
 
 func (r *RepeatedConfig) GetType() string {
@@ -160,6 +180,6 @@ func (r *RepeatedConfig) GetResponse() string {
 func (r *RepeatedConfig) SetResponse(response string) {
 }
 
-func (r *RepeatedConfig) GetReplace() map[string]string {
+func (r *RepeatedConfig) GetReplace() map[string]any {
 	return r.Replace
 }

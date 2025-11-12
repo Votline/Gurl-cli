@@ -36,7 +36,7 @@ func SetupRepeated() *RepeatedConfig {
 	return &RepeatedConfig{
 		Type: "repeated",
 		RepID: "1",
-		Replace: map[string]string{"-":"-"},
+		Replace: map[string]any{"-":"-"},
 	}
 }
 

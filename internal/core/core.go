@@ -2,6 +2,7 @@ package core
 
 import (
 	"log"
+	"strconv"
 
 	"Gurl-cli/internal/config"
 	"Gurl-cli/internal/transport"
@@ -85,12 +86,16 @@ func handleRequest(cfgPath string, ic bool) {
 		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
 	}
 
-	for _, c := range cfgs {
+	for idx, c := range cfgs {
 		cfg, err := config.Parsing(c, cfgs)
 		if err != nil {
 			log.Printf("Parse error: %v", err)
 			continue
 		}
+		strIdx := strconv.Itoa(idx+1)
+		cfg.SetID(strIdx)
+		cfgs[idx] = cfg
+
 		switch v := cfg.(type) {
 		case *config.HTTPConfig:
 			handleHTTP(v, cfgPath, ic)
