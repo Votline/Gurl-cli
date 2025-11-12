@@ -114,28 +114,29 @@ func findSource[T Config] (sourceCfg *T, cfgs []T, id string) bool {
 	return false
 }
 
-func findID(data []byte, startIdx, endIdx int) (string, string, error) {
-	template := string(data[startIdx : endIdx+startIdx+1])
-
+func templateData(data []byte, startIdx, endIdx int) (instType, idPart, procType string, err error) {
+	template := string(data[startIdx : endIdx+startIdx])
 	parts := strings.Split(template, " ")
-	minParts := instructions[parts[0]]
 
-	if len(parts) != minParts {
-		return "", "", errors.New("Invalid template")
+	instType = parts[0]
+	minParts := instructions[instType]
+
+	if len(parts) < minParts {
+		err = errors.New("Invalid template")
+		return
 	}
 
-	idPart := strings.TrimPrefix(parts[1], "id=")
-	_, err := strconv.Atoi(idPart)
-	if err != nil {
-		return "", "", errors.New("Invalid id in RESPONSE template")
+	idPart = strings.TrimPrefix(parts[1], "id=")
+	if _, convErr := strconv.Atoi(idPart); convErr != nil {
+		err = errors.New("Invalid id: " + idPart)
+		return
 	}
 
-	if minParts == 2 {
-		return idPart, "", nil
+	if minParts == 3 {
+		procType = parts[2]
 	}
 
-	procType := strings.Trim(parts[2], `}`)
-	return idPart, procType, nil
+	return
 }
 
 func findIdx(data []byte) (startIdx, endIdx int) {
@@ -154,30 +155,33 @@ func findIdx(data []byte) (startIdx, endIdx int) {
 	return
 }
 
-func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
+func parse[T Config](data []byte, cfgs []T) ([]byte, bool, T, error) {
+	var zero T
+
 	startIdx, endIdx := findIdx(data)
 	if startIdx == -1 {
-		return data, errors.New("Parse is not needed")
+		return data, false, zero, errors.New("Parse is not needed")
 	}
 
-	idPart, procType, err := findID(data, startIdx, endIdx)
-	if err != nil {return nil, err}
+	instType, idPart, procType, err := templateData(data, startIdx, endIdx)
+	if err != nil {return nil, false, zero, err}
 
 	var sourceCfg T
 	if !findSource(&sourceCfg, cfgs, idPart) {
-		return nil, errors.New("Config not found. ID: " + idPart)
+		return nil, false, zero, errors.New("Config not found. ID: " + idPart)
 	}
 
-	var newData []byte
-	if procType != "" {
-		sourceResponse := sourceCfg.GetResponse()
-		if sourceResponse == "" {
-			return nil, errors.New("Config response is nil")
-		}
-
-		newData, err = handleProcType(sourceResponse, procType)
-		if err != nil {return nil, err}
+	if instType == "REPEAT" {
+		return nil, true, sourceCfg, nil
 	}
+
+	sourceResponse := sourceCfg.GetResponse()
+	if sourceResponse == "" {
+		return nil, false, zero, errors.New("Config response is nil")
+	}
+
+	newData, err := handleProcType(sourceResponse, procType)
+	if err != nil {return nil, false, zero, err}
 
 	log.Printf("PARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
 	log.Printf("PARSER: Extracted value: %s", string(newData))
@@ -187,7 +191,7 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, error) {
 	result.Write(newData)
 	result.Write(data[startIdx+endIdx+1:])
 
-	return result.Bytes(), nil
+	return result.Bytes(), false, zero, nil
 }
 
 func Parsing[T Config](cfg T, cfgs []T) (T, error) {
@@ -200,11 +204,14 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 		defer wg.Done()
 		for {
 			url := cfg.GetUrl()
-			newUrl, err := parse([]byte(url), cfgs)
+			newUrl, repeat, newCfg, err := parse([]byte(url), cfgs)
 			if err != nil {
 				if err.Error() == "Parse is not needed" {
 					break
 				} else {errChan <- err; return}
+			} else if repeat {
+				cfg = newCfg
+				continue
 			}
 			cfg.SetUrl(string(newUrl))
 		}
@@ -217,7 +224,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 			headers, err := cfg.GetHeaders()
 			if err != nil {errChan <- err; return}
 			if headers != nil {
-				newHeaders, err := parse(headers, cfgs)
+				newHeaders, _, _, err := parse(headers, cfgs)
 				if err != nil {
 					if err.Error() == "Parse is not needed" {
 						break
@@ -237,7 +244,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 		for {
 			body := cfg.GetBody()
 			if body != nil {
-				newBody, err := parse(body, cfgs)
+				newBody, _, _, err := parse(body, cfgs)
 				if err != nil {
 					if err.Error() == "Parse is not needed" {
 						break
