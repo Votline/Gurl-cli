@@ -1,9 +1,20 @@
 # Gurl-cli 🚀
 
-**Supercharged curl/grpcurl with config chaining.**  
-Stop memorizing complex flags — save them as small JSON configs and hit run.
+[![Go Version](https://img.shields.io/badge/Go-1.24.5-00ADD8?style=flat-square&logo=go)](https://golang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
+[![HTTP Ready](https://img.shields.io/badge/HTTP-Ready-%23007EC6?style=flat-square&logo=internetexplorer)](https://developer.mozilla.org/en-US/docs/Web/HTTP)
+[![gRPC Ready](https://img.shields.io/badge/gRPC-Ready-%23007EC6?style=flat-square&logo=google)](https://grpc.io/)
+[![Protobuf Support](https://img.shields.io/badge/Protobuf-Supported-green?style=flat-square&logo=protobuf)](https://protobuf.dev/)
+[![JSON Configs](https://img.shields.io/badge/JSON-Configs-yellow?style=flat-square&logo=json)](https://www.json.org/)
+[![Response Chaining](https://img.shields.io/badge/Response-Chaining-purple?style=flat-square)](https://github.com/Votlines/Gurl-cli)
+[![Config Reuse](https://img.shields.io/badge/Config-Reuse-orange?style=flat-square)](https://github.com/Votline/Gulr-cli)
+
+**Supercharged curl/grpcurl with config chaining and response templating.**  
+Stop memorizing complex flags — save them as reusable JSON configs and hit run.
 
 ---
+
+
 
 ## Why this exists
 
@@ -15,150 +26,69 @@ Stop memorizing complex flags — save them as small JSON configs and hit run.
   - `google.golang.org/grpc` for gRPC calls
   - `github.com/jhump/protoreflect` for protobuf introspection
 
+## AND
+
+- **🔁 Response Placeholders Everywhere** - Use `{RESPONSE}` in URLs, headers, and bodies
+- **🔄 Repeated Configs** - Duplicate and modify existing configs with `replace` fields  
+- **♻️ Loop Processing** - All placeholders in a request are now properly processed
+- **🆔 Automatic ID Management** - IDs are now enforced to prevent conflicts
+
 ---
 
 ## Quick Start
 
 ```bash
-# 1) Generate a starter config (HTTP)
-go run main.go --config-create
+# 1) Generate a starter config
+gurl-cli --config-create --config=my_config
 
-# 2) Edit it with your values
-vim http_config.json
+# 2) Edit it with your endpoints
+vim my_config.json
 
 # 3) Run it
-go run main.go --config=http_config.json
-````
-
-Example `http_config.json` you might start from:
-
-```json
-[
-  {
-    "id": "1",
-    "type": "http",
-    "url": "http://localhost:8080/api/todos/reg",
-    "method": "POST",
-    "headers": { "Content-Type": "application/json" },
-    "body": {
-      "id": "Votline",
-      "first_name": "Votl",
-      "last_name": "line",
-      "password_hash": "123"
-    },
-    "response": "-"
-  }
-]
+go run main.go --config=my_config.json
 ```
 
-> Tip: Use placeholders like `"{RESPONSE id=1 json:token}"` to pipe earlier responses into later requests.
-
----
-
-## The Meat (copy–paste configs)
-
-### HTTP chain (auth → create → list → update → delete)
+### Example: Chaining Requests
 
 ```json
 [
   {
     "id": "1",
     "type": "http",
-    "url": "http://localhost:8080/api/todos/reg",
+    "url": "http://localhost:8080/api/auth",
     "method": "POST",
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "body": {
-      "id": "Votline",
-      "first_name": "Vot",
-      "last_name": "line",
-      "password_hash": "123"
-    },
+    "body": {"user": "test", "pass": "test"},
     "response": "-"
   },
   {
-    "id": "2",
+    "id": "2", 
     "type": "http",
-    "url": "http://localhost:8080/api/todos/task",
-    "method": "POST",
-    "headers": {
-      "Authorization": "Bearer {RESPONSE id=1 json:token}",
-      "Content-Type": "application/json"
-    },
-    "body": {
-      "title": "some title",
-      "content": "some content",
-      "category_id": "some category",
-      "done": false
-    },
-    "response": "-"
-  },
-  {
-    "id": "3",
-    "type": "http",
-    "url": "http://localhost:8080/api/todos/task",
+    "url": "http://localhost:8080/api/data/{RESPONSE id=1 json:user_id}",
     "method": "GET",
     "headers": {
-      "Authorization": "Bearer {RESPONSE id=1 json:token}",
-      "Content-Type": "application/json"
-    },
-    "body": {
-      "title": "some title"
-    },
-    "response": "-"
-  },
-  {
-    "id": "4",
-    "type": "http",
-    "url": "http://localhost:8080/api/todos/task",
-    "method": "PUT",
-    "headers": {
-      "Authorization": "Bearer {RESPONSE id=1 json:token}",
-      "Content-Type": "application/json"
-    },
-    "body": {
-      "id": "1",
-      "title": "no some title"
-    },
-    "response": "-"
-  },
-  {
-    "id": "5",
-    "type": "http",
-    "url": "http://localhost:8080/api/todos/task",
-    "method": "DELETE",
-    "headers": {
-      "Authorization": "Bearer {RESPONSE id=1 json:token}",
-      "Content-Type": "application/json"
-    },
-    "body": {
-      "id": "1"
+      "Authorization": "Bearer {RESPONSE id=1 json:token}"
     },
     "response": "-"
   }
 ]
 ```
 
-### gRPC step (reusing token from step 1)
+### Example: Repeated Configs
 
 ```json
 {
-  "id": "6",
-  "type": "grpc",
-  "target": "localhost:50051",
-  "endpoint": "auth.AuthService/ExtUserID",
-  "data": {
-    "token": "{RESPONSE id=1 json:token}"
-  },
-  "response": "-"
+  "type": "repeated",
+  "repeated_id": "1",
+  "replace": {
+    "user": "different_user"
+  }
 }
 ```
 
 ---
 
-## Docs
+## 📚 Documentation
 
-* **Full guide:** see [`GUIDE.md`](GUIDE.md) for detailed schema, chaining, and tips.
-* **License:** This project is licensed under [MIT](LICENSE)
-* **Licenses** The full license texts are available in the [licenses directory](licenses/)
+- **Full Guide:** See [`GUIDE.md`](GUIDE.md) for detailed examples and advanced features
+- **License:** This project is licensed under  [MIT](LICENSE)
+- **Third-party Licenses:** The full license texts are available in the  [licenses/](licenses/)

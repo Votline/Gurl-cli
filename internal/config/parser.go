@@ -13,7 +13,6 @@ import (
 
 var instructions = map[string]int{
 	"RESPONSE": 3,
-	"REPEAT": 2,
 }
 
 func getNested(data interface{}, path string) (interface{}, bool) {
