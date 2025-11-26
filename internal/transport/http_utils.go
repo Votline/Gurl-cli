@@ -2,17 +2,19 @@ package transport
 
 import (
 	"io"
-	"log"
 	"bytes"
 	"strings"
 	"net/http"
 	"crypto/tls"
 	"encoding/json"
+	"net/http/cookiejar"
+
+	"go.uber.org/zap"
 
 	"Gurl-cli/internal/config"
 )
 
-func convData(body []byte, res *http.Response) map[string]any {
+func (c *HTTPClient) convData(body []byte, res *http.Response) map[string]any {
 	contentType := res.Header.Get("Content-Type")
 	if !strings.Contains(contentType, "application/json") {
 		return nil
@@ -21,27 +23,27 @@ func convData(body []byte, res *http.Response) map[string]any {
 	var data map[string]any
 	err := json.Unmarshal(body, &data)
 	if err != nil {
-		log.Printf("JSON decoding error: %v", err.Error())
+		c.log.Error("JSON decoding error", zap.Error(err))
 	}
 	return data
 }
 
-func extBody(resBody io.ReadCloser) []byte {
+func (c *HTTPClient) extBody(resBody io.ReadCloser) []byte {
 	body, err := io.ReadAll(resBody)
 	if err != nil {
-		log.Printf("Body reading error: %v", err.Error())
+		c.log.Error("Body reading error", zap.Error(err))
 		return nil
 	}
 	return body
 }
 
-func prepareBody(body any) (io.Reader, error) {
+func (c *HTTPClient) prepareBody(body any) (io.Reader, error) {
 	var bodyReader io.Reader
 
 	if body != nil {
 		jsonBytes, err := json.Marshal(body)
 		if err != nil {
-			log.Printf("Marshal body error: %v", err)
+			c.log.Error("Marshal body error", zap.Error(err))
 			return nil, err
 		}
 		bodyReader = bytes.NewReader(jsonBytes)
@@ -49,16 +51,16 @@ func prepareBody(body any) (io.Reader, error) {
 	return bodyReader, nil
 }
 
-func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
-	bodyReader, err := prepareBody(cfg.Body)
+func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
+	bodyReader, err := c.prepareBody(cfg.Body)
 	if err != nil {
-		log.Printf("Prepare body err: %v", err)
+		c.log.Error("Prepare body err", zap.Error(err))
 		return nil, err
 	}
 
 	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
 	if err != nil {
-		log.Printf("Create request error: %v", err)
+		c.log.Error("Create request error", zap.Error(err))
 		return nil, err
 	}
 
@@ -69,15 +71,34 @@ func prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
 	return req, nil
 }
 
-func clientDo(req *http.Request, ic bool) (*http.Response, error) {
-	if !ic {
-		return http.DefaultClient.Do(req)
+func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
+	cl := &http.Client{}
+	if c.jar == nil {
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			c.log.Warn("Create cookie jar error. Cookie's will be ignored",
+				zap.Error(err))
+		}
+		c.jar = jar
+	}
+	cl.Jar = c.jar
+
+	if c.ic {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		cl.Transport = tr
 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	res, err := cl.Do(req)
+	if err != nil {
+		c.log.Error("Do request error", zap.Error(err))
+		return nil, err
+	}
+	cookies := res.Cookies()
+	if len(cookies) > 0 {
+		c.cookies[req.URL.Host] = append(c.cookies[req.URL.Host], cookies...)
 	}
 
-	cl := &http.Client{Transport: tr}
-	return cl.Do(req)
+	return res, nil
 }

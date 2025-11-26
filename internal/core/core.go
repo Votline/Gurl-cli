@@ -17,6 +17,7 @@ type core struct{
 	ic bool
 
 	parser *config.Parser
+	client *transport.HTTPClient
 }
 
 func prettyPrint(data any, indent string) {
@@ -47,13 +48,13 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 	var res transport.Result
 	switch cfg.Method {
 	case "GET":
-		res, err = transport.Get(cfg, c.ic)
+		res, err = c.client.Get(cfg)
 	case "POST":
-		res, err = transport.Post(cfg, c.ic)
+		res, err = c.client.Post(cfg)
 	case "PUT":
-		res, err = transport.Put(cfg, c.ic)
+		res, err = c.client.Put(cfg)
 	case "DELETE":
-		res, err = transport.Del(cfg, c.ic)
+		res, err = c.client.Del(cfg)
 	}
 	if err != nil {
 		c.log.Fatal("Make http request error",
@@ -119,12 +120,13 @@ func (c *core) handleRequest() {
 	}
 }
 
-func Start(cfgType, cfgPath string, cfgCreate, ic bool, log *zap.Logger) {
+func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.Logger) {
 	c := &core{
 		log: log,
 		cfgPath: cfgPath,
 		ic: ic,
 		parser: config.NewParser(log),
+		client: transport.NewClient(ic, ckPath, log),
 	}
 	if !cfgCreate {
 		switch cfgType {

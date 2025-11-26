@@ -1,91 +1,84 @@
 package transport
 
 import (
-	"log"
-	"net/http"
+	"go.uber.org/zap"
 
 	"Gurl-cli/internal/config"
 )
 
-type Result struct {
-	Raw *http.Response
-	RawBody []byte
-	JSON map[string]any
-}
-
-func Get(cfg *config.HTTPConfig, ic bool) (Result, error) {
-	req, err := prepareRequest(cfg)
+func (c *HTTPClient) Get(cfg *config.HTTPConfig) (Result, error) {
+	req, err := c.prepareRequest(cfg)
 	if err != nil {
-		log.Printf("Prepare request error: %v", err)
+		c.log.Error("Prepare request error", zap.Error(err))
 		return Result{}, err
 	}
 
-	res, err := clientDo(req, ic)
+	res, err := c.clientDo(req)
 	if err != nil {
-		log.Printf("Couldn't get response: %v", err)
+		c.log.Error("Couldn't get response", zap.Error(err))
 		return Result{}, err
 	}
 	defer res.Body.Close()
 
-	body := extBody(res.Body)
-	data := convData(body, res)
+	body := c.extBody(res.Body)
+	data := c.convData(body, res)
 
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Post(cfg *config.HTTPConfig, ic bool) (Result, error) {
-	req, err := prepareRequest(cfg)
+func (c *HTTPClient) Post(cfg *config.HTTPConfig) (Result, error) {
+	req, err := c.prepareRequest(cfg)
 	if err != nil {
-		log.Printf("Prepare request error: %v", err)
+		c.log.Error("Prepare request error", zap.Error(err))
 		return Result{}, err
 	}
 
-	res, err := clientDo(req, ic)
+	res, err := c.clientDo(req)
 	if err != nil {
-		log.Printf("Couldn't get response: %v", err)
+		c.log.Error("Couldn't get response", zap.Error(err))
 		return Result{}, err
 	}
 	defer res.Body.Close()
 
-	body := extBody(res.Body)
-	data := convData(body, res)
+	body := c.extBody(res.Body)
+	data := c.convData(body, res)
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Put(cfg *config.HTTPConfig, ic bool) (Result, error) {
-	req, err := prepareRequest(cfg)
+func (c *HTTPClient) Put(cfg *config.HTTPConfig) (Result, error) {
+	req, err := c.prepareRequest(cfg)
 	if err != nil {
-		log.Printf("Prepare request error: %v", err)
+		c.log.Error("Prepare request error", zap.Error(err))
 		return Result{}, err
 	}
 	
-	res, err := clientDo(req, ic)
+	res, err := c.clientDo(req)
 	if err != nil {
-		log.Printf("Couldn't get response: %v", err)
+		c.log.Error("Couldn't get response", zap.Error(err))
 		return Result{}, err
 	}
 	defer res.Body.Close()
 
-	body := extBody(res.Body)
-	data := convData(body, res)
+	body := c.extBody(res.Body)
+	data := c.convData(body, res)
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
 
-func Del(cfg *config.HTTPConfig, ic bool) (Result, error) {
-	req, err := prepareRequest(cfg)
+func (c *HTTPClient) Del(cfg *config.HTTPConfig) (Result, error) {
+	req, err := c.prepareRequest(cfg)
 	if err != nil {
-		log.Printf("Prepare request error: %v", err)
+		c.log.Error("Prepare request error", zap.Error(err))
 		return Result{}, err
 	}
 
-	res, err := clientDo(req, ic)
+	res, err := c.clientDo(req)
 	if err != nil {
-		log.Printf("Couldn't get response: %v", err)
+		c.log.Error("Couldn't get response", zap.Error(err))
 		return Result{}, err
 	}
 	defer res.Body.Close()
 
-	body := extBody(res.Body)
-	data := convData(body, res)
+	body := c.extBody(res.Body)
+	data := c.convData(body, res)
 	return Result{Raw: res, RawBody: body, JSON: data}, nil
 }
