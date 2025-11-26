@@ -1,15 +1,18 @@
 package main
 
 import (
-	"flag"
-	"log"
 	"os"
+	"flag"
+
+	"go.uber.org/zap"
 
 	"Gurl-cli/internal/core"
 )
 
+
+
 func main() {
-	log.SetFlags(log.Lshortfile)
+	log, _ := zap.NewDevelopment()
 
 	var cfgCreate bool
 	flag.BoolVar(&cfgCreate, "config-create", false, "Creates a configuration file (.json). Default for HTTP requests")
@@ -25,5 +28,5 @@ func main() {
 
 	flag.Parse()
 
-	core.HandleFlags(*cfgType, *cfgPath, cfgCreate, ignoreCert)
+	core.Start(*cfgType, *cfgPath, cfgCreate, ignoreCert, log)
 }

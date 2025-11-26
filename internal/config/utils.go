@@ -2,11 +2,11 @@ package config
 
 import (
 	"os"
-	"fmt"
-	"log"
 	"errors"
 	"encoding/json"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 func findConfigPath(userPath string) (string, error) {
@@ -24,13 +24,14 @@ func findConfigPath(userPath string) (string, error) {
 	return "", errors.New("config not found in:\n" + msg)
 }
 
-func parseTypedConfig(rawCfg []byte) (Config, error) {
+func (p *Parser) parseTypedConfig(rawCfg []byte) (Config, error) {
 	var head struct {
 		Type string `json:"type"`
 	}
 	if err := json.Unmarshal(rawCfg, &head); err != nil {
-		log.Printf("Error unmarshalling config: %v\nSource: %v",
-			err, string(rawCfg))
+		p.log.Error("Unmarshalling config error",
+			zap.String("source", string(rawCfg)),
+			zap.Error(err))
 		return nil, err
 	}
 
@@ -43,27 +44,29 @@ func parseTypedConfig(rawCfg []byte) (Config, error) {
 	case "repeated":
 		c = &RepeatedConfig{}
 	default:
-		log.Printf("Invalid config type: %v", head.Type)
+		p.log.Warn("Invalid config type", zap.String("type", head.Type))
 		return nil, errors.New("Invalid config type")
 	}
 
 	if err := json.Unmarshal(rawCfg, c); err != nil {
-		log.Printf("Error unmarshalling config into result: %v\nSource: %v", err, string(rawCfg))
+		p.log.Error("Unmarshalling config error",
+			zap.String("source", string(rawCfg)),
+			zap.Error(err))
 		return nil, errors.New("Unmarshling config error")
 	}
 	return c, nil
 }
 
-func Decode(cfgPath string) ([]Config, error) {
+func (p *Parser) Decode(cfgPath string) ([]Config, error) {
 	path, err := findConfigPath(cfgPath)
 	if err != nil {
-		log.Printf("FindConfigPath error: %v", err)
+		p.log.Error("Couldn't find config path error", zap.Error(err))
 		return nil, err
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		log.Printf("ReadFile error: %v", err)
+		p.log.Error("ReadFile error", zap.Error(err))
 		return nil, err
 	}
 	
@@ -71,28 +74,29 @@ func Decode(cfgPath string) ([]Config, error) {
 	if err := json.Unmarshal(data, &rawConfigs); err == nil {
 		configs := make([]Config, len(rawConfigs))
 		for i, rawCfg := range rawConfigs {
-			cfg, err := parseTypedConfig(rawCfg)
+			cfg, err := p.parseTypedConfig(rawCfg)
 			if err != nil {
-				log.Printf("ParseTypedConfig multi error: %v", err)
-				return nil, fmt.Errorf("config: %d: %v", i, err)
+				p.log.Error("ParseTypedConfig multi error", zap.Error(err))
+
+				return nil, err
 			}
 			configs[i] = cfg
 		}
 		return configs, nil
 	}
 	
-	cfg, err := parseTypedConfig(data)
+	cfg, err := p.parseTypedConfig(data)
 	if err != nil {
-		log.Printf("ParseTypedConfig solo error: %v", err)
+		p.log.Error("Parse one config error", zap.Error(err))
 		return nil, err
 	}
 	return []Config{cfg}, nil
 }
 
-func ConfigUpd[T Config](parsed T, cfgPath string) error {
-	cfgs, err := Decode(cfgPath)
+func (p *Parser) ConfigUpd(parsed Config, cfgPath string) error {
+	cfgs, err := p.Decode(cfgPath)
 	if err != nil {
-		log.Printf("Decode config error: %v", err)
+		p.log.Error("Decode config error",zap.Error(err))
 		return err
 	}
 
@@ -106,13 +110,13 @@ func ConfigUpd[T Config](parsed T, cfgPath string) error {
 
 	jsonData, err := json.MarshalIndent(cfgs, "", "    ")
 	if err != nil {
-		log.Printf("Error MarshalIndent config: %v", err)
+		p.log.Error("Error MarshalIndent config", zap.Error(err))
 		return err
 	}
 
 	err = os.WriteFile(cfgPath, jsonData, 0666)
 	if err != nil {
-		log.Printf("WriteFile error: %v", err)
+		p.log.Error("WriteFile error", zap.Error(err))
 		return err
 	}
 

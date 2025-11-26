@@ -6,20 +6,19 @@ import (
 	"bytes"
 	"strings"
 	"net/http"
-	"io/ioutil"
 	"crypto/tls"
 	"encoding/json"
 
 	"Gurl-cli/internal/config"
 )
 
-func convData(body []byte, res *http.Response) map[string]interface{} {
+func convData(body []byte, res *http.Response) map[string]any {
 	contentType := res.Header.Get("Content-Type")
 	if !strings.Contains(contentType, "application/json") {
 		return nil
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	err := json.Unmarshal(body, &data)
 	if err != nil {
 		log.Printf("JSON decoding error: %v", err.Error())
@@ -28,7 +27,7 @@ func convData(body []byte, res *http.Response) map[string]interface{} {
 }
 
 func extBody(resBody io.ReadCloser) []byte {
-	body, err := ioutil.ReadAll(resBody)
+	body, err := io.ReadAll(resBody)
 	if err != nil {
 		log.Printf("Body reading error: %v", err.Error())
 		return nil
@@ -36,7 +35,7 @@ func extBody(resBody io.ReadCloser) []byte {
 	return body
 }
 
-func prepareBody(body interface{}) (io.Reader, error) {
+func prepareBody(body any) (io.Reader, error) {
 	var bodyReader io.Reader
 
 	if body != nil {

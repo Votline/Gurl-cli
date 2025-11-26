@@ -1,6 +1,17 @@
 package config
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"go.uber.org/zap"
+)
+
+type Parser struct{
+	log *zap.Logger
+}
+func NewParser(log *zap.Logger) *Parser {
+	return &Parser{log: log}
+}
 
 type Config interface {
 	GetID() string

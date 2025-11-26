@@ -1,30 +1,33 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"sync"
+	"maps"
 	"time"
 	"bytes"
 	"errors"
 	"strings"
 	"strconv"
 	"encoding/json"
+
+	"go.uber.org/zap"
 )
 
 var instructions = map[string]int{
 	"RESPONSE": 3,
 }
 
-func getNested(data interface{}, path string) (interface{}, bool) {
+func getNested(data any, path string) (any, bool) {
 	keys := strings.Split(path, ".")
-	var current interface{} = data
+	var current any = data
 	for _, key := range keys {
 		switch curr := current.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			val, ok := curr[key]
 			if !ok {return nil, false}
 			current = val
-		case []interface{}:
+		case []any:
 			idx, err := strconv.Atoi(key)
 			if err != nil || idx < 0 || idx >= len(curr) {
 				return nil, false
@@ -37,14 +40,15 @@ func getNested(data interface{}, path string) (interface{}, bool) {
 	return current, true
 }
 
-func handleJson(source, inst string) ([]byte, error) {
+func (p *Parser) handleJson(source, inst string) ([]byte, error) {
 	source = strings.Trim(source, `"`)
 	source = strings.TrimSpace(source)
 
-	var data map[string]interface{}
+	var data map[string]any
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
-		log.Printf("Error unmarshalling JSON from Response: %v\nSource: %v",
-			err, source)
+		p.log.Error("Unmarshalling JSON error",
+			zap.String("source", source),
+			zap.Error(err))
 		return nil, err
 	}
 
@@ -63,7 +67,7 @@ func handleJson(source, inst string) ([]byte, error) {
 	
 	res, err := json.Marshal(value)
 	if err != nil {
-		log.Printf("Error marshalling response: %v", err)
+		p.log.Error("Marshalling response error", zap.Error(err))
 		return nil, err
 	}
 	return res, nil
@@ -77,7 +81,7 @@ func handleString(source, inst string) ([]byte, error) {
 	return []byte(source), nil
 }
 
-func handleProcType(source, procType string) ([]byte, error) {
+func (p *Parser) handleProcType(source, procType string) ([]byte, error) {
 	if procType == "none" {
 		return []byte(removeJsonShit(source)), nil
 	}
@@ -85,7 +89,7 @@ func handleProcType(source, procType string) ([]byte, error) {
 		if !strings.HasPrefix(strings.TrimSpace(source), "{") {
 			return handleString(source, procType)
 		}
-		return handleJson(source, procType)
+		return p.handleJson(source, procType)
 	}
 	return []byte(source), nil
 }
@@ -154,8 +158,8 @@ func findIdx(data []byte) (startIdx, endIdx int) {
 	return
 }
 
-func parse[T Config](data []byte, cfgs []T) ([]byte, bool, T, error) {
-	var zero T
+func (p *Parser) parse(data []byte, cfgs []Config) ([]byte, bool, Config, error) {
+	var zero Config
 
 	startIdx, endIdx := findIdx(data)
 	if startIdx == -1 {
@@ -165,7 +169,7 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, bool, T, error) {
 	instType, idPart, procType, err := templateData(data, startIdx, endIdx)
 	if err != nil {return nil, false, zero, err}
 
-	var sourceCfg T
+	var sourceCfg Config
 	if !findSource(&sourceCfg, cfgs, idPart) {
 		return nil, false, zero, errors.New("Config not found. ID: " + idPart)
 	}
@@ -179,11 +183,11 @@ func parse[T Config](data []byte, cfgs []T) ([]byte, bool, T, error) {
 		return nil, false, zero, errors.New("Config response is nil")
 	}
 
-	newData, err := handleProcType(sourceResponse, procType)
+	newData, err := p.handleProcType(sourceResponse, procType)
 	if err != nil {return nil, false, zero, err}
 
-	log.Printf("PARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
-	log.Printf("PARSER: Extracted value: %s", string(newData))
+	fmt.Printf("\nPARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
+	fmt.Printf("\nPARSER: Extracted value: %s", string(newData))
 	
 	var result bytes.Buffer
 	result.Write(data[:startIdx-1])
@@ -203,9 +207,7 @@ func applyReplace[T Config](baseCfg T, repeatedCfg T) T {
 	if len(body) > 0 {
 		var bodyMap map[string]any
 		if err := json.Unmarshal(body, &bodyMap); err == nil {
-			for k, v := range replacements {
-				bodyMap[k] = v
-			}
+			maps.Copy(bodyMap, replacements)
 			newBody, _ := json.Marshal(bodyMap)
 			baseCfg.SetBody(newBody)
 		}
@@ -234,18 +236,17 @@ func applyReplace[T Config](baseCfg T, repeatedCfg T) T {
 	return baseCfg
 }
 
-func Parsing[T Config](cfg T, cfgs []T) (T, error) {
-	var zero T
+func (p *Parser) Parsing(cfg Config, cfgs []Config) (Config, error) {
+	var zero Config
 	var wg sync.WaitGroup
 	errChan := make(chan error, 3)
-
 
 	if cfg.GetType() == "repeated" {
 		id, err := strconv.Atoi(cfg.GetID())
 		if err != nil {return zero, err}
 		baseCfg := cfgs[id-1]
 		finalCfg := applyReplace(baseCfg, cfg)
-		return Parsing(finalCfg, cfgs)
+		return p.Parsing(finalCfg, cfgs)
 	}
 
 	wg.Add(1)
@@ -253,7 +254,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 		defer wg.Done()
 		for {
 			url := cfg.GetUrl()
-			newUrl, repeat, newCfg, err := parse([]byte(url), cfgs)
+			newUrl, repeat, newCfg, err := p.parse([]byte(url), cfgs)
 			if err != nil {
 				if err.Error() == "Parse is not needed" {
 					break
@@ -273,7 +274,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 			headers, err := cfg.GetHeaders()
 			if err != nil {errChan <- err; return}
 			if headers != nil {
-				newHeaders, _, _, err := parse(headers, cfgs)
+				newHeaders, _, _, err := p.parse(headers, cfgs)
 				if err != nil {
 					if err.Error() == "Parse is not needed" {
 						break
@@ -293,7 +294,7 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 		for {
 			body := cfg.GetBody()
 			if body != nil {
-				newBody, _, _, err := parse(body, cfgs)
+				newBody, _, _, err := p.parse(body, cfgs)
 				if err != nil {
 					if err.Error() == "Parse is not needed" {
 						break
@@ -311,10 +312,9 @@ func Parsing[T Config](cfg T, cfgs []T) (T, error) {
 
 	select{
 	case err := <-errChan:
-		log.Printf("Error in goroutines %v", err.Error())
+		p.log.Error("Error in goroutines", zap.Error(err))
 		return zero, err
 	default:
 		return cfg, nil
 	}
-
 }

@@ -10,7 +10,7 @@ import (
 type Result struct {
 	Raw *http.Response
 	RawBody []byte
-	JSON map[string]interface{}
+	JSON map[string]any
 }
 
 func Get(cfg *config.HTTPConfig, ic bool) (Result, error) {

@@ -1,123 +1,141 @@
 package core
 
 import (
-	"log"
+	"fmt"
 	"strconv"
+
+	"go.uber.org/zap"
 
 	"Gurl-cli/internal/config"
 	"Gurl-cli/internal/transport"
 	gen "Gurl-cli/internal/generate"
 )
 
-func prettyPrint[T any](data T, indent string) {
+type core struct{
+	log *zap.Logger
+	cfgPath string
+	ic bool
+
+	parser *config.Parser
+}
+
+func prettyPrint(data any, indent string) {
 	switch v := any(data).(type) {
-	case map[string]interface{}:
-		log.Println(indent+"[")
+	case map[string]any:
+		fmt.Println(indent+"[")
 		for key, val := range v {
 			switch valTyped := val.(type) {
-			case map[string]interface{}, []interface{}:
-				log.Printf("%s    %s:", indent, key)
+			case map[string]any, []any:
+				fmt.Printf("%s    %s:", indent, key)
 				prettyPrint(valTyped, indent + "    ")
 			default:
-				log.Printf("%s    %s: %v", indent, key, valTyped)
+				fmt.Printf("%s    %s: %v", indent, key, valTyped)
 			}
 		}
-		log.Println(indent+"]")
-	case []interface{}:
+		fmt.Println(indent+"]")
+	case []any:
 		for _, elem := range v {
 			prettyPrint(elem, indent+"    ")
 		}
 	default:
-		log.Printf("%s%v", indent, v)
+		fmt.Printf("%s%v", indent, v)
 	}
 }
 
-func handleHTTP(cfg *config.HTTPConfig, cfgPath string, ic bool) {
+func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 	var err error
 	var res transport.Result
 	switch cfg.Method {
 	case "GET":
-		res, err = transport.Get(cfg, ic)
+		res, err = transport.Get(cfg, c.ic)
 	case "POST":
-		res, err = transport.Post(cfg, ic)
+		res, err = transport.Post(cfg, c.ic)
 	case "PUT":
-		res, err = transport.Put(cfg, ic)
+		res, err = transport.Put(cfg, c.ic)
 	case "DELETE":
-		res, err = transport.Del(cfg, ic)
+		res, err = transport.Del(cfg, c.ic)
 	}
 	if err != nil {
-		log.Fatalf("Error when trying to make a %v request:\n%v", cfg.Method, err.Error())
+		c.log.Fatal("Make http request error",
+			zap.String("Method", cfg.Method),
+			zap.Error(err))
 	}
 
-	log.Println(res.Raw.Status)
+	fmt.Println(res.Raw.Status)
 	if res.JSON != nil {
 		prettyPrint(res.JSON, "    ")
 	} else if res.RawBody != nil {
-		log.Println(string(res.RawBody))
+		fmt.Println(string(res.RawBody))
 	} else {
-		log.Println("Empty response body")
+		fmt.Println("Empty response body")
 	}
 
 	cfg.SetResponse(string(res.RawBody))
-	config.ConfigUpd(cfg, cfgPath)
+	c.parser.ConfigUpd(cfg, c.cfgPath)
 }
 
-func handleGRPC(cfg *config.GRPCConfig, cfgPath string) {
+func (c *core) handleGRPC(cfg *config.GRPCConfig) {
 	res, err := transport.GRPC(cfg)
 	if err != nil {
-		log.Fatalf("Error when trying to make a gRPC request:\n%v", err)
+		c.log.Fatal("Make gRPC request error", zap.Error(err))
 	}
 
 	if res.JSON != nil {
 		prettyPrint(res.JSON, "    ")
 	} else if res.RawBody != nil {
-		log.Println(string(res.RawBody))
+		fmt.Println(string(res.RawBody))
 	} else {
-		log.Println("Empty resonse body")
+		fmt.Println("Empty response body")
 	}
 
 	cfg.SetResponse(string(res.RawBody))
-	config.ConfigUpd(cfg, cfgPath)
+	c.parser.ConfigUpd(cfg, c.cfgPath)
 }
 
-func handleRequest(cfgPath string, ic bool) {
-	cfgs, err := config.Decode(cfgPath)
+func (c *core) handleRequest() {
+	cfgs, err := c.parser.Decode(c.cfgPath)
 	if err != nil {
-		log.Fatalf("Error when trying to get the config:\n%v", err.Error())
+		c.log.Fatal("Error when trying to get the config", zap.Error(err))
 	}
 
-	for idx, c := range cfgs {
-		cfg, err := config.Parsing(c, cfgs)
+	for idx, cfg := range cfgs {
+		parsed, err := c.parser.Parsing(cfg, cfgs)
 		if err != nil {
-			log.Printf("Parse error: %v", err)
+			c.log.Error("Parse error", zap.Error(err))
 			continue
 		}
 		strIdx := strconv.Itoa(idx+1)
-		cfg.SetID(strIdx)
-		cfgs[idx] = cfg
+		parsed.SetID(strIdx)
+		cfgs[idx] = parsed
 
 		switch v := cfg.(type) {
 		case *config.HTTPConfig:
-			handleHTTP(v, cfgPath, ic)
+			c.handleHTTP(v)
 		case *config.GRPCConfig:
-			handleGRPC(v, cfgPath)
+			c.handleGRPC(v)
 		default:
-			log.Printf("Invalid config type %v", v)
+			c.log.Error("Invalid config type", zap.Any("type", v))
 		}
 	}
 }
 
-func HandleFlags(cfgType, cfgPath string, cfgCreate, ic bool) {
+func Start(cfgType, cfgPath string, cfgCreate, ic bool, log *zap.Logger) {
+	c := &core{
+		log: log,
+		cfgPath: cfgPath,
+		ic: ic,
+		parser: config.NewParser(log),
+	}
 	if !cfgCreate {
 		switch cfgType {
 		case "http", "grpc", "repeated":
-			handleRequest(cfgPath, ic)
+			c.handleRequest()
 			return
 		default:
-			log.Fatalf("Invalid config type: %s", cfgType)
+			log.Fatal("Invalid config type", zap.String("config type", cfgType))
 		}
 	}
 	if err := gen.InitConfig(cfgPath, cfgType); err != nil {
-		log.Fatalf("Generate config error: %v", err)
+		log.Fatal("Generate config error", zap.Error(err))
 	}
 }
