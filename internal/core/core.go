@@ -28,10 +28,10 @@ func prettyPrint(data any, indent string) {
 		for key, val := range v {
 			switch valTyped := val.(type) {
 			case map[string]any, []any:
-				fmt.Printf("%s    %s:", indent, key)
+				fmt.Printf("\n%s    %s:", indent, key)
 				prettyPrint(valTyped, indent + "    ")
 			default:
-				fmt.Printf("%s    %s: %v", indent, key, valTyped)
+				fmt.Printf("\n%s    %s: %v", indent, key, valTyped)
 			}
 		}
 		fmt.Println(indent+"]")
@@ -40,7 +40,7 @@ func prettyPrint(data any, indent string) {
 			prettyPrint(elem, indent+"    ")
 		}
 	default:
-		fmt.Printf("%s%v", indent, v)
+		fmt.Printf("\n%s%v", indent, v)
 	}
 }
 
@@ -112,13 +112,13 @@ func (c *core) handleRequest() {
 		parsed.SetID(strIdx)
 		cfgs[idx] = parsed
 
-		switch v := cfg.(type) {
+		switch v := parsed.(type) {
 		case *config.HTTPConfig:
 			c.handleHTTP(v)
 		case *config.GRPCConfig:
 			c.handleGRPC(v)
 		default:
-			c.log.Error("Invalid config type", zap.Any("type", v))
+			c.log.Error("Invalid config type", zap.Any("type", v.GetType()))
 		}
 	}
 }
