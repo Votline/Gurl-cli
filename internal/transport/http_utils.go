@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"crypto/tls"
 	"encoding/json"
-	"net/http/cookiejar"
 
 	"go.uber.org/zap"
 
@@ -73,15 +72,8 @@ func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, erro
 
 func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
 	cl := &http.Client{}
-	if c.jar == nil {
-		jar, err := cookiejar.New(nil)
-		if err != nil {
-			c.log.Warn("Create cookie jar error. Cookie's will be ignored",
-				zap.Error(err))
-		}
-		c.jar = jar
-	}
-	cl.Jar = c.jar
+	jar := c.CkCl.GetJar()
+	cl.Jar = jar
 
 	if c.ic {
 		tr := &http.Transport{
@@ -95,10 +87,24 @@ func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
 		c.log.Error("Do request error", zap.Error(err))
 		return nil, err
 	}
-	cookies := res.Cookies()
-	if len(cookies) > 0 {
-		c.cookies[req.URL.Host] = append(c.cookies[req.URL.Host], cookies...)
+	if c.CkCl != nil {
+		cookies := res.Cookies()
+		if len(cookies) > 0 {
+			ownCookies := c.CkCl.GetCookies()
+			for _, newCookie := range cookies {
+				found := false
+				for i, existsCookie := range ownCookies[req.URL.Host] {
+					if existsCookie.Name == newCookie.Name {
+						ownCookies[req.URL.Host][i] = newCookie
+						found = true
+						break
+					}
+				}
+				if !found {
+				ownCookies[req.URL.Host] = append(ownCookies[req.URL.Host], cookies...)
+				}
+			}
+		}
 	}
-
 	return res, nil
 }

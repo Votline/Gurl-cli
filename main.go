@@ -9,8 +9,6 @@ import (
 	"Gurl-cli/internal/core"
 )
 
-
-
 func main() {
 	log, _ := zap.NewDevelopment()
 
@@ -22,7 +20,7 @@ func main() {
 	flag.BoolVar(&ignoreCert, "ic", false, "Ignores site certificates (https)")
 
 	var cookiePath string
-	flag.StringVar(&cookiePath, "cookie", "", "Path for cookie.txt (it can be used for the following configuration. In-memory is used for the current configuration.)")
+	flag.StringVar(&cookiePath, "cookie", "", "cookie.txt path (it can be used for the following configuration. In-memory is used for the current configuration.)")
 
 	cfgType := flag.String("type", "http", "Sets the request type in the configuration file(type field in .json")
 

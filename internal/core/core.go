@@ -17,7 +17,7 @@ type core struct{
 	ic bool
 
 	parser *config.Parser
-	client *transport.HTTPClient
+	http *transport.HTTPClient
 }
 
 func prettyPrint(data any, indent string) {
@@ -48,13 +48,13 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 	var res transport.Result
 	switch cfg.Method {
 	case "GET":
-		res, err = c.client.Get(cfg)
+		res, err = c.http.Get(cfg)
 	case "POST":
-		res, err = c.client.Post(cfg)
+		res, err = c.http.Post(cfg)
 	case "PUT":
-		res, err = c.client.Put(cfg)
+		res, err = c.http.Put(cfg)
 	case "DELETE":
-		res, err = c.client.Del(cfg)
+		res, err = c.http.Del(cfg)
 	}
 	if err != nil {
 		c.log.Fatal("Make http request error",
@@ -126,7 +126,7 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 		cfgPath: cfgPath,
 		ic: ic,
 		parser: config.NewParser(log),
-		client: transport.NewClient(ic, ckPath, log),
+		http: transport.NewHTTP(ic, ckPath, log),
 	}
 	if !cfgCreate {
 		switch cfgType {
@@ -140,4 +140,6 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 	if err := gen.InitConfig(cfgPath, cfgType); err != nil {
 		log.Fatal("Generate config error", zap.Error(err))
 	}
+
+	c.http.CkCl.SaveCookies()
 }
