@@ -2,14 +2,15 @@ package generate
 
 import (
 	"os"
-	"log"
 	"path/filepath"
 	"encoding/json"
+	
+	"go.uber.org/zap"
 
 	"Gurl-cli/internal/config"
 )
 
-func InitConfig(path, cfgType string) error {
+func InitConfig(path, cfgType string, log *zap.Logger) error {
 	var cfg any
 	switch cfgType {
 	case "grpc":
@@ -22,7 +23,7 @@ func InitConfig(path, cfgType string) error {
 
 	json, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
-		log.Printf("Couldn't marshal config: %v", err)
+		log.Error("Couldn't marshal config", zap.Error(err))
 		return err
 	}
 
@@ -36,12 +37,12 @@ func InitConfig(path, cfgType string) error {
 
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Printf("Couldn't create a directory: %v", err)
+		log.Error("Couldn't create a directory", zap.Error(err))
 		return err
 	}
 
 	if err := os.WriteFile(path, json, 0644); err != nil {
-		log.Printf("Couldn't create a file: %v", err)
+		log.Error("Couldn't create a file", zap.Error(err))
 		return err
 	}
 

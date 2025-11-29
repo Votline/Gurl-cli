@@ -18,6 +18,7 @@ type core struct{
 
 	parser *config.Parser
 	http *transport.HTTPClient
+	grpc *transport.GRPCClient
 }
 
 func prettyPrint(data any, indent string) {
@@ -57,9 +58,10 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 		res, err = c.http.Del(cfg)
 	}
 	if err != nil {
-		c.log.Fatal("Make http request error",
+		c.log.Error("Make http request error",
 			zap.String("Method", cfg.Method),
 			zap.Error(err))
+		return
 	}
 
 	fmt.Println(res.Raw.Status)
@@ -76,9 +78,10 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 }
 
 func (c *core) handleGRPC(cfg *config.GRPCConfig) {
-	res, err := transport.GRPC(cfg)
+	res, err := c.grpc.GRPC(cfg)
 	if err != nil {
-		c.log.Fatal("Make gRPC request error", zap.Error(err))
+		c.log.Error("Make gRPC request error", zap.Error(err))
+		return
 	}
 
 	if res.JSON != nil {
@@ -127,6 +130,7 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 		ic: ic,
 		parser: config.NewParser(log),
 		http: transport.NewHTTP(ic, ckPath, log),
+		grpc: transport.NewGRPC(log),
 	}
 	if !cfgCreate {
 		switch cfgType {
@@ -137,7 +141,7 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 			log.Fatal("Invalid config type", zap.String("config type", cfgType))
 		}
 	}
-	if err := gen.InitConfig(cfgPath, cfgType); err != nil {
+	if err := gen.InitConfig(cfgPath, cfgType, log); err != nil {
 		log.Fatal("Generate config error", zap.Error(err))
 	}
 

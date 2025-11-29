@@ -5,12 +5,20 @@ import (
 	"flag"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"Gurl-cli/internal/core"
 )
 
 func main() {
-	log, _ := zap.NewDevelopment()
+	cfg := zap.NewDevelopmentConfig()
+	cfg.Encoding = "console"
+	cfg.EncoderConfig.TimeKey = ""
+	cfg.EncoderConfig.EncodeLevel = func(l zapcore.Level, pae zapcore.PrimitiveArrayEncoder) {
+		pae.AppendString("\n" + l.CapitalString())
+	}
+	log, _ := cfg.Build()
+	defer log.Sync()
 
 	var cfgCreate bool
 	flag.BoolVar(&cfgCreate, "config-create", false, "Creates a configuration file (.json). Default for HTTP requests")
