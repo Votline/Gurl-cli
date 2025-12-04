@@ -91,8 +91,10 @@ func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
 		cookies := res.Cookies()
 		if len(cookies) > 0 {
 			ownCookies := c.CkCl.GetCookies()
+
 			for _, newCookie := range cookies {
 				found := false
+
 				for i, existsCookie := range ownCookies[req.URL.Host] {
 					if existsCookie.Name == newCookie.Name {
 						ownCookies[req.URL.Host][i] = newCookie
@@ -100,10 +102,13 @@ func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
 						break
 					}
 				}
+
 				if !found {
-				ownCookies[req.URL.Host] = append(ownCookies[req.URL.Host], cookies...)
+					ownCookies[req.URL.Host] = append(ownCookies[req.URL.Host], newCookie)
 				}
 			}
+			
+			c.CkCl.SetCookies(ownCookies)
 		}
 	}
 	return res, nil

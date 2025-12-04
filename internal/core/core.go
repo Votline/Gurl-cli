@@ -132,6 +132,9 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 		http: transport.NewHTTP(ic, ckPath, log),
 		grpc: transport.NewGRPC(log),
 	}
+	defer func(){
+		if ckPath != "" { c.http.CkCl.SaveCookies() }
+	}()
 	if !cfgCreate {
 		switch cfgType {
 		case "http", "grpc", "repeated":
@@ -145,5 +148,4 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 		log.Fatal("Generate config error", zap.Error(err))
 	}
 
-	c.http.CkCl.SaveCookies()
 }

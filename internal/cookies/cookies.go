@@ -17,15 +17,16 @@ type CookiesClient struct {
 	ckPath string
 }
 func NewClient(ckPath string, log *zap.Logger) *CookiesClient {
-	if ckPath == "" {
-		return nil
-	}
 	ckCl := CookiesClient{log: log, ckPath: ckPath}
-	ckCl.loadCookie()
+	if err := ckCl.loadCookie(); err != nil {
+		log.Error("Failed to load cookie", zap.Error(err))
+	}
 	return &ckCl
 }
 
 func (cc *CookiesClient) SaveCookies() error {
+	cc.log.Info("Saving cookies with", zap.Any("cookies", cc.cookies))
+
 	file, err := os.Create(cc.ckPath)
 	if err != nil {
 		cc.log.Error("Couldn't create file for cookies", zap.Error(err))
@@ -38,6 +39,8 @@ func (cc *CookiesClient) SaveCookies() error {
 }
 
 func (cc *CookiesClient) loadCookie() error {
+	if cc.ckPath == "" {return nil}
+
 	data, err := os.ReadFile(cc.ckPath)
 	if err != nil {
 		cc.log.Error("Couldn't load cookies file", zap.Error(err))
@@ -82,5 +85,11 @@ func (cc *CookiesClient) GetJar() http.CookieJar {
 	return cc.jar
 }
 func (cc *CookiesClient) GetCookies() map[string][]*http.Cookie {
+	if cc.cookies == nil {
+		cc.cookies = make(map[string][]*http.Cookie)
+	}
 	return cc.cookies
+}
+func (cc *CookiesClient) SetCookies(cks map[string][]*http.Cookie) {
+	cc.cookies = cks
 }
