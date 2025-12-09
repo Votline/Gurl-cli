@@ -133,7 +133,7 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 		grpc: transport.NewGRPC(log),
 	}
 	defer func(){
-		if ckPath != "" { c.http.CkCl.SaveCookies() }
+		if ckPath != "" && !cfgCreate { c.http.CkCl.SaveCookies() }
 	}()
 	if !cfgCreate {
 		switch cfgType {
@@ -147,5 +147,4 @@ func Start(cfgType, cfgPath string, cfgCreate, ic bool, ckPath string, log *zap.
 	if err := gen.InitConfig(cfgPath, cfgType, log); err != nil {
 		log.Fatal("Generate config error", zap.Error(err))
 	}
-
 }
