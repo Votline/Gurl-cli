@@ -1,9 +1,10 @@
 package config
 
 import (
-	"os"
-	"errors"
+	"bytes"
 	"encoding/json"
+	"errors"
+	"os"
 	"path/filepath"
 
 	"go.uber.org/zap"
@@ -22,6 +23,58 @@ func findConfigPath(userPath string) (string, error) {
 
 	msg := userPath + "\n" + possiblePath
 	return "", errors.New("config not found in:\n" + msg)
+}
+
+func makeJson(rawCfg []byte) ([]byte, error) {
+	idx := bytes.Index(rawCfg, []byte(`"body":`))
+	if idx == -1 {
+		return nil, errors.New("Couldn't find 'body' key")
+	}
+	idx += 7
+
+	for idx < len(rawCfg) && (rawCfg[idx] == ' ' || rawCfg[idx] == '\t' || rawCfg[idx] == '\n' || rawCfg[idx] == '\r') {
+		idx += 1
+	}
+
+	if idx >= len(rawCfg) {
+		return nil, errors.New("Start index bigger than length of config")
+	}
+
+	if rawCfg[idx] != '"' {
+		return nil, errors.New("Body value not in a quotes")
+	}
+
+	var value []byte
+	end := idx + 1
+
+	for end < len(rawCfg) && rawCfg[end] != '"' && rawCfg[end] != '\\' {
+		end += 1
+	}
+
+	if end >= len(rawCfg) {
+		return nil, errors.New("End index bigger than length of config")
+	}
+
+	value = rawCfg[idx+1:end]
+	newValue, err := json.Marshal(map[string]string{"field": string(value)})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(newValue) <= (end+1 - idx) {
+		copy(rawCfg[idx:end], newValue)
+		
+		for i := idx + len(newValue); i <= end; i++ {
+			rawCfg[i] = ' '
+		}
+		return rawCfg, nil
+	} else {
+		result := make([]byte, 0, len(rawCfg) + len(newValue) - (end-idx))
+		result = append(result, rawCfg[:idx]...)
+		result = append(result, newValue...)
+		result = append(result, rawCfg[end+1:]...)
+		return result, nil
+	}
 }
 
 func (p *Parser) parseTypedConfig(rawCfg []byte) (Config, error) {
@@ -52,7 +105,19 @@ func (p *Parser) parseTypedConfig(rawCfg []byte) (Config, error) {
 		p.log.Error("Unmarshalling config error",
 			zap.String("source", string(rawCfg)),
 			zap.Error(err))
-		return nil, errors.New("Unmarshling config error")
+		if cfg, err := makeJson(rawCfg); err != nil {
+			p.log.Error("Fallback make json error",
+				zap.String("make json response", string(cfg)),
+				zap.Error(err))
+			return nil, errors.New("Unmarshling config error")
+		} else {
+			if err := json.Unmarshal(cfg, c); err != nil {
+				p.log.Error("Fallback Unmarshling error",
+					zap.String("config", string(cfg)),
+					zap.Error(err))
+				return nil, errors.New("Unmarshling config error")
+			}
+		}
 	}
 	return c, nil
 }

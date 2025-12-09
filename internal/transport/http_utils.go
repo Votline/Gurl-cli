@@ -1,12 +1,13 @@
 package transport
 
 import (
-	"io"
 	"bytes"
-	"strings"
-	"net/http"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -36,25 +37,69 @@ func (c *HTTPClient) extBody(resBody io.ReadCloser) []byte {
 	return body
 }
 
-func (c *HTTPClient) prepareBody(body any) (io.Reader, error) {
+func (c *HTTPClient) prepareBody(body any, contentType string) (io.Reader, error) {
+	if body == nil {
+		return nil, nil
+	}
+
 	var bodyReader io.Reader
 
-	if body != nil {
+	if strings.Contains(strings.ToLower(contentType), "application/json") {
 		jsonBytes, err := json.Marshal(body)
 		if err != nil {
 			c.log.Error("Marshal body error", zap.Error(err))
 			return nil, err
 		}
 		bodyReader = bytes.NewReader(jsonBytes)
+		c.log.Debug("JSON body prepared", zap.ByteString("bytes", jsonBytes))
+	} else {
+		switch v := body.(type) {
+		case json.RawMessage:
+			c.log.Debug("RawMessage bytes", zap.ByteString("raw", v))
+			
+			var str string
+			if err := json.Unmarshal(v, &str); err != nil {
+				c.log.Error("Failed to unmarshal RawMessage", zap.Error(err))
+				return nil, err
+			}
+
+			bodyReader = strings.NewReader(str)
+			
+		case string:
+			bodyReader = strings.NewReader(v)
+		case []byte:
+			bodyReader = bytes.NewReader(v)
+		default:
+			str := fmt.Sprintf("%v", v)
+			bodyReader = strings.NewReader(str)
+		}
 	}
 	return bodyReader, nil
 }
 
+
 func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
-	bodyReader, err := c.prepareBody(cfg.Body)
+	contentType := "application/json"
+	if ct, ok := cfg.Headers["Content-Type"]; ok {
+		contentType = ct
+	}
+
+	bodyReader, err := c.prepareBody(cfg.Body, contentType)
 	if err != nil {
 		c.log.Error("Prepare body err", zap.Error(err))
 		return nil, err
+	}
+
+	var bodyBytes []byte
+	if bodyReader != nil {
+		bodyBytes, _ = io.ReadAll(bodyReader)
+		c.log.Debug("ACTUAL BODY TO SEND", 
+			zap.ByteString("bytes", bodyBytes),
+			zap.String("as_string", string(bodyBytes)),
+			zap.String("hex", fmt.Sprintf("%x", bodyBytes)),
+			zap.Int("length", len(bodyBytes)))
+		
+		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
 	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
@@ -66,6 +111,8 @@ func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, erro
 	for header, value := range cfg.Headers {
 		req.Header.Set(header, value)
 	}
+
+	c.log.Debug("Request headers", zap.Any("headers", req.Header))
 
 	return req, nil
 }
