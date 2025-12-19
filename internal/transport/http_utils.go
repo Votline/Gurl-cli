@@ -51,12 +51,10 @@ func (c *HTTPClient) prepareBody(body any, contentType string) (io.Reader, error
 			return nil, err
 		}
 		bodyReader = bytes.NewReader(jsonBytes)
-		c.log.Debug("JSON body prepared", zap.ByteString("bytes", jsonBytes))
 	} else {
 		switch v := body.(type) {
 		case json.RawMessage:
-			c.log.Debug("RawMessage bytes", zap.ByteString("raw", v))
-			
+
 			var str string
 			if err := json.Unmarshal(v, &str); err != nil {
 				c.log.Error("Failed to unmarshal RawMessage", zap.Error(err))
@@ -64,11 +62,6 @@ func (c *HTTPClient) prepareBody(body any, contentType string) (io.Reader, error
 			}
 
 			bodyReader = strings.NewReader(str)
-			
-		case string:
-			bodyReader = strings.NewReader(v)
-		case []byte:
-			bodyReader = bytes.NewReader(v)
 		default:
 			str := fmt.Sprintf("%v", v)
 			bodyReader = strings.NewReader(str)
@@ -93,12 +86,7 @@ func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, erro
 	var bodyBytes []byte
 	if bodyReader != nil {
 		bodyBytes, _ = io.ReadAll(bodyReader)
-		c.log.Debug("ACTUAL BODY TO SEND", 
-			zap.ByteString("bytes", bodyBytes),
-			zap.String("as_string", string(bodyBytes)),
-			zap.String("hex", fmt.Sprintf("%x", bodyBytes)),
-			zap.Int("length", len(bodyBytes)))
-		
+	
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
@@ -111,8 +99,6 @@ func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, erro
 	for header, value := range cfg.Headers {
 		req.Header.Set(header, value)
 	}
-
-	c.log.Debug("Request headers", zap.Any("headers", req.Header))
 
 	return req, nil
 }
@@ -135,28 +121,7 @@ func (c *HTTPClient) clientDo(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	if c.CkCl != nil {
-		cookies := res.Cookies()
-		if len(cookies) > 0 {
-			ownCookies := c.CkCl.GetCookies()
-
-			for _, newCookie := range cookies {
-				found := false
-
-				for i, existsCookie := range ownCookies[req.URL.Host] {
-					if existsCookie.Name == newCookie.Name {
-						ownCookies[req.URL.Host][i] = newCookie
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					ownCookies[req.URL.Host] = append(ownCookies[req.URL.Host], newCookie)
-				}
-			}
-			
-			c.CkCl.SetCookies(ownCookies)
-		}
+		c.CkCl.UpdateCookies(req.URL)
 	}
 	return res, nil
 }

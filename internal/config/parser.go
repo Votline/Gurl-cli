@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"sync"
 	"maps"
 	"time"
@@ -186,8 +185,9 @@ func (p *Parser) parse(data []byte, cfgs []Config) ([]byte, bool, Config, error)
 	newData, err := p.handleProcType(sourceResponse, procType)
 	if err != nil {return nil, false, zero, err}
 
-	fmt.Printf("\nPARSER: Found template: %s", string(data[startIdx-1:startIdx+endIdx+1]))
-	fmt.Printf("\nPARSER: Extracted value: %s", string(newData))
+	p.log.Debug("PARSER: Replaced template",
+		zap.String("template", string(data[startIdx-1:startIdx+endIdx+1])),
+		zap.String("extracted value", string(newData)))
 	
 	var result bytes.Buffer
 	result.Write(data[:startIdx-1])

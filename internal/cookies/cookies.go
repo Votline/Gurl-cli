@@ -68,19 +68,33 @@ func (cc *CookiesClient) loadedToJar() error {
 	}
 
 	for dom, ck := range cc.cookies {
-		url, err := url.Parse("https://"+dom)
-		if err != nil {
+		url, err := url.Parse("http://"+dom)
+		urls, err1 := url.Parse("https://"+dom)
+		if err != nil || err1 != nil {
 			continue
 		}
 		cc.jar.SetCookies(url, ck)
+		cc.jar.SetCookies(urls, ck)
 	}
 
 	return nil
 }
 
+func (cc *CookiesClient) UpdateCookies(u *url.URL) {
+	if cc.jar == nil || cc.cookies == nil { return }
+	cc.cookies[u.Host] = cc.jar.Cookies(u)
+}
+
 func (cc *CookiesClient) GetJar() http.CookieJar {
 	if cc == nil {
 		return nil
+	}
+	if cc.jar == nil {
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			cc.log.Error("Failed to create new jar", zap.Error(err))
+		}
+		cc.jar = jar
 	}
 	return cc.jar
 }
