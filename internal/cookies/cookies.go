@@ -98,6 +98,9 @@ func (cc *CookiesClient) GetJar() http.CookieJar {
 	}
 	return cc.jar
 }
+func (cc *CookiesClient) SetJar(jar http.CookieJar) {
+	cc.jar = jar
+}
 
 func (cc *CookiesClient) MarshalCookie(url string, cks []*http.Cookie) (json.RawMessage, error) {
 	newCks := map[string][]*http.Cookie{url: cks}

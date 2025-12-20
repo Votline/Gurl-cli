@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"strings"
 
 	"go.uber.org/zap"
@@ -35,6 +37,46 @@ func (c *HTTPClient) extBody(resBody io.ReadCloser) []byte {
 		return nil
 	}
 	return body
+}
+
+func (c *HTTPClient) prepareCookie(raw json.RawMessage) error {
+	if len(raw) == 0 {
+		return nil
+	}
+	var currentData []byte = raw
+	s := string(raw)
+
+	for strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
+		var unquoted string
+		if err := json.Unmarshal([]byte(s), &unquoted); err != nil {
+			s = s[1 : len(s)-1]
+		} else {
+			s = unquoted
+		}
+		s = strings.ReplaceAll(s, `\"`, `"`)
+	}
+	
+	currentData = []byte(s)
+	c.log.Debug("Final cookie string to unmarshal", zap.String("data", s))
+
+	cks := make(map[string][]*http.Cookie)
+	if err := json.Unmarshal(currentData, &cks); err != nil {
+		c.log.Error("Failed to unmarshal cookie structure", 
+			zap.String("final_data", string(currentData)), 
+			zap.Error(err))
+		return err
+	}
+	
+	jar, _ := cookiejar.New(nil)
+	for k, v := range cks {
+		u, err := url.Parse(k)
+		if err != nil {
+			continue
+		}
+		jar.SetCookies(u, v)
+	}
+	c.CkCl.SetJar(jar)
+	return nil
 }
 
 func (c *HTTPClient) prepareBody(body any, contentType string) (io.Reader, error) {
@@ -70,7 +112,6 @@ func (c *HTTPClient) prepareBody(body any, contentType string) (io.Reader, error
 	return bodyReader, nil
 }
 
-
 func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, error) {
 	contentType := "application/json"
 	if ct, ok := cfg.Headers["Content-Type"]; ok {
@@ -88,6 +129,11 @@ func (c *HTTPClient) prepareRequest(cfg *config.HTTPConfig) (*http.Request, erro
 		bodyBytes, _ = io.ReadAll(bodyReader)
 	
 		bodyReader = bytes.NewReader(bodyBytes)
+	}
+
+	if err := c.prepareCookie(cfg.GetCookies()); err != nil {
+		c.log.Error("Failed to set cookie, ignoring", zap.Error(err))
+		c.log.Debug("Cookies", zap.String("cookies", string(cfg.GetCookies())))
 	}
 
 	req, err := http.NewRequest(cfg.Method, cfg.Url, bodyReader)
