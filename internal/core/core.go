@@ -2,13 +2,14 @@ package core
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"go.uber.org/zap"
 
 	"Gurl-cli/internal/config"
-	"Gurl-cli/internal/transport"
 	gen "Gurl-cli/internal/generate"
+	"Gurl-cli/internal/transport"
 )
 
 type core struct{
@@ -74,6 +75,9 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 	}
 
 	cfg.SetResponse(string(res.RawBody))
+	cfg.SetCookies(map[string][]*http.Cookie{
+		res.URL.String(): res.Raw.Cookies(),
+	})
 	c.parser.ConfigUpd(cfg, c.cfgPath)
 }
 

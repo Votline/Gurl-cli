@@ -2,6 +2,7 @@ package transport
 
 import (
 	"net/http"
+	"net/url"
 
 	"go.uber.org/zap"
 
@@ -24,6 +25,7 @@ type Result struct {
 	Raw *http.Response
 	RawBody []byte
 	JSON map[string]any
+	URL *url.URL
 }
 
 type GRPCClient struct {

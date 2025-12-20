@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -32,6 +33,9 @@ type Config interface {
 	SetResponse(response string)
 
 	GetReplace() map[string]any
+
+	GetCookies() map[string][]*http.Cookie
+	SetCookies(map[string][]*http.Cookie)
 }
 
 type HTTPConfig struct {
@@ -42,6 +46,7 @@ type HTTPConfig struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     json.RawMessage   `json:"body,omitempty"`
 	Response string            `json:"response,omitempty"`
+	Cookies  map[string][]*http.Cookie `json:"cookies"`
 }
 
 func (h *HTTPConfig) Clone() Config {
@@ -90,6 +95,13 @@ func (h *HTTPConfig) SetResponse(response string) {
 
 func (h *HTTPConfig) GetReplace() map[string]any {
 	return nil
+}
+
+func (h *HTTPConfig) GetCookies() map[string][]*http.Cookie {
+	return h.Cookies
+}
+func (h *HTTPConfig) SetCookies(cks map[string][]*http.Cookie) {
+	h.Cookies = cks
 }
 
 type GRPCConfig struct {
@@ -146,6 +158,12 @@ func (g *GRPCConfig) GetReplace() map[string]any {
 	return nil
 }
 
+func (h *GRPCConfig) GetCookies() map[string][]*http.Cookie {
+	return nil
+}
+func (h *GRPCConfig) SetCookies(cks map[string][]*http.Cookie) {
+}
+
 type RepeatedConfig struct {
 	Type      string         `json:"type"`
 	RepID     string         `json:"repeated_id"`
@@ -194,3 +212,10 @@ func (r *RepeatedConfig) SetResponse(response string) {
 func (r *RepeatedConfig) GetReplace() map[string]any {
 	return r.Replace
 }
+
+func (h *RepeatedConfig) GetCookies() map[string][]*http.Cookie {
+	return nil
+}
+func (h *RepeatedConfig) SetCookies(cks map[string][]*http.Cookie) {
+}
+

@@ -23,7 +23,7 @@ func (c *HTTPClient) Get(cfg *config.HTTPConfig) (Result, error) {
 	body := c.extBody(res.Body)
 	data := c.convData(body, res)
 
-	return Result{Raw: res, RawBody: body, JSON: data}, nil
+	return Result{Raw: res, RawBody: body, JSON: data, URL: req.URL}, nil
 }
 
 func (c *HTTPClient) Post(cfg *config.HTTPConfig) (Result, error) {
@@ -42,7 +42,8 @@ func (c *HTTPClient) Post(cfg *config.HTTPConfig) (Result, error) {
 
 	body := c.extBody(res.Body)
 	data := c.convData(body, res)
-	return Result{Raw: res, RawBody: body, JSON: data}, nil
+
+	return Result{Raw: res, RawBody: body, JSON: data, URL: req.URL}, nil
 }
 
 func (c *HTTPClient) Put(cfg *config.HTTPConfig) (Result, error) {
@@ -61,7 +62,8 @@ func (c *HTTPClient) Put(cfg *config.HTTPConfig) (Result, error) {
 
 	body := c.extBody(res.Body)
 	data := c.convData(body, res)
-	return Result{Raw: res, RawBody: body, JSON: data}, nil
+
+	return Result{Raw: res, RawBody: body, JSON: data, URL: req.URL}, nil
 }
 
 func (c *HTTPClient) Del(cfg *config.HTTPConfig) (Result, error) {
@@ -80,5 +82,6 @@ func (c *HTTPClient) Del(cfg *config.HTTPConfig) (Result, error) {
 
 	body := c.extBody(res.Body)
 	data := c.convData(body, res)
-	return Result{Raw: res, RawBody: body, JSON: data}, nil
+
+	return Result{Raw: res, RawBody: body, JSON: data, URL: req.URL}, nil
 }
