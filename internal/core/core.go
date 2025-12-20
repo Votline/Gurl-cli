@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"go.uber.org/zap"
@@ -74,10 +73,14 @@ func (c *core) handleHTTP(cfg *config.HTTPConfig) {
 		fmt.Println("Empty response body")
 	}
 
+	newCks, err := c.http.CkCl.MarshalCookie(res.URL.String(), res.Raw.Cookies())
+	if err != nil {
+		c.log.Error("Failed to marshal cookies from response", zap.Error(err))
+		newCks = []byte("")
+	}
+
 	cfg.SetResponse(string(res.RawBody))
-	cfg.SetCookies(map[string][]*http.Cookie{
-		res.URL.String(): res.Raw.Cookies(),
-	})
+	cfg.SetCookies(newCks)
 	c.parser.ConfigUpd(cfg, c.cfgPath)
 }
 

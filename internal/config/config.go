@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -34,8 +33,8 @@ type Config interface {
 
 	GetReplace() map[string]any
 
-	GetCookies() map[string][]*http.Cookie
-	SetCookies(map[string][]*http.Cookie)
+	GetCookies() json.RawMessage
+	SetCookies(json.RawMessage)
 }
 
 type HTTPConfig struct {
@@ -46,7 +45,7 @@ type HTTPConfig struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     json.RawMessage   `json:"body,omitempty"`
 	Response string            `json:"response,omitempty"`
-	Cookies  map[string][]*http.Cookie `json:"cookies"`
+	Cookies  json.RawMessage `json:"cookies"`
 }
 
 func (h *HTTPConfig) Clone() Config {
@@ -97,10 +96,10 @@ func (h *HTTPConfig) GetReplace() map[string]any {
 	return nil
 }
 
-func (h *HTTPConfig) GetCookies() map[string][]*http.Cookie {
+func (h *HTTPConfig) GetCookies() json.RawMessage {
 	return h.Cookies
 }
-func (h *HTTPConfig) SetCookies(cks map[string][]*http.Cookie) {
+func (h *HTTPConfig) SetCookies(cks json.RawMessage) {
 	h.Cookies = cks
 }
 
@@ -158,10 +157,10 @@ func (g *GRPCConfig) GetReplace() map[string]any {
 	return nil
 }
 
-func (h *GRPCConfig) GetCookies() map[string][]*http.Cookie {
+func (h *GRPCConfig) GetCookies() json.RawMessage {
 	return nil
 }
-func (h *GRPCConfig) SetCookies(cks map[string][]*http.Cookie) {
+func (h *GRPCConfig) SetCookies(cks json.RawMessage) {
 }
 
 type RepeatedConfig struct {
@@ -213,9 +212,9 @@ func (r *RepeatedConfig) GetReplace() map[string]any {
 	return r.Replace
 }
 
-func (h *RepeatedConfig) GetCookies() map[string][]*http.Cookie {
+func (h *RepeatedConfig) GetCookies() json.RawMessage {
 	return nil
 }
-func (h *RepeatedConfig) SetCookies(cks map[string][]*http.Cookie) {
+func (h *RepeatedConfig) SetCookies(cks json.RawMessage) {
 }
 

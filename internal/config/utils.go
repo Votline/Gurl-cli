@@ -169,6 +169,7 @@ func (p *Parser) ConfigUpd(parsed Config, cfgPath string) error {
 	for _, c := range cfgs {
 		if c.GetID() == cfgID {
 			c.SetResponse(parsed.GetResponse())
+			c.SetCookies(parsed.GetCookies())
 			break
 		}
 	}

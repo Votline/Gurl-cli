@@ -98,6 +98,13 @@ func (cc *CookiesClient) GetJar() http.CookieJar {
 	}
 	return cc.jar
 }
+
+func (cc *CookiesClient) MarshalCookie(url string, cks []*http.Cookie) (json.RawMessage, error) {
+	newCks := map[string][]*http.Cookie{url: cks}
+	data, err := json.Marshal(newCks)
+	return json.RawMessage(data), err
+}
+
 func (cc *CookiesClient) GetCookies() map[string][]*http.Cookie {
 	if cc.cookies == nil {
 		cc.cookies = make(map[string][]*http.Cookie)
@@ -107,3 +114,5 @@ func (cc *CookiesClient) GetCookies() map[string][]*http.Cookie {
 func (cc *CookiesClient) SetCookies(cks map[string][]*http.Cookie) {
 	cc.cookies = cks
 }
+
+

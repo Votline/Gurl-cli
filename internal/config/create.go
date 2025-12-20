@@ -1,6 +1,8 @@
 package config
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func SetupHTTP() *HTTPConfig {
 	return &HTTPConfig{
@@ -14,6 +16,7 @@ func SetupHTTP() *HTTPConfig {
 		},
 		Body: json.RawMessage(`{}`),
 		Response: "-",
+		Cookies: json.RawMessage(`{}`),
 	}
 }
 

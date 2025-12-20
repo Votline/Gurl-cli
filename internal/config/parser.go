@@ -15,6 +15,7 @@ import (
 
 var instructions = map[string]int{
 	"RESPONSE": 3,
+	"COOKIES": 2,
 }
 
 func getNested(data any, path string) (any, bool) {
@@ -307,7 +308,12 @@ func (p *Parser) Parsing(cfg Config, cfgs []Config) (Config, error) {
 			time.Sleep(100*time.Millisecond)
 		}
 	}()
-
+/*
+	wg.Add(1)
+	go func(){
+		defer wg.Done()
+	}()
+*/
 	wg.Wait()
 
 	select{
