@@ -174,16 +174,19 @@ func (p *Parser) parse(data []byte, cfgs []Config) ([]byte, bool, Config, error)
 		return nil, false, zero, errors.New("Config not found. ID: " + idPart)
 	}
 
-	if instType == "REPEAT" {
-		return nil, true, sourceCfg, nil
+	var sourceData string
+	switch instType {
+	case "RESPONSE":
+		sourceData = sourceCfg.GetResponse()
+	case "COOKIES":
+		sourceData = string(sourceCfg.GetCookies())
 	}
 
-	sourceResponse := sourceCfg.GetResponse()
-	if sourceResponse == "" {
+	if sourceData == "" {
 		return nil, false, zero, errors.New("Config response is nil")
 	}
 
-	newData, err := p.handleProcType(sourceResponse, procType)
+	newData, err := p.handleProcType(sourceData, procType)
 	if err != nil {return nil, false, zero, err}
 
 	p.log.Debug("PARSER: Replaced template",
@@ -308,12 +311,27 @@ func (p *Parser) Parsing(cfg Config, cfgs []Config) (Config, error) {
 			time.Sleep(100*time.Millisecond)
 		}
 	}()
-/*
+
 	wg.Add(1)
 	go func(){
 		defer wg.Done()
+		for {
+			cks := cfg.GetCookies()
+			if cks != nil {
+				newCks, _, _, err := p.parse(cks, cfgs)
+				if err != nil {
+					if err.Error() == "Parse is not needed" {
+						break
+					} else {errChan <- err; return }
+				}
+				if newCks != nil {
+					cfg.SetCookies(newCks)
+				}
+			} else {break}
+			time.Sleep(100*time.Millisecond)
+		}
 	}()
-*/
+
 	wg.Wait()
 
 	select{
