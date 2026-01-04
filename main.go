@@ -2,52 +2,48 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"Gurl-cli/internal/core"
+	"gcli/internal/core"
 )
 
 func main() {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.Encoding = "console"
 	cfg.EncoderConfig.TimeKey = ""
-	cfg.EncoderConfig.EncodeLevel = func(l zapcore.Level, pae zapcore.PrimitiveArrayEncoder) {
-		pae.AppendString("\n" + l.CapitalString())
-	}
+	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.DisableStacktrace = true
+	cfg.EncoderConfig.ConsoleSeparator = " | "
+	lvl := zapcore.ErrorLevel
 
-	var cfgCreate bool
-	flag.BoolVar(&cfgCreate, "config-create", false, "Creates a configuration file (.json). Default for HTTP requests")
+	cfgCreate := flag.Bool("config-create", false, "Creates config by type. Defaul HTTP")
 
-	var ignoreCert bool
-	flag.BoolVar(&ignoreCert, "ignore-cert", false, "Ignores site certificates (https)")
-	flag.BoolVar(&ignoreCert, "ic", false, "Ignores site certificates (https)")
+	ignoreCert := flag.Bool("ignore-cert", false, "Ignores site certificates")
+	ignoreCert = flag.Bool("ic", false, "Ignores site certificates")
 
-	var cookiePath string
-	flag.StringVar(&cookiePath, "cookie", "", "cookie.txt path (it can be used for the following configuration. In-memory is used for the current configuration.)")
-
-	logLevel := flag.String("level", "info", "Log level (debug, info, warn, error, dpanic, panic, fatal)")
+	ckPath := flag.String("cookie", "", "cookie.txt path (it can be used for the following configuration. In-memory is used for the current configuration.)")
 
 	cfgType := flag.String("type", "http", "Sets the request type in the configuration file(type field in .json")
 
 	defPath, _ := os.Getwd()
-	cfgPath := flag.String("config", defPath, "Specifies the name and path for creating the configuration file")
+	cfgPath := flag.String("config", defPath, "Specifies the name and path for creating the config")
+
+	dbg := flag.Bool("debug", false, "Set debug log level")
 
 	flag.Parse()
 
-	parsedLevel := zapcore.InfoLevel
-	if lvl, err := zapcore.ParseLevel(*logLevel); err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid log level %q, defaulting to info\n", *logLevel)
-	} else {
-		parsedLevel = lvl
+	if *dbg {
+		lvl = zapcore.DebugLevel
 	}
-	cfg.Level = zap.NewAtomicLevelAt(parsedLevel)
-	
+	cfg.Level = zap.NewAtomicLevelAt(lvl)
+
 	log, _ := cfg.Build()
 	defer log.Sync()
 
-	core.Start(*cfgType, *cfgPath, cfgCreate, ignoreCert, cookiePath, log)
+	if err := core.Start(*cfgType, *cfgPath, *ckPath, *cfgCreate, *ignoreCert, log); err != nil {
+		log.Error("failed", zap.Error(err))
+	}
 }
