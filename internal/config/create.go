@@ -12,7 +12,7 @@ func Create(cType, cPath string) error {
 
 	var d []byte
 	var err error
-	switch cType{
+	switch cType {
 	case "http":
 		d, err = cHttp()
 	case "grpc":
@@ -22,7 +22,7 @@ func Create(cType, cPath string) error {
 	case "mixed":
 		d, err = cMix()
 	default:
-		return fmt.Errorf("%s: invalid config", op)
+		return fmt.Errorf("%s: undefined config", op)
 	}
 	if err != nil {
 		return fmt.Errorf("%s: create cfg: %w", op, err)
@@ -65,9 +65,13 @@ func cMix() ([]byte, error) {
 	grpcCfg.ID = 1
 
 	hData, err := gurlf.Marshal(httpCfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	gData, err := gurlf.Marshal(grpcCfg)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	return append(hData, gData...), nil
 }

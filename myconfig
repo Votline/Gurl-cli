@@ -1,0 +1,10 @@
+[grpc_config]
+type:grpc
+response:catatacarca
+id:0
+[\grpc_config]
+[repeat_config]
+type:repeat
+target_id:0
+[\repeat_config]
+
