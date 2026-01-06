@@ -1,10 +1,10 @@
-[grpc_config]
-type:grpc
-response:catatacarca
+[http_config]
 id:0
-[\grpc_config]
-[repeat_config]
-type:repeat
-target_id:0
-[\repeat_config]
+type:http
+response:
+[\http_config]
 
+[repeat_config]
+target:0
+type:repeat
+[\repeat_config]

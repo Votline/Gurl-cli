@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"bytes"
 	"fmt"
 	"gcli/internal/config"
+	"unsafe"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
@@ -16,20 +18,31 @@ func Parse(cPath string) ([]config.Config, error) {
 		return nil, fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
-	cfgs := make([]config.Config, len(sData))
-	for i, d := range sData {
-		b := config.BaseConfig{}
-		if err := gurlf.Unmarshal(d, &b); err != nil {
-			// <- log warn with string(d)
-			return nil, fmt.Errorf("%s: item №[%d]: invalid base: %w",
-				op, i, err)
+	cfgs, err := parseData(&sData)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return cfgs, nil
+}
+
+func parseData(sData *[]gscan.Data) ([]config.Config, error) {
+	const op = "parser.parseData"
+
+	cfgs := make([]config.Config, len(*sData))
+	for i, d := range *sData {
+		tp := fastExtractType(&d.RawData, &d.Entries)
+		if tp == "" {
+			return cfgs, fmt.Errorf("%s: no config type", op)
 		}
-		b.ID = i
-		cfg, err := handleType(&b, &d)
-		if err != nil {
+
+		var cfg config.Config
+		if err := handleType(&cfg, &tp, &d); err != nil {
 			return cfgs, fmt.Errorf("%s: cfg №[%d] failed: %w",
 				op, i, err)
 		}
+
+		cfg.SetID(i)
 		if err := resolveRepeat(i, &cfg, &cfgs); err != nil {
 			return cfgs, fmt.Errorf("%s: cfg №[%d] repeat failed: %w",
 				op, i, err)
@@ -41,26 +54,22 @@ func Parse(cPath string) ([]config.Config, error) {
 	return cfgs, nil
 }
 
-func handleType(b *config.BaseConfig, d *gscan.Data) (config.Config, error) {
+func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	const op = "parser.handleType"
 
-	var cfg config.Config
-	tp := b.Type
-	switch tp {
-	case "http":
-		cfg = &config.HTTPConfig{BaseConfig: *b}
-	case "grpc":
-		cfg = &config.GRPCConfig{BaseConfig: *b}
-	case "repeat":
-		cfg = &config.RepeatConfig{BaseConfig: *b}
+	switch *tp {
+	case "http": *c = &config.HTTPConfig{}
+	case "grpc": *c = &config.GRPCConfig{}
+	case "repeat": *c = &config.RepeatConfig{}
 	default:
-		return nil, fmt.Errorf("%s: undefined cfg type: %q", op, tp)
+		return fmt.Errorf("%s: undefined cfg type: %q", op, *tp)
 	}
 
-	if err := gurlf.Unmarshal(*d, cfg); err != nil {
-		return nil, fmt.Errorf("%s: type %q: %w", op, tp, err)
+	if err := gurlf.Unmarshal(*d, *c); err != nil {
+		return fmt.Errorf("%s: type %q: %w", op, *tp, err)
 	}
-	return cfg, nil
+
+	return nil
 }
 
 func resolveRepeat(i int, cfg *config.Config, cfgs *[]config.Config) error {
@@ -75,8 +84,21 @@ func resolveRepeat(i int, cfg *config.Config, cfgs *[]config.Config) error {
 		return fmt.Errorf("%s: idx: invalid repeat idx: %d", op, r.TargetID)
 	}
 
-	*cfg = (*cfgs)[r.TargetID].Clone()
+	(*cfg) = (*cfgs)[r.TargetID].Clone()
 	(*cfg).SetID(i)
 
 	return nil
+}
+
+func fastExtractType(raw *[]byte, ents *[]gscan.Entry) (string) {
+	for _, ent := range *ents {
+		if bytes.Equal( (*raw)[ent.KeyStart : ent.KeyEnd], []byte("type")) {
+			vS, vE := ent.ValStart, ent.ValEnd
+			tmp := (*raw)[vS:vE]
+			tp := unsafe.String(unsafe.SliceData(tmp), len(tmp))
+			return tp
+		}
+	}
+
+	return ""
 }

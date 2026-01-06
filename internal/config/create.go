@@ -48,14 +48,14 @@ func cGrpc() ([]byte, error) {
 	base.Type = "grpc"
 	base.Name = "grpc_config"
 	c := GRPCConfig{BaseConfig: *base}
-	return gurlf.Marshal(c)
+	return gurlf.Marshal(&c)
 }
 func cRepeat() ([]byte, error) {
 	base := defBase()
 	base.Type = "repeat"
 	base.Name = "repeat_config"
 	c := RepeatConfig{BaseConfig: *base}
-	return gurlf.Marshal(c)
+	return gurlf.Marshal(&c)
 }
 func cMix() ([]byte, error) {
 	base := defBase()
