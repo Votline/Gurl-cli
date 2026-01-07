@@ -11,27 +11,11 @@ import (
 func handleConfig(cPath, ckPath string) error {
 	const op = "core.handleConfig"
 
-	cfgs, err := parser.Parse(cPath)
-	if err != nil {
+	if err := parser.Parse(cPath, func(c config.Config) error {
+		fmt.Printf("%v", c)
+		return nil
+	}); err != nil {
 		return fmt.Errorf("%s: %q: %w", op, cPath, err)
-	}
-
-	for i, cfg := range cfgs {
-		if cfg == nil {
-			return fmt.Errorf("%s: cfg №[%d]: is nil", op, i)
-		}
-
-		fmt.Printf("%v", cfg)
-
-		switch v := cfg.(type) {
-		case *config.HTTPConfig:
-			continue
-		case *config.GRPCConfig:
-			continue
-		default:
-			return fmt.Errorf("%s: cfg №[%d]: undefined type: %T",
-				op, i, v)
-		}
 	}
 
 	return nil

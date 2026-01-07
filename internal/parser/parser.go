@@ -4,63 +4,114 @@ import (
 	"bytes"
 	"fmt"
 	"gcli/internal/config"
+	"strconv"
 	"unsafe"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
-func Parse(cPath string) ([]config.Config, error) {
+func Parse(cPath string, yield func(config.Config) error) error {
 	const op = "parser.Parse"
 
 	sData, err := gurlf.ScanFile(cPath)
 	if err != nil {
-		return nil, fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
+		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
-	cfgs, err := parseData(&sData)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	if err := parseStream(&sData, yield); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	return cfgs, nil
+	return nil
 }
 
-func parseData(sData *[]gscan.Data) ([]config.Config, error) {
+func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
 	const op = "parser.parseData"
+	n := len(*sData)
 
-	cfgs := make([]config.Config, len(*sData))
+	targets := make([]int, n)
+	needed := make([]uint64, (n/64)+1)
 	for i, d := range *sData {
-		tp := fastExtractType(&d.RawData, &d.Entries)
-		if tp == "" {
-			return cfgs, fmt.Errorf("%s: no config type", op)
+		tID, err := handleRepeat(&d)
+		if err != nil {
+			return fmt.Errorf("%s: check cfg №[%d] failed: %w", op, i, err)
 		}
-
-		var cfg config.Config
-		if err := handleType(&cfg, &tp, &d); err != nil {
-			return cfgs, fmt.Errorf("%s: cfg №[%d] failed: %w",
-				op, i, err)
+		targets[i] = tID
+		if tID != -1 && tID < n {
+			needed[tID/64] |= (1 << (tID % 64))
 		}
-
-		cfg.SetID(i)
-		if err := resolveRepeat(i, &cfg, &cfgs); err != nil {
-			return cfgs, fmt.Errorf("%s: cfg №[%d] repeat failed: %w",
-				op, i, err)
-		}
-
-		cfgs[i] = cfg
 	}
 
-	return cfgs, nil
+	cache := make(map[int]config.Config)
+	for i, d := range *sData {
+		var cfg config.Config
+
+		tID := targets[i]
+		if tID != -1 {
+			orig, ok := cache[tID]
+			if !ok {
+				return fmt.Errorf("%s: target id %d not found", op, i)
+			}
+			cfg = orig.Clone()
+		} else {
+			tp := fastExtract(&d.RawData, &d.Entries, []byte("type"))
+			if tp == "" {
+				return fmt.Errorf("%s: no config type", op)
+			} else {
+				if err := handleType(&cfg, &tp, &d); err != nil {
+					return fmt.Errorf("%s: cfg №[%d] failed: %w", op, i, err)
+				}
+			}
+		}
+		cfg.SetID(i)
+
+		if (needed[i/64] & (1 << (i % 64))) != 0 {
+			cache[i] = cfg.Clone()
+		}
+
+		if err := yield(cfg); err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	return nil
+}
+
+func handleRepeat(d *gscan.Data) (int, error) {
+	const op = "parser.handleRepeat"
+
+	tp := fastExtract(&d.RawData, &d.Entries, []byte("type"))
+	if tp == "" {
+		return -1, fmt.Errorf("%s: no config type", op)
+	}
+	if tp == "repeat" {
+		tID := fastExtract(&d.RawData, &d.Entries, []byte("target_id"))
+		if tID == "" {
+			return -1, fmt.Errorf("%s: no target id", op)
+		}
+
+		id, err := strconv.Atoi(tID)
+		if err != nil {
+			return -1, fmt.Errorf("%s: invalid target id: %w", op, err)
+		}
+
+		return id, nil
+	}
+
+	return -1, nil
 }
 
 func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	const op = "parser.handleType"
 
 	switch *tp {
-	case "http": *c = &config.HTTPConfig{}
-	case "grpc": *c = &config.GRPCConfig{}
-	case "repeat": *c = &config.RepeatConfig{}
+	case "http":
+		*c = &config.HTTPConfig{}
+	case "grpc":
+		*c = &config.GRPCConfig{}
+	case "repeat":
+		*c = &config.RepeatConfig{}
 	default:
 		return fmt.Errorf("%s: undefined cfg type: %q", op, *tp)
 	}
@@ -72,29 +123,13 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	return nil
 }
 
-func resolveRepeat(i int, cfg *config.Config, cfgs *[]config.Config) error {
-	const op = "parser.resolveRepeat"
-
-	r, ok := (*cfg).(*config.RepeatConfig)
-	if !ok {
-		return nil
-	}
-
-	if r.TargetID >= i || r.TargetID < 0 {
-		return fmt.Errorf("%s: idx: invalid repeat idx: %d", op, r.TargetID)
-	}
-
-	(*cfg) = (*cfgs)[r.TargetID].Clone()
-	(*cfg).SetID(i)
-
-	return nil
-}
-
-func fastExtractType(raw *[]byte, ents *[]gscan.Entry) (string) {
-	for _, ent := range *ents {
-		if bytes.Equal( (*raw)[ent.KeyStart : ent.KeyEnd], []byte("type")) {
+func fastExtract(raw *[]byte, ents *[]gscan.Entry, need []byte) string {
+	data := *raw
+	entries := *ents
+	for _, ent := range entries {
+		if bytes.Equal(data[ent.KeyStart:ent.KeyEnd], need) {
 			vS, vE := ent.ValStart, ent.ValEnd
-			tmp := (*raw)[vS:vE]
+			tmp := data[vS:vE]
 			tp := unsafe.String(unsafe.SliceData(tmp), len(tmp))
 			return tp
 		}

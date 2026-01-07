@@ -5,33 +5,41 @@ import (
 	"testing"
 
 	"github.com/Votline/Gurlf"
+	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
 var raw = []byte(`
 	[http_config]
-	id:15
+	id:0
 	type:http
 	resp:hello
 	[\http_config]`)
+var repRaw = append(raw, []byte(`
+		[rep]
+		target_id:0
+		type:repeat
+		[\rep]
+	`)...)
 
-func TestParseData(t *testing.T) {
-	d, _ := gurlf.Scan(raw)
 
-	cfgs, err := parseData(&d)
-	if err != nil {
+func yield(c config.Config) error { return nil }
+
+func TestParseStream(t *testing.T) {
+	d, _ := gurlf.Scan(repRaw)
+	if err := parseStream(&d, func(c config.Config) error {
+		if c.GetType() != "http" {
+			t.Errorf("expected %q, but got %q", "http", c.GetType())
+		}
+		return nil
+	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	if len(cfgs) != 1 {
-		t.Errorf("expected len 1 but got %d", len(cfgs))
-	}
 }
-func BenchmarkParseData(b *testing.B) {
+func BenchmarkParseStream(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
 	for b.Loop() {
-		_, err := parseData(&d)
-		if err != nil {
+		if err := parseStream(&d, yield); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -63,58 +71,58 @@ func BenchmarkHandleType(b *testing.B) {
 	}
 }
 
-func TestResolveRepeat(t *testing.T) {
-	repCfg := config.RepeatConfig{
-		BaseConfig: config.BaseConfig{
-			Name: "repeat_config", ID: 15, Type: "repeat"},
-		TargetID: 0,
+func TestHandleRepeat(t *testing.T) {
+	d, _ := gurlf.Scan(repRaw)
+
+	tests := []struct{
+		input *gscan.Data
+		expected int
+	}{
+		{&d[0], -1},
+		{&d[1], 0},
 	}
-	var cfg config.Config = &repCfg
-	cfgs := []config.Config{
-		&config.HTTPConfig{
-			BaseConfig: config.BaseConfig{
-				Name: "http_config",ID: 0, Type: "repeat"} },
-		cfg,
-	}
-	var i int = 1
-	
-	if err := resolveRepeat(i, &cfg, &cfgs); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+
+	for i, tt := range tests {
+		tID, err := handleRepeat(tt.input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tID != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
+		}
 	}
 }
-func BenchmarkResolveRepeat(b *testing.B) {
-	repCfg := config.RepeatConfig{
-		BaseConfig: config.BaseConfig{
-			Name: "repeat_config", ID: 15, Type: "repeat"},
-		TargetID: 0,
-	}
-	var cfg config.Config = &repCfg
-	cfgs := []config.Config{
-		&config.HTTPConfig{
-			BaseConfig: config.BaseConfig{
-				Name: "http_config",ID: 0, Type: "repeat"} },
-		cfg,
-	}
-	var i int = 1
-	
+func BenchmarkHandleRepeat(b *testing.B) {
+	d, _ := gurlf.Scan(repRaw)
+
 	for b.Loop() {
-		if err := resolveRepeat(i, &cfg, &cfgs); err != nil {
+		if _, err := handleRepeat(&d[0]); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
 }
 
 func TestFastExtractType(t *testing.T) {
+	tests := []struct{
+		input []byte
+		expected string
+	}{
+		{[]byte("type"), "http"},
+		{[]byte("id"), "0"},
+		{[]byte("resp"), "hello"},
+	}
 	d, _ := gurlf.Scan(raw)
 	
-	if tp := fastExtractType(&d[0].RawData, &d[0].Entries); tp != "http" {
-		t.Errorf("expected %q, but got %q", "http", tp)
+	for i, tt := range tests {
+		if tp := fastExtract(&d[0].RawData, &d[0].Entries, tt.input); tp != tt.expected {
+			t.Errorf("[%d]: expected %q, but got %q", i, tt.expected, tp)
+		}
 	}
 }
 func BenchmarkFastExtractType(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 	
 	for b.Loop() {
-		fastExtractType(&d[0].RawData, &d[0].Entries)
+		fastExtract(&d[0].RawData, &d[0].Entries, []byte("type"))
 	}
 }

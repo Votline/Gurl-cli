@@ -5,6 +5,6 @@ response:
 [\http_config]
 
 [repeat_config]
-target:0
+target_id:0
 type:repeat
 [\repeat_config]
