@@ -8,8 +8,10 @@ import (
 
 type ringBuffer struct {
 	wPos, rPos uint64
+	closed     uint32
 	buf        [64]config.Config
 }
+
 func NewRb() *ringBuffer {
 	return &ringBuffer{
 		wPos: 0,
@@ -38,6 +40,9 @@ func (b *ringBuffer) Read() config.Config {
 		r := atomic.LoadUint64(&b.rPos)
 
 		if r == w {
+			if b.IsClosed() {
+				return nil
+			}
 			runtime.Gosched()
 			continue
 		}
@@ -46,4 +51,11 @@ func (b *ringBuffer) Read() config.Config {
 		atomic.AddUint64(&b.rPos, 1)
 		return val
 	}
+}
+
+func (b *ringBuffer) Close() {
+	atomic.StoreUint32(&b.closed, 1)
+}
+func (b *ringBuffer) IsClosed() bool {
+	return atomic.LoadUint32(&b.closed) == 1
 }
