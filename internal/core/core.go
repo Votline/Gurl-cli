@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gcli/internal/config"
 	"gcli/internal/parser"
+	"gcli/internal/buffer"
 
 	"go.uber.org/zap"
 )
@@ -11,8 +12,9 @@ import (
 func handleConfig(cPath, ckPath string) error {
 	const op = "core.handleConfig"
 
+	rb := buffer.NewRb()
 	if err := parser.Parse(cPath, func(c config.Config) error {
-		fmt.Printf("%v", c)
+		rb.Write(c)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("%s: %q: %w", op, cPath, err)
