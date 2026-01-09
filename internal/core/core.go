@@ -13,7 +13,7 @@ import (
 func handleConfig(cPath, ckPath string) error {
 	const op = "core.handleConfig"
 
-	rb := buffer.NewRb()
+	rb := buffer.NewRb[config.Config]()
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
@@ -22,7 +22,8 @@ func handleConfig(cPath, ckPath string) error {
 			if cfg == nil {
 				return
 			}
-			fmt.Printf("%v", cfg)
+			fmt.Printf("%v\n", cfg)
+			cfg.Release()
 		}
 	})
 

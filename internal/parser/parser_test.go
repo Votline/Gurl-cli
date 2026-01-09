@@ -19,12 +19,13 @@ var repRaw = append(raw, []byte(`
 		target_id:0
 		type:repeat
 		[\rep]
-	`)...)
+`)...)
 
-
-func yield(c config.Config) error { return nil }
+func yield(c config.Config) error { c.Release(); return nil }
 
 func TestParseStream(t *testing.T) {
+
+	config.Init()
 	d, _ := gurlf.Scan(repRaw)
 	if err := parseStream(&d, func(c config.Config) error {
 		if c.GetType() != "http" {
@@ -50,6 +51,8 @@ func TestHandleType(t *testing.T) {
 		Name: "http_config", ID: 15, Type: "http"}
 	d, _ := gurlf.Scan(raw)
 
+	config.Init()
+
 	var cfg config.Config
 	if err := handleType(&cfg, &b.Type, &d[0]); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -62,20 +65,22 @@ func TestHandleType(t *testing.T) {
 func BenchmarkHandleType(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
+	config.Init()
 	var cfg config.Config
 	for b.Loop() {
 		var base config.BaseConfig = config.BaseConfig{Name: "http_config", ID: 15, Type: "http"}
 		if err := handleType(&cfg, &base.Type, &d[0]); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
+		cfg.Release()
 	}
 }
 
 func TestHandleRepeat(t *testing.T) {
 	d, _ := gurlf.Scan(repRaw)
 
-	tests := []struct{
-		input *gscan.Data
+	tests := []struct {
+		input    *gscan.Data
 		expected int
 	}{
 		{&d[0], -1},
@@ -103,8 +108,8 @@ func BenchmarkHandleRepeat(b *testing.B) {
 }
 
 func TestFastExtractType(t *testing.T) {
-	tests := []struct{
-		input []byte
+	tests := []struct {
+		input    []byte
 		expected string
 	}{
 		{[]byte("type"), "http"},
@@ -112,7 +117,7 @@ func TestFastExtractType(t *testing.T) {
 		{[]byte("resp"), "hello"},
 	}
 	d, _ := gurlf.Scan(raw)
-	
+
 	for i, tt := range tests {
 		if tp := fastExtract(&d[0].RawData, &d[0].Entries, tt.input); tp != tt.expected {
 			t.Errorf("[%d]: expected %q, but got %q", i, tt.expected, tp)
@@ -121,7 +126,7 @@ func TestFastExtractType(t *testing.T) {
 }
 func BenchmarkFastExtractType(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
-	
+
 	for b.Loop() {
 		fastExtract(&d[0].RawData, &d[0].Entries, []byte("type"))
 	}

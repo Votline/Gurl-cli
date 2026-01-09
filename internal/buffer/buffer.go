@@ -1,61 +1,76 @@
 package buffer
 
 import (
-	"gcli/internal/config"
 	"runtime"
 	"sync/atomic"
+	"time"
 )
 
-type ringBuffer struct {
+const bufSize uint64 = 10
+
+type ringBuffer[T any] struct {
 	wPos, rPos uint64
 	closed     uint32
-	buf        [64]config.Config
+	buf        [bufSize]T
 }
 
-func NewRb() *ringBuffer {
-	return &ringBuffer{
+func NewRb[T any]() *ringBuffer[T] {
+	return &ringBuffer[T]{
 		wPos: 0,
 		rPos: 0,
 	}
 }
 
-func (b *ringBuffer) Write(c config.Config) {
+func spin(idx *int) {
+	*idx++
+	if *idx < 10 {
+		runtime.Gosched()
+	} else {
+		time.Sleep(time.Millisecond)
+		*idx = 0
+	}
+}
+
+func (b *ringBuffer[T]) Write(val T) {
+	idx := 0
 	for {
 		w := atomic.LoadUint64(&b.wPos)
 		r := atomic.LoadUint64(&b.rPos)
 
-		if w+1-r > 64 {
-			runtime.Gosched()
+		if w-r >= bufSize {
+			spin(&idx)
 			continue
 		}
 
-		b.buf[w%64] = c
+		b.buf[w%bufSize] = val
 		atomic.AddUint64(&b.wPos, 1)
 		return
 	}
 }
-func (b *ringBuffer) Read() config.Config {
+func (b *ringBuffer[T]) Read() T {
+	var idx int = 0
 	for {
 		w := atomic.LoadUint64(&b.wPos)
 		r := atomic.LoadUint64(&b.rPos)
 
 		if r == w {
 			if b.IsClosed() {
-				return nil
+				var zero T
+				return zero
 			}
-			runtime.Gosched()
+			spin(&idx)
 			continue
 		}
 
-		val := b.buf[r%64]
+		val := b.buf[r%bufSize]
 		atomic.AddUint64(&b.rPos, 1)
 		return val
 	}
 }
 
-func (b *ringBuffer) Close() {
+func (b *ringBuffer[T]) Close() {
 	atomic.StoreUint32(&b.closed, 1)
 }
-func (b *ringBuffer) IsClosed() bool {
+func (b *ringBuffer[T]) IsClosed() bool {
 	return atomic.LoadUint32(&b.closed) == 1
 }

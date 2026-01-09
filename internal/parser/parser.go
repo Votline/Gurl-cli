@@ -14,6 +14,8 @@ import (
 func Parse(cPath string, yield func(config.Config) error) error {
 	const op = "parser.Parse"
 
+	config.Init()
+
 	sData, err := gurlf.ScanFile(cPath)
 	if err != nil {
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
@@ -27,7 +29,7 @@ func Parse(cPath string, yield func(config.Config) error) error {
 }
 
 func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
-	const op = "parser.parseData"
+	const op = "parser.parseStream"
 	n := len(*sData)
 
 	targets := make([]int, n)
@@ -51,7 +53,7 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
 		if tID != -1 {
 			orig, ok := cache[tID]
 			if !ok {
-				return fmt.Errorf("%s: target id %d not found", op, i)
+				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
 			cfg = orig.Clone()
 		} else {
@@ -107,11 +109,13 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 
 	switch *tp {
 	case "http":
-		*c = &config.HTTPConfig{}
+		obj, itab := config.GetHTTP()
+		*(*uintptr)(unsafe.Pointer(c)) = itab
+		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
 	case "grpc":
-		*c = &config.GRPCConfig{}
-	case "repeat":
-		*c = &config.RepeatConfig{}
+		obj, itab := config.GetGRPC()
+		*(*uintptr)(unsafe.Pointer(c)) = itab
+		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
 	default:
 		return fmt.Errorf("%s: undefined cfg type: %q", op, *tp)
 	}
