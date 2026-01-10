@@ -11,7 +11,7 @@ import (
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
-func Parse(cPath string, yield func(config.Config) error) error {
+func Parse(cPath string, yield func(config.Config)) error {
 	const op = "parser.Parse"
 
 	config.Init()
@@ -28,7 +28,7 @@ func Parse(cPath string, yield func(config.Config) error) error {
 	return nil
 }
 
-func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
+func parseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
 
@@ -57,7 +57,7 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
 			}
 			cfg = orig.Clone()
 		} else {
-			tp := fastExtract(&d.RawData, &d.Entries, []byte("type"))
+			tp := fastExtract(&d.RawData, &d.Entries, []byte("Type"))
 			if tp == "" {
 				return fmt.Errorf("%s: no config type", op)
 			} else {
@@ -72,9 +72,7 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
 			cache[i] = cfg.Clone()
 		}
 
-		if err := yield(cfg); err != nil {
-			return fmt.Errorf("%s: %w", op, err)
-		}
+		yield(cfg)
 	}
 
 	return nil
@@ -83,12 +81,12 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config) error) error {
 func handleRepeat(d *gscan.Data) (int, error) {
 	const op = "parser.handleRepeat"
 
-	tp := fastExtract(&d.RawData, &d.Entries, []byte("type"))
+	tp := fastExtract(&d.RawData, &d.Entries, []byte("Type"))
 	if tp == "" {
 		return -1, fmt.Errorf("%s: no config type", op)
 	}
 	if tp == "repeat" {
-		tID := fastExtract(&d.RawData, &d.Entries, []byte("target_id"))
+		tID := fastExtract(&d.RawData, &d.Entries, []byte("Target_ID"))
 		if tID == "" {
 			return -1, fmt.Errorf("%s: no target id", op)
 		}

@@ -1,28 +1,15 @@
-
 [http_config]
-id:0
-type:http
-response:hello my
+ID:       0
+Type:     http
+Url:      http://localhost:8443/
+Method:   GET
+Body:     `the body pattern`
+Headers:  `the headers pattern`
+Response: hello world
 [\http_config]
 
-[another config]
-id: 15
-type:grpc
-[\another config]
-
-[repeat_config]
-target_id:1
-type:repeat
-[\repeat_config]
-
-[http_config]
-id:2
-type:http
-response:hello my friend
-[\http_config]
-
-[repeat_config]
-target_id:3
-type:repeat
-[\repeat_config]
-
+[rep]
+ID:        1
+Type:      repeat
+Target_ID: 0
+[\rep]
