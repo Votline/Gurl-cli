@@ -2,19 +2,32 @@ package parser
 
 import (
 	"bytes"
-	"strings"
 )
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	for len(hdrs) != 0 {
 		kS := 0
+		for kS < len(hdrs) && isSpace(hdrs[kS]) {
+			kS++
+		}
 		kE := bytes.IndexByte(hdrs, ':')
-		if kE == -1 { return }
+		if kE == -1 {
+			return
+		}
 
-		vS := kE+1
-		vE := len(hdrs)-1
+		vS := kE + 1
+		for vS < len(hdrs) && isSpace(hdrs[vS]) {
+			vS++
+		}
+		vE := bytes.IndexByte(hdrs[vS:], '\n')
+		if vE == -1 {
+			vE = len(hdrs)
+		} else {
+			vE += vS
+		}
 
 		yield(hdrs[kS:kE], hdrs[vS:vE])
+		hdrs = hdrs[vE:]
 	}
 }
 
@@ -22,12 +35,13 @@ func ParseContentType(ct *string) {
 	s := *ct
 	start, end := 0, len(s)
 
-	for i := len(s)-1; i > 0; i-- {
+	for i := len(s) - 1; i > 0; i-- {
 		if s[i] == ';' {
 			end = i
 			break
 		}
 	}
+
 	for start < end && isSpace(s[start]) {
 		start++
 	}
@@ -38,10 +52,12 @@ func ParseContentType(ct *string) {
 
 	base := s[start:end]
 
-	if len(base) == len("application/json") {
-		if strings.EqualFold(base, "application/json") {
-			*ct = "application/json"
-			return
+	if len(base) == 16 {
+		for i := range len(base) {
+			if (base[i] | 0x20) == ("application/json"[i] | 0x20) {
+				*ct = "application/json"
+				return
+			}
 		}
 	}
 	*ct = ""

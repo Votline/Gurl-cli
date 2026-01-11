@@ -25,21 +25,27 @@ func Init(putRes func(*Result)) {
 	}
 }
 
-func DoHTTP(c *config.HTTPConfig, resObj *Result) (error) {
+func DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	const op = "transport.DoHTTP"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	req, err := prepareRequest(c, ctx)
-	if err != nil { return fmt.Errorf("%s: %w", op, err) }
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
 	res, err := clientDo(req, false)
-	if err != nil { return fmt.Errorf("%s: %w", op, err) }
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 	defer res.Body.Close()
 
 	resObj.Raw, resObj.IsJson, err = readBody(res.Body, res)
-	if err != nil { return fmt.Errorf("%s: %w", op, err) }
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
 	return nil
 }
@@ -47,7 +53,9 @@ func DoHTTP(c *config.HTTPConfig, resObj *Result) (error) {
 func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, error) {
 	const op = "transport.prepareRequest"
 
-	if c.Body == nil || c.Headers == nil { return nil, nil } //log warn
+	if c.Body == nil || c.Headers == nil {
+		return nil, nil
+	} //log warn
 
 	bRdr := bytes.NewReader(c.Body)
 
@@ -75,24 +83,30 @@ func clientDo(req *http.Request, ic bool) (*http.Response, error) {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
-	
+
 	return cl.Do(req)
 }
 
-func readBody (body io.ReadCloser, res *http.Response) ([]byte, bool, error) {
+func readBody(body io.ReadCloser, res *http.Response) ([]byte, bool, error) {
 	const op = "transport.readBody"
 
 	b, err := io.ReadAll(body)
 	if err != nil {
-		return nil, false, fmt.Errorf("%s: ")
+		return nil, false, fmt.Errorf("%s: read body: %w", op, err)
 	}
 
 	ct := res.Header.Get("Content-Type")
-	if len(ct) == 0 { ct = res.Header.Get("content-type") }
-	if len(ct) == 0 { return b, false, nil }
+	if len(ct) == 0 {
+		ct = res.Header.Get("content-type")
+	}
+	if len(ct) == 0 {
+		return b, false, nil
+	}
 
 	parser.ParseContentType(&ct)
-	if ct == "" { return b, false, nil }
+	if ct == "" {
+		return b, false, nil
+	}
 
 	return b, true, nil
 }

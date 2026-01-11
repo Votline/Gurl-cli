@@ -10,28 +10,27 @@ import (
 
 var raw = []byte(`
 	[http_config]
-	id:0
-	type:http
-	resp:hello
+	ID:0
+	Type:http
+	Response:hello
 	[\http_config]`)
 var repRaw = append(raw, []byte(`
 		[rep]
-		target_id:0
-		type:repeat
+		Target_ID:0
+		Type:repeat
 		[\rep]
 `)...)
 
-func yield(c config.Config) error { c.Release(); return nil }
+func yield(c config.Config) { c.Release() }
 
 func TestParseStream(t *testing.T) {
 
 	config.Init()
 	d, _ := gurlf.Scan(repRaw)
-	if err := parseStream(&d, func(c config.Config) error {
+	if err := parseStream(&d, func(c config.Config) {
 		if c.GetType() != "http" {
 			t.Errorf("expected %q, but got %q", "http", c.GetType())
 		}
-		return nil
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,9 +111,9 @@ func TestFastExtractType(t *testing.T) {
 		input    []byte
 		expected string
 	}{
-		{[]byte("type"), "http"},
-		{[]byte("id"), "0"},
-		{[]byte("resp"), "hello"},
+		{[]byte("Type"), "http"},
+		{[]byte("ID"), "0"},
+		{[]byte("Response"), "hello"},
 	}
 	d, _ := gurlf.Scan(raw)
 

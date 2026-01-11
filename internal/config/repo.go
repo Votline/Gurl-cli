@@ -91,7 +91,7 @@ type GRPCConfig struct {
 }
 
 func GetGRPC() (*GRPCConfig, uintptr) { return gBuf.Read(), gItab }
-func (c *GRPCConfig) Release() { *c = GRPCConfig{}; gBuf.Write(c) }
+func (c *GRPCConfig) Release()        { *c = GRPCConfig{}; gBuf.Write(c) }
 func (c *GRPCConfig) Clone() Config {
 	newCfg := gBuf.Read()
 	*newCfg = *c
