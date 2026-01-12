@@ -13,3 +13,14 @@ ID:        1
 Type:      repeat
 Target_ID: 0
 [\rep]
+
+[http_config]
+ID:       0
+Type:     http
+Url:      http://localhost:8443/api/users/reg
+Method:   POST
+Body:     {RESPONSE id=0 none}
+Headers:  `the headers pattern`
+Response: hello world
+[\http_config]
+

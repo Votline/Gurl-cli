@@ -18,6 +18,7 @@ var repRaw = append(raw, []byte(`
 		[rep]
 		Target_ID:0
 		Type:repeat
+		Response:something {RESPONSE id=0 json:token}
 		[\rep]
 `)...)
 
@@ -40,6 +41,74 @@ func BenchmarkParseStream(b *testing.B) {
 
 	for b.Loop() {
 		if err := parseStream(&d, yield); err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+func TestHandleRepeat(t *testing.T) {
+	d, _ := gurlf.Scan(repRaw)
+
+	tests := []struct {
+		input    *gscan.Data
+		expected int
+	}{
+		{&d[0], -1},
+		{&d[1], 0},
+	}
+
+	for i, tt := range tests {
+		tID, err := handleRepeat(tt.input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tID != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
+		}
+	}
+}
+func BenchmarkHandleRepeat(b *testing.B) {
+	d, _ := gurlf.Scan(repRaw)
+
+	for b.Loop() {
+		if _, err := handleRepeat(&d[0]); err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+func TestHandleInstructions(t *testing.T) {
+	d, _ := gurlf.Scan(repRaw)
+	
+	tests := []struct{
+		input   *gscan.Data
+		expected int
+	}{
+		{&d[0], -1},
+		{&d[1], 0},
+	}
+	insts := [][]byte{[]byte("RESPONSE id=")}
+	instsPos := make([]instruction, 0, len(d))
+	
+	for i, tt := range tests {
+		tID, err := handleInstructions(tt.input, &insts, instsPos)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tID != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
+		}
+	}
+}
+func BenchmarkHandleInstructions(b *testing.B) {
+	d, _ := gurlf.Scan(repRaw)
+	
+	insts := [][]byte{[]byte("RESPONSE id=")}
+	instsPos := make([]instruction, 0, len(d))
+
+	for b.Loop() {
+		instsPos = instsPos[:0]
+		if _, err := handleInstructions(&d[1], &insts, instsPos); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -75,37 +144,6 @@ func BenchmarkHandleType(b *testing.B) {
 	}
 }
 
-func TestHandleRepeat(t *testing.T) {
-	d, _ := gurlf.Scan(repRaw)
-
-	tests := []struct {
-		input    *gscan.Data
-		expected int
-	}{
-		{&d[0], -1},
-		{&d[1], 0},
-	}
-
-	for i, tt := range tests {
-		tID, err := handleRepeat(tt.input)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if tID != tt.expected {
-			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
-		}
-	}
-}
-func BenchmarkHandleRepeat(b *testing.B) {
-	d, _ := gurlf.Scan(repRaw)
-
-	for b.Loop() {
-		if _, err := handleRepeat(&d[0]); err != nil {
-			b.Fatalf("unexpected error: %v", err)
-		}
-	}
-}
-
 func TestFastExtractType(t *testing.T) {
 	tests := []struct {
 		input    []byte
@@ -128,5 +166,28 @@ func BenchmarkFastExtractType(b *testing.B) {
 
 	for b.Loop() {
 		fastExtract(&d[0].RawData, &d[0].Entries, []byte("type"))
+	}
+}
+
+func TestAtoi(t *testing.T) {
+	tests := []struct{
+		input []byte
+		expected int
+	}{
+		{[]byte("10"), 10},
+		{[]byte("15 "), 15},
+		{[]byte("02"), 2},
+	}
+
+	for i, tt := range tests {
+		tID := atoi(tt.input)
+		if tID != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
+		}
+	}
+}
+func BenchmarkAtoi(b *testing.B) {
+	for b.Loop() {
+		atoi([]byte("2"))
 	}
 }
