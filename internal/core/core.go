@@ -10,6 +10,7 @@ import (
 	"gcli/internal/transport"
 
 	"go.uber.org/zap"
+	"github.com/Votline/Gurlf"
 )
 
 func Start(cType, cPath, ckPath string, cCreate, ic bool, log *zap.Logger) error {
@@ -22,11 +23,18 @@ func Start(cType, cPath, ckPath string, cCreate, ic bool, log *zap.Logger) error
 func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
+	config.Init()
+	sData, err := gurlf.ScanFile(cPath)
+	if err != nil {
+		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
+	}
+
+	hub := make([][]byte, 0, len(sData))
 	rb := buffer.NewRb[config.Config]()
 	resB := buffer.NewRb[*transport.Result]()
 	transport.Init(resB.Write)
-	var wg sync.WaitGroup
 
+	var wg sync.WaitGroup
 	wg.Go(func() {
 		var err error
 		for {
@@ -34,6 +42,25 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			if cfg == nil {
 				return
 			}
+
+			cfg.RangeDeps(func(d config.Dependency) {
+				if d.TargetID >= len(hub) {
+				log.Error("Dependency points to non-exists config",
+					zap.String("op", op),
+					zap.Int("TargetID", d.TargetID))
+					return
+				}
+
+				resp := hub[d.TargetID]
+				if resp == nil {
+					log.Warn("Response for dependency is empty",
+						zap.String("op", op),
+						zap.Int("TargetID for resp", d.TargetID))
+					return
+				}
+
+				cfg.Apply(d.Start, d.End, d.Key, resp)
+			})
 
 			res := resB.Read()
 			switch v := cfg.(type) {
@@ -54,13 +81,16 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			cfg.Release()
 
 			fmt.Printf("res: %v\n", string(res.Raw))
+			tmp := make([]byte, len(res.Raw))
+			copy(tmp, res.Raw)
+			hub = append(hub, tmp)
 
 			resB.Write(res)
 		}
 	})
 
-	if err := parser.Parse(cPath, rb.Write); err != nil {
-		return fmt.Errorf("%s: %q: %w", op, cPath, err)
+	if err := parser.ParseStream(&sData, rb.Write); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	rb.Close()
 

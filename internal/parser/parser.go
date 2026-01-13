@@ -15,26 +15,10 @@ type instruction struct {
 	tID   int
 	start int
 	end   int
+	key   string
 }
 
-func Parse(cPath string, yield func(config.Config)) error {
-	const op = "parser.Parse"
-
-	config.Init()
-
-	sData, err := gurlf.ScanFile(cPath)
-	if err != nil {
-		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
-	}
-
-	if err := parseStream(&sData, yield); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	return nil
-}
-
-func parseStream(sData *[]gscan.Data, yield func(config.Config)) error {
+func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
 	insts := [][]byte{[]byte("RESPONSE id=")}
@@ -51,33 +35,21 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		if tID != -1 && tID < n {
 			needed[tID/64] |= (1 << (tID % 64))
 		}
-
-		tID, err = handleInstructions(&d, &insts, instsPos)
-		if err != nil {
-			return fmt.Errorf("%s: check instr. cfg's №[%d]: %w", op, i, err)
-		}
-		if tID != -1 && tID < n {
-			for _, inst := range instsPos {
-				if inst.tID < n {
-					needed[tID/64] |= (1 << (tID % 64))
-				}
-			}
-		}
 	}
 
-	cache := make(map[int]config.Config)
+	cache := make([]config.Config, n)
 	for i, d := range *sData {
 		var cfg config.Config
 
 		tID := targets[i]
 		if tID != -1 {
-			orig, ok := cache[tID]
-			if !ok {
+			orig := cache[tID]
+			if orig == nil {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
 			cfg = orig.Clone()
 		} else {
-			tp := fastExtract(&d.RawData, &d.Entries, []byte("Type"))
+			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
 			if tp == "" {
 				return fmt.Errorf("%s: no config type", op)
 			} else {
@@ -87,6 +59,19 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			}
 		}
 		cfg.SetID(i)
+
+		tID, err := handleInstructions(&d, &insts, &instsPos)
+		if err != nil {
+			return fmt.Errorf("%s: check instr. cfg's №[%d]: %w", op, i, err)
+		}
+		if tID != -1 && tID < n {
+			for _, inst := range instsPos {
+				if inst.tID < n {
+					cfg.SetDependency(config.Dependency{
+						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end,})
+				}
+			}
+		}
 
 		if (needed[i/64] & (1 << (i % 64))) != 0 {
 			cache[i] = cfg.Clone()
@@ -101,12 +86,12 @@ func parseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 func handleRepeat(d *gscan.Data) (int, error) {
 	const op = "parser.handleRepeat"
 
-	tp := fastExtract(&d.RawData, &d.Entries, []byte("Type"))
+	tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
 	if tp == "" {
 		return -1, fmt.Errorf("%s: no config type", op)
 	}
 	if tp == "repeat" {
-		tID := fastExtract(&d.RawData, &d.Entries, []byte("Target_ID"))
+		tID := fastExtract(d.RawData, &d.Entries, []byte("Target_ID"))
 		if tID == "" {
 			return -1, fmt.Errorf("%s: no target id", op)
 		}
@@ -122,7 +107,7 @@ func handleRepeat(d *gscan.Data) (int, error) {
 	return -1, nil
 }
 
-func handleInstructions(d *gscan.Data, insts *[][]byte, position []instruction) (int, error) {
+func handleInstructions(d *gscan.Data, insts *[][]byte, position *[]instruction) (int, error) {
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
@@ -156,17 +141,27 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, position []instruction) 
 			return -1, fmt.Errorf("%s: empty id value", op)
 		}
 		
-		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd
+		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd +1
 
 		tID := atoi(d.RawData[valStart:valEnd])
 		if tID == -1 {
 			return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
 		}
 
-		position = append(position, instruction{
+		instKey := ""
+		for _, ent := range d.Entries {
+			if pIdx >= ent.ValStart && pIdx <= ent.ValEnd {
+				start = pIdx - ent.ValStart
+				end = end - ent.ValStart
+				instKey = unsafe.String(unsafe.SliceData(d.RawData[ent.KeyStart:ent.KeyEnd]), ent.KeyEnd-ent.KeyStart)
+			}
+		}
+
+		*position = append(*position, instruction{
 			tID: tID,
-			start: pIdx,
+			start: start,
 			end:   end,
+			key:   instKey,
 		})
 	}
 
@@ -196,8 +191,7 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	return nil
 }
 
-func fastExtract(raw *[]byte, ents *[]gscan.Entry, need []byte) string {
-	data := *raw
+func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 	entries := *ents
 	for _, ent := range entries {
 		if bytes.Equal(data[ent.KeyStart:ent.KeyEnd], need) {

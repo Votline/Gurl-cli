@@ -59,7 +59,9 @@ func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, e
 
 	bRdr := bytes.NewReader(c.Body)
 
-	req, err := http.NewRequestWithContext(ctx, c.Method, c.Url, bRdr)
+	mtd := unsafe.String(unsafe.SliceData(c.Method), len(c.Method))
+	url := unsafe.String(unsafe.SliceData(c.Url), len(c.Url))
+	req, err := http.NewRequestWithContext(ctx, mtd, url, bRdr)
 	if err != nil {
 		return nil, fmt.Errorf("%s: create request: %w", op, err)
 	}

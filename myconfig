@@ -17,9 +17,9 @@ Target_ID: 0
 [http_config]
 ID:       0
 Type:     http
-Url:      http://localhost:8443/api/users/reg
+Url:      {RESPONSE id=0}
 Method:   POST
-Body:     {RESPONSE id=0 none}
+Body:     `the cool`
 Headers:  `the headers pattern`
 Response: hello world
 [\http_config]

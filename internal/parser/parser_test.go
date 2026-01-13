@@ -144,7 +144,7 @@ func BenchmarkHandleType(b *testing.B) {
 	}
 }
 
-func TestFastExtractType(t *testing.T) {
+func TestFastExtract(t *testing.T) {
 	tests := []struct {
 		input    []byte
 		expected string
@@ -156,16 +156,16 @@ func TestFastExtractType(t *testing.T) {
 	d, _ := gurlf.Scan(raw)
 
 	for i, tt := range tests {
-		if tp := fastExtract(&d[0].RawData, &d[0].Entries, tt.input); tp != tt.expected {
+		if tp := fastExtract(d[0].RawData, &d[0].Entries, tt.input); tp != tt.expected {
 			t.Errorf("[%d]: expected %q, but got %q", i, tt.expected, tp)
 		}
 	}
 }
-func BenchmarkFastExtractType(b *testing.B) {
+func BenchmarkFastExtract(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
 	for b.Loop() {
-		fastExtract(&d[0].RawData, &d[0].Entries, []byte("type"))
+		fastExtract(d[0].RawData, &d[0].Entries, []byte("type"))
 	}
 }
 
