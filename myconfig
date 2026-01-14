@@ -1,7 +1,7 @@
 [http_config]
 ID:       0
 Type:     http
-Url:      http://localhost:8443/
+Url:      `http://localhost:8443/`
 Method:   GET
 Body:     `the body pattern`
 Headers:  `the headers pattern`

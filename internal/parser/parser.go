@@ -22,7 +22,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
 	insts := [][]byte{[]byte("RESPONSE id=")}
-	instsPos := make([]instruction, 0, n)
+	instsPos := make([]instruction, 0, 6)
 
 	targets := make([]int, n)
 	needed := make([]uint64, (n/64)+1)
@@ -40,6 +40,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	cache := make([]config.Config, n)
 	for i, d := range *sData {
 		var cfg config.Config
+		instsPos = instsPos[:0]
 
 		tID := targets[i]
 		if tID != -1 {
@@ -60,7 +61,9 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		}
 		cfg.SetID(i)
 
-		tID, err := handleInstructions(&d, &insts, &instsPos)
+		tID, err := handleInstructions(&d, &insts, func(inst instruction) {
+			instsPos = append(instsPos, inst)
+		})
 		if err != nil {
 			return fmt.Errorf("%s: check instr. cfg's №[%d]: %w", op, i, err)
 		}
@@ -107,7 +110,7 @@ func handleRepeat(d *gscan.Data) (int, error) {
 	return -1, nil
 }
 
-func handleInstructions(d *gscan.Data, insts *[][]byte, position *[]instruction) (int, error) {
+func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruction)) (int, error) {
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
@@ -157,7 +160,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, position *[]instruction)
 			}
 		}
 
-		*position = append(*position, instruction{
+		yield(instruction{
 			tID: tID,
 			start: start,
 			end:   end,

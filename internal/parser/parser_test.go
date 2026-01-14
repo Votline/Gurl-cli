@@ -28,7 +28,7 @@ func TestParseStream(t *testing.T) {
 
 	config.Init()
 	d, _ := gurlf.Scan(repRaw)
-	if err := parseStream(&d, func(c config.Config) {
+	if err := ParseStream(&d, func(c config.Config) {
 		if c.GetType() != "http" {
 			t.Errorf("expected %q, but got %q", "http", c.GetType())
 		}
@@ -40,7 +40,7 @@ func BenchmarkParseStream(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
 	for b.Loop() {
-		if err := parseStream(&d, yield); err != nil {
+		if err := ParseStream(&d, yield); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -91,7 +91,7 @@ func TestHandleInstructions(t *testing.T) {
 	instsPos := make([]instruction, 0, len(d))
 	
 	for i, tt := range tests {
-		tID, err := handleInstructions(tt.input, &insts, instsPos)
+		tID, err := handleInstructions(tt.input, &insts, func(inst instruction) { instsPos = append(instsPos, inst) })
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -108,7 +108,7 @@ func BenchmarkHandleInstructions(b *testing.B) {
 
 	for b.Loop() {
 		instsPos = instsPos[:0]
-		if _, err := handleInstructions(&d[1], &insts, instsPos); err != nil {
+		if _, err := handleInstructions(&d[1], &insts, func(inst instruction) { instsPos = append(instsPos,  inst)}); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
