@@ -70,3 +70,28 @@ func BenchmarkParseContentType(b *testing.B) {
 		ParseContentType(&str)
 	}
 }
+
+func TestParseBody(t *testing.T) {
+	tests := []struct{
+		input    string
+		expected string
+	}{
+		{"\n\t\tpretty\n\t\tbody\n", "pretty\nbody"},
+		{"pretty\nbody", "pretty\nbody"},
+		{"one string body", "one string body"},
+		{"pret\n\tty\n\t\tbo\ndy\n", "pret\nty\nbo\ndy"},
+	}
+
+	for i, tt := range tests {
+		res := ParseBody([]byte(tt.input))
+		if string(res) != tt.expected {
+			t.Errorf("[%d]: expected %q, but got %q",
+				i, tt.expected, string(res))
+		}
+	}
+}
+func BenchmarkParseBody(b *testing.B) {
+	for b.Loop() {
+		ParseBody([]byte("\n\t\tpretty\n\t\tbody\n"))
+	}
+}

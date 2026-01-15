@@ -17,10 +17,13 @@ Target_ID: 0
 [http_config]
 ID:       0
 Type:     http
-Url:      {RESPONSE id=0}
+Url:      http://localhost:8443
 Method:   POST
-Body:     `the cool`
-Headers:  `the headers pattern`
+Body:     `
+			pretty
+			body
+`
+Headers:  plain/text
 Response: hello world
 [\http_config]
 

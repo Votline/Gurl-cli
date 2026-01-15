@@ -53,14 +53,24 @@ func DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, error) {
 	const op = "transport.prepareRequest"
 
-	if c.Body == nil || c.Headers == nil {
-		return nil, nil
-	} //log warn
-
-	bRdr := bytes.NewReader(c.Body)
+	if c == nil {
+		return nil, fmt.Errorf("%s: nil config", op)
+	}
 
 	mtd := unsafe.String(unsafe.SliceData(c.Method), len(c.Method))
 	url := unsafe.String(unsafe.SliceData(c.Url), len(c.Url))
+
+	var bRdr io.Reader
+	if c.Body != nil {
+		bRdr = bytes.NewReader(c.Body)
+		ct := unsafe.String(unsafe.SliceData(c.Headers), len(c.Headers))
+		parser.ParseContentType(&ct)
+		if ct != "application/json" {
+			bd := parser.ParseBody(c.Body)
+			bRdr = bytes.NewReader(bd)
+		}
+	}
+
 	req, err := http.NewRequestWithContext(ctx, mtd, url, bRdr)
 	if err != nil {
 		return nil, fmt.Errorf("%s: create request: %w", op, err)

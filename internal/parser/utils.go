@@ -63,6 +63,41 @@ func ParseContentType(ct *string) {
 	*ct = ""
 }
 
+func ParseBody(b []byte) []byte {
+	lineStart := false
+	readIdx, writeIdx := 0, 0
+	for readIdx < len(b) && isSpace(b[readIdx]) {
+		readIdx++
+	}
+
+	for readIdx < len(b) {
+		ch := b[readIdx]
+		
+		if !lineStart {
+			if ch == '\t' || ch == ' ' {
+				readIdx++
+				continue
+			}
+			lineStart = true
+		}
+
+		b[writeIdx] = b[readIdx]
+		writeIdx++
+		readIdx++
+
+		if ch == '\n' {
+			lineStart = false
+		}
+	}
+	res := b[:writeIdx]
+	for len(res) > 0 && isSpace(res[len(res)-1]) {
+		res = res[:len(res)-1]
+	}
+
+	return res
+
+}
+
 func isSpace(r byte) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\v' || r == '\f'
 }
