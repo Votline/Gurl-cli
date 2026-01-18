@@ -40,6 +40,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	cache := make([]config.Config, n)
 	for i, d := range *sData {
 		var cfg config.Config
+		var execCfg config.Config
 		instsPos = instsPos[:0]
 
 		tID := targets[i]
@@ -48,7 +49,15 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			if orig == nil {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
-			cfg = orig.Clone()
+			execCfg = orig.Clone()
+			
+			var rep config.Config
+			tp := "repeat"
+			handleType(&rep, &tp, &d)
+			rep.SetID(tID)
+			rep.SetOrig(execCfg)
+			
+			cfg = rep
 		} else {
 			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
 			if tp == "" {
@@ -58,26 +67,29 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 					return fmt.Errorf("%s: cfg №[%d] failed: %w", op, i, err)
 				}
 			}
+			execCfg = cfg
 		}
-		cfg.SetID(i)
+
+		execCfg.SetID(i)
+		execCfg.SetStart(d.Entries[0].KeyStart-2-len(d.Name))
 
 		tID, err := handleInstructions(&d, &insts, func(inst instruction) {
 			instsPos = append(instsPos, inst)
 		})
 		if err != nil {
-			return fmt.Errorf("%s: check instr. cfg's №[%d]: %w", op, i, err)
+			return fmt.Errorf("%s: check instr. execCfg's №[%d]: %w", op, i, err)
 		}
 		if tID != -1 && tID < n {
 			for _, inst := range instsPos {
 				if inst.tID < n {
-					cfg.SetDependency(config.Dependency{
+					execCfg.SetDependency(config.Dependency{
 						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end,})
 				}
 			}
 		}
 
 		if (needed[i/64] & (1 << (i % 64))) != 0 {
-			cache[i] = cfg.Clone()
+			cache[i] = execCfg.Clone()
 		}
 
 		yield(cfg)
@@ -181,6 +193,10 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
 	case "grpc":
 		obj, itab := config.GetGRPC()
+		*(*uintptr)(unsafe.Pointer(c)) = itab
+		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
+	case "repeat":
+		obj, itab := config.GetRepeat()
 		*(*uintptr)(unsafe.Pointer(c)) = itab
 		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
 	default:

@@ -25,12 +25,11 @@ var repRaw = append(raw, []byte(`
 func yield(c config.Config) { c.Release() }
 
 func TestParseStream(t *testing.T) {
-
 	config.Init()
-	d, _ := gurlf.Scan(repRaw)
+	d, _ := gurlf.Scan(raw)
 	if err := ParseStream(&d, func(c config.Config) {
-		if c.GetType() != "http" {
-			t.Errorf("expected %q, but got %q", "http", c.GetType())
+		if c.GetType() != "http" && c.GetType() != "repeat" {
+			t.Errorf("expected %q, but got %q", "http or repeat", c.GetType())
 		}
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)

@@ -1,5 +1,4 @@
 [http_config]
-ID:       0
 Type:     http
 Url:      `http://localhost:8443/`
 Method:   GET
@@ -9,16 +8,15 @@ Response: hello world
 [\http_config]
 
 [rep]
-ID:        1
 Type:      repeat
 Target_ID: 0
+Response: 0
 [\rep]
 
 [http_config]
-ID:       0
 Type:     http
 Url:      http://localhost:8443
-Method:   POST
+Method:   {RESPONSE id=0}
 Body:     `
 			pretty
 			body

@@ -1,0 +1,27 @@
+[http_config]
+Type:http
+Response:
+Url:http://localhost:8443/
+Method:GET
+Body:the body pattern
+Headers:the headers pattern
+[\http_config]
+
+[rep]
+Type:repeat
+Response:0
+Target_ID:0
+[\rep]
+
+[http_config]
+Type:http
+Response:
+Url:http://localhost:8443
+Method:{RESPONSE id=0}
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+[\http_config]
+

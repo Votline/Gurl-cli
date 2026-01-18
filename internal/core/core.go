@@ -1,16 +1,19 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"sync"
+	"unsafe"
 
 	"gcli/internal/buffer"
 	"gcli/internal/config"
 	"gcli/internal/parser"
 	"gcli/internal/transport"
 
-	"go.uber.org/zap"
 	"github.com/Votline/Gurlf"
+	"go.uber.org/zap"
 )
 
 func Start(cType, cPath, ckPath string, cCreate, ic bool, log *zap.Logger) error {
@@ -29,7 +32,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
-	hub := make([][]byte, 0, len(sData))
+	resHub := make([][]byte, 0, len(sData))
+	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
 	resB := buffer.NewRb[*transport.Result]()
 	transport.Init(resB.Write)
@@ -39,19 +43,18 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		var err error
 		for {
 			cfg := rb.Read()
-			if cfg == nil {
-				return
-			}
+			if cfg == nil { break }
+			cfgToFile := cfg.Clone()
 
 			cfg.RangeDeps(func(d config.Dependency) {
-				if d.TargetID >= len(hub) {
+				if d.TargetID >= len(resHub) {
 				log.Error("Dependency points to non-exists config",
 					zap.String("op", op),
 					zap.Int("TargetID", d.TargetID))
 					return
 				}
 
-				resp := hub[d.TargetID]
+				resp := resHub[d.TargetID]
 				if resp == nil {
 					log.Warn("Response for dependency is empty",
 						zap.String("op", op),
@@ -63,7 +66,9 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			})
 
 			res := resB.Read()
-			switch v := cfg.(type) {
+
+			execCfg := cfg.UnwrapExec()
+			switch v := execCfg.(type) {
 			case *config.HTTPConfig:
 				err = transport.DoHTTP(v, res)
 			case *config.GRPCConfig:
@@ -78,14 +83,77 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					zap.String("config type", cfg.GetType()),
 					zap.Error(err))
 			}
-			cfg.Release()
 
-			fmt.Printf("res: %v\n", string(res.Raw))
 			tmp := make([]byte, len(res.Raw))
 			copy(tmp, res.Raw)
-			hub = append(hub, tmp)
+			resHub = append(resHub, tmp)
 
+			resStr := unsafe.String(unsafe.SliceData(tmp), len(tmp))
+			cfgToFile.SetResp(resStr)
+			cfgFileBuf.Write(cfgToFile)
+
+			cfg.Release()
 			resB.Write(res)
+		}
+		cfgFileBuf.Close()
+	})
+
+	wg.Go(func(){
+		f, err := os.OpenFile(cPath+".out", os.O_RDWR, 0644)
+		if err != nil {
+			log.Fatal("Failed to open file",
+				zap.String("op", op),
+				zap.String("path", cPath),
+				zap.Error(err))
+		}
+		defer f.Close()
+
+		/*st, err := f.Stat()
+		if err != nil {
+			log.Fatal("Failed to open file",
+				zap.String("op", op),
+				zap.String("path", cPath),
+				zap.Error(err))
+		}
+		
+		origSize := st.Size()
+		curSize := origSize
+		*/
+		var buf bytes.Buffer
+		cnt, bufSize := 0, 5
+		
+		for {
+			cfg := cfgFileBuf.Read()
+			if cfg == nil { break }
+
+			data, err := gurlf.Marshal(cfg)
+			if err != nil {
+				log.Error("Failed to Marshal config, stop processing",
+					zap.String("op", op),
+					zap.Error(err))
+			}
+
+			buf.Write(data)
+			cnt++
+
+			if cnt == bufSize {
+				cnt = 0
+				if err := flush(&buf, f); err != nil {
+					log.Error("failed to flush buffer",
+						zap.String("op", op),
+						zap.Error(err))
+				}
+			}
+
+			cfg.Release()
+		}
+
+		if cnt > 0 {
+			if err := flush(&buf, f); err != nil {
+					log.Error("failed to flush buffer",
+						zap.String("op", op),
+						zap.Error(err))
+				}
 		}
 	})
 
@@ -95,5 +163,21 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 	rb.Close()
 
 	wg.Wait()
+	return nil
+}
+
+func flush(buf *bytes.Buffer, f *os.File) error {
+	const op = "core.flush"
+	n, err := f.Write(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("%s: write file: %w", op, err)
+	}
+
+	if n != buf.Len() {
+		return fmt.Errorf("%s: short wrtie: expected %d, but got %d",
+			op, buf.Len(), n)
+	}
+
+	buf.Reset()
 	return nil
 }

@@ -54,7 +54,7 @@ func cRepeat() ([]byte, error) {
 	base := defBase()
 	base.Type = "repeat"
 	base.Name = "repeat_config"
-	c := RepeatConfig{BaseConfig: *base}
+	c := &RepeatConfig{BaseConfig: *base}
 	return gurlf.Marshal(&c)
 }
 func cMix() ([]byte, error) {
