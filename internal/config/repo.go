@@ -36,6 +36,7 @@ type Config interface {
 	RangeDeps(func(d Dependency))
 	SetDependency(Dependency)
 	Apply(int, int, string, []byte)
+	GetRaw(string, int, int) []byte
 }
 
 var (
@@ -87,6 +88,7 @@ func defBase() *BaseConfig {
 	}
 }
 
+func (c *BaseConfig) GetRaw(key string, start, end int) []byte {return nil}
 func (c *BaseConfig) UnwrapExec() Config             { return c }
 func (c *BaseConfig) SetOrig(Config)                 {}
 func (c *BaseConfig) Apply(int, int, string, []byte) {}
@@ -156,6 +158,25 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	case "Headers":
 		c.Headers = splice(c.Headers, val, start, end)
 	}
+}
+func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
+	var source []byte
+	switch key {
+	case "Url":
+		source = c.Url
+	case "Method":
+		source = c.Method
+	case "Body":
+		source = c.Body
+	case "Headers":
+		source = c.Headers
+	}
+
+	if start < 0 || end < 0 || start >= len(source) || end > len(source) || start==end {
+		return nil
+	}
+
+	return source[start:end]
 }
 
 type GRPCConfig struct {

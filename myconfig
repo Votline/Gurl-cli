@@ -1,9 +1,16 @@
 [http_config]
 Type:     http
-Url:      `http://localhost:8443/`
-Method:   GET
-Body:     `the body pattern`
-Headers:  `the headers pattern`
+Url:      `http://localhost:8443/api/users/reg`
+Method:   POST
+Body:     `
+	{
+		"name": "zivaaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:  `Content-Type: application/json`
 Response: hello world
 [\http_config]
 
@@ -15,8 +22,8 @@ Response: 0
 
 [http_config]
 Type:     http
-Url:      http://localhost:8443
-Method:   {RESPONSE id=0}
+Url:      {RESPONSE id=0 json:token}
+Method:   GET
 Body:     `
 			pretty
 			body

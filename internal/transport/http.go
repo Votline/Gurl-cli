@@ -26,6 +26,8 @@ func Init(putRes func(*Result)) {
 }
 
 func DoHTTP(c *config.HTTPConfig, resObj *Result) error {
+	fmt.Println("DoHTTP")
+
 	const op = "transport.DoHTTP"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

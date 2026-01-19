@@ -95,3 +95,29 @@ func BenchmarkParseBody(b *testing.B) {
 		ParseBody([]byte("\n\t\tpretty\n\t\tbody\n"))
 	}
 }
+
+func TestParseResponse(t *testing.T) {
+	tests := []struct{
+		input    string
+		inst     string
+		expected string
+	}{
+		{`"token":   "fjhklghdfsdiuflg"`, `{RESPONSE id=0 json:token}`, `fjhklghdfsdiuflg`},
+		{`"\nToken": "fj\nhklghdfsd\tiuflg\r"`, `{RESPONSE id=15 json:\nToken}`, `fj\nhklghdfsd\tiuflg\r`},
+	}
+
+	for i, tt := range tests {
+		res := []byte(tt.input)
+		ParseResponse(&res, []byte(tt.input))
+		if string(res) != tt.expected {
+			t.Errorf("[%d]: expected %q, but got %q",
+				i, tt.expected, string(res))
+		}
+	}
+}
+func BenchmarkParseResponse(b *testing.B) {
+	var res []byte
+	for b.Loop() {
+		ParseResponse(&res, []byte(`"json": "token"`))
+	}
+}

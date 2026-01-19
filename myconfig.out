@@ -1,10 +1,18 @@
 [http_config]
 Type:http
-Response:
-Url:http://localhost:8443/
-Method:GET
-Body:the body pattern
-Headers:the headers pattern
+Response:`rpc error: code = Unknown desc = UserService.ReqUser: add user: UserPostgresRepository.AddUser: execute query: pq: duplicate key value violates unique constraint "users_user_name_key"
+`
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "zivaaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
 [\http_config]
 
 [rep]
@@ -16,12 +24,15 @@ Target_ID:0
 [http_config]
 Type:http
 Response:
-Url:http://localhost:8443
-Method:{RESPONSE id=0}
+Url:{RESPONSE id=0 json:token}
+Method:GET
 Body:`
 			pretty
 			body
 `
 Headers:plain/text
+[\http_config]
+
+ext
 [\http_config]
 

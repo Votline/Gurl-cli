@@ -62,6 +62,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					return
 				}
 
+				inst := cfg.GetRaw(d.Key, d.Start, d.End)
+				parser.ParseResponse(&resp, inst)
 				cfg.Apply(d.Start, d.End, d.Key, resp)
 			})
 
@@ -75,6 +77,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				cfg.Release()
 				continue
 			}
+
+			fmt.Printf("\nEXEC:%T\nORIG:%T\n", execCfg, cfg)
 
 			if err != nil {
 				log.Error("Failed to send config",
