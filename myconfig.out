@@ -1,29 +1,26 @@
 [http_config]
-Type:http
-Response:`rpc error: code = Unknown desc = UserService.ReqUser: add user: UserPostgresRepository.AddUser: execute query: pq: duplicate key value violates unique constraint "users_user_name_key"
-`
 Url:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
-		"name": "zivaaa",
+		"name": "viz",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
 	}
 `
 Headers:Content-Type: application/json
+Type:http
+Response:
 [\http_config]
 
 [rep]
-Type:repeat
-Response:0
 Target_ID:0
+Type:repeat
+Response:
 [\rep]
 
 [http_config]
-Type:http
-Response:
 Url:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
@@ -31,8 +28,26 @@ Body:`
 			body
 `
 Headers:plain/text
+Type:http
+Response:
 [\http_config]
 
-ext
+[rep]
+Target_ID:0
+Type:repeat
+Response:`rpc error: code = Unknown desc = UserService.ReqUser: add user: UserPostgresRepository.AddUser: execute query: pq: duplicate key value violates unique constraint "users_user_name_key"
+`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
 [\http_config]
 

@@ -4,7 +4,7 @@ Url:      `http://localhost:8443/api/users/reg`
 Method:   POST
 Body:     `
 	{
-		"name": "zivaaa",
+		"name": "viz",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
@@ -17,7 +17,7 @@ Response: hello world
 [rep]
 Type:      repeat
 Target_ID: 0
-Response: 0
+Response:zero
 [\rep]
 
 [http_config]

@@ -125,11 +125,11 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 }
 
 type HTTPConfig struct {
-	BaseConfig
 	Url     []byte `gurlf:"Url"`
 	Method  []byte `gurlf:"Method"`
 	Body    []byte `gurlf:"Body"`
 	Headers []byte `gurlf:"Headers"`
+	BaseConfig
 }
 
 func GetHTTP() (*HTTPConfig, uintptr)    { return hBuf.Read(), hItab }
@@ -196,9 +196,9 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 }
 
 type RepeatConfig struct {
-	BaseConfig
 	TargetID int `gurlf:"Target_ID"`
 	Orig     Config
+	BaseConfig
 }
 
 func GetRepeat() (*RepeatConfig, uintptr) { return rBuf.Read(), rItab }
@@ -211,14 +211,10 @@ func (c *RepeatConfig) UnwrapExec() Config {
 func (c *RepeatConfig) Release()      { *c = RepeatConfig{}; rBuf.Write(c) }
 func (c *RepeatConfig) SetID(nID int) { c.TargetID = nID }
 func (c *RepeatConfig) SetOrig(nc Config) {
-	if c.Orig != nil {
-		c.Orig = nc
-	}
+	c.Orig = nc
 }
 func (c *RepeatConfig) SetResp(nResp string) {
-	if c.Orig != nil {
-		c.Orig.SetResp(nResp)
-	}
+	c.Resp = nResp
 }
 func (c *RepeatConfig) Clone() Config {
 	newCfg := rBuf.Read()

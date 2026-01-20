@@ -78,8 +78,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				continue
 			}
 
-			fmt.Printf("\nEXEC:%T\nORIG:%T\n", execCfg, cfg)
-
 			if err != nil {
 				log.Error("Failed to send config",
 					zap.String("op", op),

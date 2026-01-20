@@ -56,7 +56,6 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			handleType(&rep, &tp, &d)
 			rep.SetID(tID)
 			rep.SetOrig(execCfg)
-			fmt.Printf("\nREPTYPE:%T\nEXECTYPE:%T\nISNIL:%v\n", rep, execCfg, execCfg == nil)
 			
 			cfg = rep
 		} else {
