@@ -37,6 +37,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		}
 	}
 
+	absEnd := 0
 	cache := make([]config.Config, n)
 	for i, d := range *sData {
 		var cfg config.Config
@@ -50,13 +51,13 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
 			execCfg = orig.Clone()
-			
+
 			var rep config.Config
 			tp := "repeat"
 			handleType(&rep, &tp, &d)
 			rep.SetID(tID)
 			rep.SetOrig(execCfg)
-			
+
 			cfg = rep
 		} else {
 			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
@@ -70,8 +71,12 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			execCfg = cfg
 		}
 
+		tagOverhead := (len(d.Name)+2) + (len(d.Name)+3)+2
+		localEnd := len(d.RawData)+tagOverhead
+		absEnd += localEnd
+
 		execCfg.SetID(i)
-		execCfg.SetStart(d.Entries[0].KeyStart-2-len(d.Name))
+		cfg.SetEnd(absEnd)
 
 		tID, err := handleInstructions(&d, &insts, func(inst instruction) {
 			instsPos = append(instsPos, inst)
@@ -83,7 +88,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			for _, inst := range instsPos {
 				if inst.tID < n {
 					execCfg.SetDependency(config.Dependency{
-						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end,})
+						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end})
 				}
 			}
 		}
@@ -126,13 +131,19 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
-	if start == -1 { return -1, nil}
+	if start == -1 {
+		return -1, nil
+	}
 	end := bytes.IndexByte(d.RawData, '}')
-	if end == -1 { return -1, nil}
-	
+	if end == -1 {
+		return -1, nil
+	}
+
 	for _, inst := range *insts {
-		pIdx  := bytes.Index(d.RawData[start+1:], inst)
-		if pIdx == -1 { return -1, nil}
+		pIdx := bytes.Index(d.RawData[start+1:], inst)
+		if pIdx == -1 {
+			return -1, nil
+		}
 		pIdx += start
 
 		idOffset := bytes.Index(d.RawData[pIdx:], []byte("id="))
@@ -155,8 +166,8 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 		if valStart == valEnd {
 			return -1, fmt.Errorf("%s: empty id value", op)
 		}
-		
-		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd +1
+
+		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd + 1
 
 		tID := atoi(d.RawData[valStart:valEnd])
 		if tID == -1 {
@@ -173,7 +184,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 		}
 
 		yield(instruction{
-			tID: tID,
+			tID:   tID,
 			start: start,
 			end:   end,
 			key:   instKey,

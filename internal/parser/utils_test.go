@@ -72,7 +72,7 @@ func BenchmarkParseContentType(b *testing.B) {
 }
 
 func TestParseBody(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		input    string
 		expected string
 	}{
@@ -97,7 +97,7 @@ func BenchmarkParseBody(b *testing.B) {
 }
 
 func TestParseResponse(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		input    string
 		inst     string
 		expected string

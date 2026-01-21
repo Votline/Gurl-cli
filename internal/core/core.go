@@ -1,8 +1,9 @@
 package core
 
 import (
-	"bytes"
 	"fmt"
+	"io"
+	"bytes"
 	"os"
 	"sync"
 	"unsafe"
@@ -43,14 +44,16 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		var err error
 		for {
 			cfg := rb.Read()
-			if cfg == nil { break }
+			if cfg == nil {
+				break
+			}
 			cfgToFile := cfg.Clone()
 
 			cfg.RangeDeps(func(d config.Dependency) {
 				if d.TargetID >= len(resHub) {
-				log.Error("Dependency points to non-exists config",
-					zap.String("op", op),
-					zap.Int("TargetID", d.TargetID))
+					log.Error("Dependency points to non-exists config",
+						zap.String("op", op),
+						zap.Int("TargetID", d.TargetID))
 					return
 				}
 
@@ -100,43 +103,91 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		cfgFileBuf.Close()
 	})
 
-	wg.Go(func(){
-		f, err := os.OpenFile(cPath+".out", os.O_RDWR, 0644)
-		if err != nil {
-			log.Fatal("Failed to open file",
-				zap.String("op", op),
-				zap.String("path", cPath),
-				zap.Error(err))
-		}
-		defer f.Close()
-
-		/*st, err := f.Stat()
-		if err != nil {
-			log.Fatal("Failed to open file",
-				zap.String("op", op),
-				zap.String("path", cPath),
-				zap.Error(err))
-		}
-		
-		origSize := st.Size()
-		curSize := origSize
-		*/
-		var buf bytes.Buffer
+	wg.Go(func() {
 		cnt, bufSize := 0, 5
-		
+		var buf bytes.Buffer
+		var pendingOffset int64
+		var cfg config.Config
+
+		tmpPath := cPath + ".out.tmp"
+		f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			log.Fatal("Failed to open file",
+				zap.String("op", op),
+				zap.String("path", cPath),
+				zap.Error(err))
+		}
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("Recovered from panic",
+					zap.String("op", op),
+					zap.Any("recovered", r))
+
+				if err := flush(&buf, f); err != nil {
+					log.Error("failed to flush buffer",
+						zap.String("op", op),
+						zap.Error(err))
+				}
+
+				orig, err := os.Open(cPath)
+
+				defer orig.Close()
+				if err == nil {
+					if _, err = orig.Seek(pendingOffset, io.SeekStart); err == nil {
+						if _, err := io.Copy(f, orig); err != nil {
+							log.Error("Failed to copy file",
+								zap.String("op", op),
+								zap.String("path", cPath),
+								zap.Error(err))
+						}
+					} else {
+						log.Error("Failed to seek file",
+							zap.String("op", op),
+							zap.String("path", cPath),
+							zap.Error(err))
+					}
+				} else {
+					log.Error("Failed to open file",
+						zap.String("op", op),
+						zap.String("path", cPath),
+						zap.Error(err))
+				}
+			}
+
+			if err := f.Sync(); err != nil {
+				log.Error("Failed to sync file",
+					zap.String("op", op),
+					zap.String("path", cPath),
+					zap.Error(err))
+			}
+
+			f.Close()
+			if err := os.Rename(tmpPath, cPath); err != nil {
+				log.Error("Failed to rename file",
+					zap.String("op", op),
+					zap.String("path to", cPath),
+					zap.String("path from", tmpPath),
+					zap.Error(err))
+			}
+		}()
+
 		for {
-			cfg := cfgFileBuf.Read()
-			if cfg == nil { break }
+			cfg = cfgFileBuf.Read()
+			if cfg == nil {
+				break
+			}
 
 			data, err := gurlf.Marshal(cfg)
 			if err != nil {
-				log.Error("Failed to Marshal config, stop processing",
+				log.Error("Failed to Marshal config",
 					zap.String("op", op),
 					zap.Error(err))
+				continue
 			}
 
 			buf.Write(data)
 			cnt++
+			pendingOffset = int64(cfg.GetEnd())
 
 			if cnt == bufSize {
 				cnt = 0
@@ -152,10 +203,10 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 
 		if cnt > 0 {
 			if err := flush(&buf, f); err != nil {
-					log.Error("failed to flush buffer",
-						zap.String("op", op),
-						zap.Error(err))
-				}
+				log.Error("failed to flush buffer",
+					zap.String("op", op),
+					zap.Error(err))
+			}
 		}
 	})
 
@@ -170,6 +221,11 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 
 func flush(buf *bytes.Buffer, f *os.File) error {
 	const op = "core.flush"
+
+	if buf.Len() == 0 {
+		return nil
+	}
+
 	n, err := f.Write(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("%s: write file: %w", op, err)

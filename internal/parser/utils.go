@@ -72,7 +72,7 @@ func ParseBody(b []byte) []byte {
 
 	for readIdx < len(b) {
 		ch := b[readIdx]
-		
+
 		if !lineStart {
 			if ch == '\t' || ch == ' ' {
 				readIdx++
@@ -100,30 +100,36 @@ func ParseBody(b []byte) []byte {
 
 func ParseResponse(res *[]byte, inst []byte) {
 	const op = "parser.parseResponse"
-	
+
 	tpStart := bytes.IndexByte(inst, ':')
-	if tpStart == -1 { return }
-	
+	if tpStart == -1 {
+		return
+	}
+
 	var tpEnd int = len(inst)
 	for tpEnd > tpStart && isSpace(inst[tpEnd-1]) {
 		tpEnd--
 	}
 
 	jsonStart := bytes.IndexByte(*res, ':')
-	if jsonStart == -1 { return }
+	if jsonStart == -1 {
+		return
+	}
 
 	jsonStart++
 	for jsonStart < len(*res) && isSpace((*res)[jsonStart]) {
 		jsonStart++
 	}
 
-	var jsonEnd int = jsonStart+1
+	var jsonEnd int = jsonStart + 1
 	for jsonEnd < len(*res) {
-		if (*res)[jsonEnd] == '"' && (*res)[jsonEnd-1] != '\\'  { break }
+		if (*res)[jsonEnd] == '"' && (*res)[jsonEnd-1] != '\\' {
+			break
+		}
 		jsonEnd++
 	}
 
-	(*res) = (*res)[jsonStart+1:jsonEnd]
+	(*res) = (*res)[jsonStart+1 : jsonEnd]
 }
 
 func isSpace(r byte) bool {

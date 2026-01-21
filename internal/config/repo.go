@@ -22,8 +22,8 @@ type Config interface {
 	GetID() int
 	SetID(int)
 
-	GetStart() int
-	SetStart(int)
+	GetEnd() int
+	SetEnd(int)
 
 	GetType() string
 	SetType(string)
@@ -71,7 +71,8 @@ func Init() {
 
 type BaseConfig struct {
 	ID        int
-	Start     int
+	End       int
+	Len       int
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
 	Resp      string `gurlf:"Response"`
@@ -88,22 +89,22 @@ func defBase() *BaseConfig {
 	}
 }
 
-func (c *BaseConfig) GetRaw(key string, start, end int) []byte {return nil}
-func (c *BaseConfig) UnwrapExec() Config             { return c }
-func (c *BaseConfig) SetOrig(Config)                 {}
-func (c *BaseConfig) Apply(int, int, string, []byte) {}
-func (c *BaseConfig) Release()                       {}
-func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
-func (c *BaseConfig) GetName() string                { return c.Name }
-func (c *BaseConfig) SetName(nName string)           { c.Name = nName }
-func (c *BaseConfig) GetID() int                     { return c.ID }
-func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
-func (c *BaseConfig) GetStart() int                  { return c.Start }
-func (c *BaseConfig) SetStart(nSt int)               { c.Start = nSt }
-func (c *BaseConfig) GetType() string                { return c.Type }
-func (c *BaseConfig) SetType(nType string)           { c.Type = nType }
-func (c *BaseConfig) GetResp() string                { return c.Resp }
-func (c *BaseConfig) SetResp(nResp string)           { c.Resp = nResp }
+func (c *BaseConfig) GetRaw(key string, start, end int) []byte { return nil }
+func (c *BaseConfig) UnwrapExec() Config                       { return c }
+func (c *BaseConfig) SetOrig(Config)                           {}
+func (c *BaseConfig) Apply(int, int, string, []byte)           {}
+func (c *BaseConfig) Release()                                 {}
+func (c *BaseConfig) Clone() Config                            { cp := *c; return &cp }
+func (c *BaseConfig) GetName() string                          { return c.Name }
+func (c *BaseConfig) SetName(nName string)                     { c.Name = nName }
+func (c *BaseConfig) GetID() int                               { return c.ID }
+func (c *BaseConfig) SetID(nID int)                            { c.ID = nID }
+func (c *BaseConfig) GetEnd() int                              { return c.End }
+func (c *BaseConfig) SetEnd(nEnd int)                          { c.End = nEnd }
+func (c *BaseConfig) GetType() string                          { return c.Type }
+func (c *BaseConfig) SetType(nType string)                     { c.Type = nType }
+func (c *BaseConfig) GetResp() string                          { return c.Resp }
+func (c *BaseConfig) SetResp(nResp string)                     { c.Resp = nResp }
 func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 	limit := c.DepsLen
 	limit = min(limit, 6)
@@ -172,7 +173,7 @@ func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
 		source = c.Headers
 	}
 
-	if start < 0 || end < 0 || start >= len(source) || end > len(source) || start==end {
+	if start < 0 || end < 0 || start >= len(source) || end > len(source) || start == end {
 		return nil
 	}
 

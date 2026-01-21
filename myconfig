@@ -1,34 +1,36 @@
 [http_config]
-Type:     http
-Url:      `http://localhost:8443/api/users/reg`
-Method:   POST
-Body:     `
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
 	{
-		"name": "viz",
+		"name": "Vahdfgdfhgfda",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
 	}
 `
-Headers:  `Content-Type: application/json`
-Response: hello world
+Headers:Content-Type: application/json
+Type:http
+Response:`circuit breaker is open
+`
 [\http_config]
 
 [rep]
-Type:      repeat
-Target_ID: 0
-Response:zero
+Target_ID:0
+Type:repeat
+Response:`circuit breaker is open
+`
 [\rep]
 
 [http_config]
-Type:     http
-Url:      {RESPONSE id=0 json:token}
-Method:   GET
-Body:     `
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
 			pretty
 			body
 `
-Headers:  plain/text
-Response: hello world
+Headers:plain/text
+Type:http
+Response:
 [\http_config]
 

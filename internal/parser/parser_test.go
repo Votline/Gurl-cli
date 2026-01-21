@@ -78,9 +78,9 @@ func BenchmarkHandleRepeat(b *testing.B) {
 
 func TestHandleInstructions(t *testing.T) {
 	d, _ := gurlf.Scan(repRaw)
-	
-	tests := []struct{
-		input   *gscan.Data
+
+	tests := []struct {
+		input    *gscan.Data
 		expected int
 	}{
 		{&d[0], -1},
@@ -88,7 +88,7 @@ func TestHandleInstructions(t *testing.T) {
 	}
 	insts := [][]byte{[]byte("RESPONSE id=")}
 	instsPos := make([]instruction, 0, len(d))
-	
+
 	for i, tt := range tests {
 		tID, err := handleInstructions(tt.input, &insts, func(inst instruction) { instsPos = append(instsPos, inst) })
 		if err != nil {
@@ -101,13 +101,13 @@ func TestHandleInstructions(t *testing.T) {
 }
 func BenchmarkHandleInstructions(b *testing.B) {
 	d, _ := gurlf.Scan(repRaw)
-	
+
 	insts := [][]byte{[]byte("RESPONSE id=")}
 	instsPos := make([]instruction, 0, len(d))
 
 	for b.Loop() {
 		instsPos = instsPos[:0]
-		if _, err := handleInstructions(&d[1], &insts, func(inst instruction) { instsPos = append(instsPos,  inst)}); err != nil {
+		if _, err := handleInstructions(&d[1], &insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -169,8 +169,8 @@ func BenchmarkFastExtract(b *testing.B) {
 }
 
 func TestAtoi(t *testing.T) {
-	tests := []struct{
-		input []byte
+	tests := []struct {
+		input    []byte
 		expected int
 	}{
 		{[]byte("10"), 10},
