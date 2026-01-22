@@ -34,6 +34,10 @@ func spin(idx *int) {
 func (b *ringBuffer[T]) Write(val T) {
 	idx := 0
 	for {
+		if b.IsClosed() {
+			return
+		}
+
 		w := atomic.LoadUint64(&b.wPos)
 		r := atomic.LoadUint64(&b.rPos)
 
@@ -47,30 +51,33 @@ func (b *ringBuffer[T]) Write(val T) {
 		return
 	}
 }
+
 func (b *ringBuffer[T]) Read() T {
-	var idx int = 0
+	idx := 0
 	for {
 		w := atomic.LoadUint64(&b.wPos)
 		r := atomic.LoadUint64(&b.rPos)
 
-		if r == w {
-			if b.IsClosed() {
-				var zero T
-				return zero
-			}
-			spin(&idx)
-			continue
+		if r < w {
+			val := b.buf[r%bufSize]
+			atomic.AddUint64(&b.rPos, 1)
+			return val
 		}
 
-		val := b.buf[r%bufSize]
-		atomic.AddUint64(&b.rPos, 1)
-		return val
+		if b.IsClosed() {
+			var zero T
+			return zero
+		}
+
+		spin(&idx)
 	}
 }
 
 func (b *ringBuffer[T]) Close() {
 	atomic.StoreUint32(&b.closed, 1)
 }
+
 func (b *ringBuffer[T]) IsClosed() bool {
 	return atomic.LoadUint32(&b.closed) == 1
 }
+

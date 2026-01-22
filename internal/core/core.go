@@ -1,9 +1,9 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"io"
-	"bytes"
 	"os"
 	"sync"
 	"unsafe"
@@ -47,7 +47,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			if cfg == nil {
 				break
 			}
-			cfgToFile := cfg.Clone()
+
+			cfgToFile := config.Clone(cfg)
 
 			cfg.RangeDeps(func(d config.Dependency) {
 				if d.TargetID >= len(resHub) {
@@ -78,6 +79,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				err = transport.DoHTTP(v, res)
 			case *config.GRPCConfig:
 				cfg.Release()
+				config.Release(cfgToFile)
 				continue
 			}
 
@@ -95,9 +97,11 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 
 			resStr := unsafe.String(unsafe.SliceData(tmp), len(tmp))
 			cfgToFile.SetResp(resStr)
+
 			cfgFileBuf.Write(cfgToFile)
 
 			cfg.Release()
+
 			resB.Write(res)
 		}
 		cfgFileBuf.Close()
@@ -110,7 +114,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		var cfg config.Config
 
 		tmpPath := cPath + ".out.tmp"
-		f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			log.Fatal("Failed to open file",
 				zap.String("op", op),
@@ -184,6 +188,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					zap.Error(err))
 				continue
 			}
+			config.Release(cfg)
 
 			buf.Write(data)
 			cnt++
@@ -197,8 +202,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 						zap.Error(err))
 				}
 			}
-
-			cfg.Release()
 		}
 
 		if cnt > 0 {

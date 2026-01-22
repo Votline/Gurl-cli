@@ -1,8 +1,9 @@
 package parser
 
 import (
-	"gcli/internal/config"
 	"testing"
+
+	"gcli/internal/config"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
@@ -10,10 +11,14 @@ import (
 
 var raw = []byte(`
 	[http_config]
-	ID:0
+	Url:http://localhost:8080
+	Method:GET
+	Body:hello
+	Headers:Content-Type:application/json
 	Type:http
 	Response:hello
 	[\http_config]`)
+
 var repRaw = append(raw, []byte(`
 		[rep]
 		Target_ID:0
@@ -35,6 +40,7 @@ func TestParseStream(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
 func BenchmarkParseStream(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
@@ -66,6 +72,7 @@ func TestHandleRepeat(t *testing.T) {
 		}
 	}
 }
+
 func BenchmarkHandleRepeat(b *testing.B) {
 	d, _ := gurlf.Scan(repRaw)
 
@@ -99,6 +106,7 @@ func TestHandleInstructions(t *testing.T) {
 		}
 	}
 }
+
 func BenchmarkHandleInstructions(b *testing.B) {
 	d, _ := gurlf.Scan(repRaw)
 
@@ -114,8 +122,9 @@ func BenchmarkHandleInstructions(b *testing.B) {
 }
 
 func TestHandleType(t *testing.T) {
-	var b config.BaseConfig = config.BaseConfig{
-		Name: "http_config", ID: 15, Type: "http"}
+	b := config.BaseConfig{
+		Name: "http_config", ID: 15, Type: "http",
+	}
 	d, _ := gurlf.Scan(raw)
 
 	config.Init()
@@ -128,14 +137,17 @@ func TestHandleType(t *testing.T) {
 	if _, ok := cfg.(*config.HTTPConfig); !ok {
 		t.Errorf("Invalid type: %T", b)
 	}
+
+	cfg.Release()
 }
+
 func BenchmarkHandleType(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
 	config.Init()
 	var cfg config.Config
 	for b.Loop() {
-		var base config.BaseConfig = config.BaseConfig{Name: "http_config", ID: 15, Type: "http"}
+		base := config.BaseConfig{Name: "http_config", ID: 15, Type: "http"}
 		if err := handleType(&cfg, &base.Type, &d[0]); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
@@ -149,7 +161,7 @@ func TestFastExtract(t *testing.T) {
 		expected string
 	}{
 		{[]byte("Type"), "http"},
-		{[]byte("ID"), "0"},
+		{[]byte("Body"), "hello"},
 		{[]byte("Response"), "hello"},
 	}
 	d, _ := gurlf.Scan(raw)
@@ -160,6 +172,7 @@ func TestFastExtract(t *testing.T) {
 		}
 	}
 }
+
 func BenchmarkFastExtract(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
 
@@ -185,6 +198,7 @@ func TestAtoi(t *testing.T) {
 		}
 	}
 }
+
 func BenchmarkAtoi(b *testing.B) {
 	for b.Loop() {
 		atoi([]byte("2"))

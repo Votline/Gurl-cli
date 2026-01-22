@@ -3,7 +3,7 @@ Url:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
-		"name": "Vahdfgdfhgfda",
+		"name": "vizaa",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
@@ -11,15 +11,23 @@ Body:`
 `
 Headers:Content-Type: application/json
 Type:http
-Response:`circuit breaker is open
-`
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
 [\http_config]
 
 [rep]
 Target_ID:0
 Type:repeat
-Response:`circuit breaker is open
-`
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
 [\rep]
 
 [http_config]
@@ -33,4 +41,1559 @@ Headers:plain/text
 Type:http
 Response:
 [\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}
+ssword"
+}`
+[\rep]
+
+[http_config]
+Url:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+Url:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "fghhh",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "fghhh",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:99
+Type:repeat
+Response:`root{
+"name": "fghhh",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\rep]
 

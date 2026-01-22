@@ -3,9 +3,10 @@ package parser
 import (
 	"bytes"
 	"fmt"
-	"gcli/internal/config"
 	"strconv"
 	"unsafe"
+
+	"gcli/internal/config"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
@@ -46,11 +47,10 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 
 		tID := targets[i]
 		if tID != -1 {
-			orig := cache[tID]
-			if orig == nil {
+			execCfg = cache[tID]
+			if execCfg == nil {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
-			execCfg = orig.Clone()
 
 			var rep config.Config
 			tp := "repeat"
@@ -61,6 +61,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			cfg = rep
 		} else {
 			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
+
 			if tp == "" {
 				return fmt.Errorf("%s: no config type", op)
 			} else {
@@ -71,8 +72,8 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			execCfg = cfg
 		}
 
-		tagOverhead := (len(d.Name)+2) + (len(d.Name)+3)+2
-		localEnd := len(d.RawData)+tagOverhead
+		tagOverhead := (len(d.Name) + 2) + (len(d.Name) + 3) + 2
+		localEnd := len(d.RawData) + tagOverhead
 		absEnd += localEnd
 
 		execCfg.SetID(i)
@@ -88,13 +89,15 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			for _, inst := range instsPos {
 				if inst.tID < n {
 					execCfg.SetDependency(config.Dependency{
-						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end})
+						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end,
+					})
 				}
 			}
 		}
 
 		if (needed[i/64] & (1 << (i % 64))) != 0 {
-			cache[i] = execCfg.Clone()
+			nw := config.Alloc(execCfg)
+			cache[i] = nw
 		}
 
 		yield(cfg)
@@ -217,7 +220,6 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	if err := gurlf.Unmarshal(*d, *c); err != nil {
 		return fmt.Errorf("%s: type %q: %w", op, *tp, err)
 	}
-
 	return nil
 }
 

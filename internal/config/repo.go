@@ -1,8 +1,9 @@
 package config
 
 import (
-	"gcli/internal/buffer"
 	"unsafe"
+
+	"gcli/internal/buffer"
 )
 
 type Dependency struct {
@@ -40,18 +41,83 @@ type Config interface {
 }
 
 var (
-	hBuf  = buffer.NewRb[*HTTPConfig]()
-	gBuf  = buffer.NewRb[*GRPCConfig]()
-	rBuf  = buffer.NewRb[*RepeatConfig]()
-	hItab uintptr
-	gItab uintptr
-	rItab uintptr
+	hBuf    = buffer.NewRb[*HTTPConfig]()
+	gBuf    = buffer.NewRb[*GRPCConfig]()
+	rBuf    = buffer.NewRb[*RepeatConfig]()
+	hItab   uintptr
+	gItab   uintptr
+	rItab   uintptr
+	hClBuf  = buffer.NewRb[*HTTPConfig]()
+	gClBuf  = buffer.NewRb[*GRPCConfig]()
+	rClBuf  = buffer.NewRb[*RepeatConfig]()
+	hItabCl uintptr
+	gItabCl uintptr
+	rItabCl uintptr
 )
+
+func Clone(cfg Config) Config {
+	switch v := cfg.(type) {
+	case *HTTPConfig:
+		newCfg := hClBuf.Read()
+		*newCfg = *v
+		newCfg.Url = cloneBytes(v.Url)
+		newCfg.Method = cloneBytes(v.Method)
+		newCfg.Body = cloneBytes(v.Body)
+		newCfg.Headers = cloneBytes(v.Headers)
+
+		return newCfg
+	case *GRPCConfig:
+		newCfg := gClBuf.Read()
+		*newCfg = *v
+		return newCfg
+	case *RepeatConfig:
+		newCfg := rClBuf.Read()
+		*newCfg = *v
+		return newCfg
+	}
+	return nil
+}
+
+func Release(cfg Config) {
+	switch v := cfg.(type) {
+	case *HTTPConfig:
+		hClBuf.Write(v)
+	case *GRPCConfig:
+		gClBuf.Write(v)
+	case *RepeatConfig:
+		rClBuf.Write(v)
+	}
+}
+
+func Alloc(cfg Config) Config {
+	switch v := cfg.(type) {
+	case *HTTPConfig:
+		cp := new(HTTPConfig)
+		*cp = *v
+		cp.Url = cloneBytes(v.Url)
+		cp.Method = cloneBytes(v.Method)
+		cp.Body = cloneBytes(v.Body)
+		cp.Headers = cloneBytes(v.Headers)
+		return cp
+	case *GRPCConfig:
+		cp := new(GRPCConfig)
+		*cp = *v
+		return cp
+	case *RepeatConfig:
+		cp := new(RepeatConfig)
+		*cp = *v
+		return cp
+	}
+	return nil
+}
 
 func Init() {
 	hBuf = buffer.NewRb[*HTTPConfig]()
 	gBuf = buffer.NewRb[*GRPCConfig]()
 	rBuf = buffer.NewRb[*RepeatConfig]()
+	hClBuf = buffer.NewRb[*HTTPConfig]()
+	gClBuf = buffer.NewRb[*GRPCConfig]()
+	rClBuf = buffer.NewRb[*RepeatConfig]()
 
 	var hIface Config = &HTTPConfig{}
 	hItab = *(*uintptr)(unsafe.Pointer(&hIface))
@@ -62,10 +128,22 @@ func Init() {
 	var rIface Config = &RepeatConfig{}
 	rItab = *(*uintptr)(unsafe.Pointer(&rIface))
 
+	var hIfaceCl Config = &HTTPConfig{}
+	hItabCl = *(*uintptr)(unsafe.Pointer(&hIfaceCl))
+
+	var gIfaceCl Config = &GRPCConfig{}
+	gItabCl = *(*uintptr)(unsafe.Pointer(&gIfaceCl))
+
+	var rIfaceCl Config = &RepeatConfig{}
+	rItabCl = *(*uintptr)(unsafe.Pointer(&rIfaceCl))
+
 	for i := 0; i < 10; i++ {
 		hBuf.Write(&HTTPConfig{})
 		gBuf.Write(&GRPCConfig{})
 		rBuf.Write(&RepeatConfig{})
+		hClBuf.Write(&HTTPConfig{})
+		gClBuf.Write(&GRPCConfig{})
+		rClBuf.Write(&RepeatConfig{})
 	}
 }
 
@@ -116,6 +194,7 @@ func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 		fn(d)
 	}
 }
+
 func (c *BaseConfig) SetDependency(nDep Dependency) {
 	if c.DepsLen < 6 {
 		c.Deps[c.DepsLen] = nDep
@@ -139,6 +218,7 @@ func (c *HTTPConfig) Release() {
 	*c = HTTPConfig{}
 	hBuf.Write(c)
 }
+
 func (c *HTTPConfig) Clone() Config {
 	newCfg := hBuf.Read()
 	*newCfg = *c
@@ -148,6 +228,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.Headers = cloneBytes(c.Headers)
 	return newCfg
 }
+
 func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
 	case "Url":
@@ -160,6 +241,7 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Headers = splice(c.Headers, val, start, end)
 	}
 }
+
 func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
 	var source []byte
 	switch key {
@@ -192,6 +274,7 @@ func (c *GRPCConfig) Clone() Config {
 	*newCfg = *c
 	return newCfg
 }
+
 func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 	return
 }
@@ -214,9 +297,11 @@ func (c *RepeatConfig) SetID(nID int) { c.TargetID = nID }
 func (c *RepeatConfig) SetOrig(nc Config) {
 	c.Orig = nc
 }
+
 func (c *RepeatConfig) SetResp(nResp string) {
 	c.Resp = nResp
 }
+
 func (c *RepeatConfig) Clone() Config {
 	newCfg := rBuf.Read()
 	*newCfg = *c
@@ -227,6 +312,7 @@ func (c *RepeatConfig) Clone() Config {
 	}
 	return newCfg
 }
+
 func splice(orig, val []byte, start, end int) []byte {
 	res := make([]byte, 0, len(orig)+len(val))
 	res = append(res, orig[:start]...)
