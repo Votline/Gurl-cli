@@ -48,7 +48,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				break
 			}
 
-			cfgToFile := config.Clone(cfg)
+			// cfgToFile := config.Clone(cfg)
+			cfgToFile := cfg.Clone()
 
 			cfg.RangeDeps(func(d config.Dependency) {
 				if d.TargetID >= len(resHub) {
@@ -79,7 +80,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				err = transport.DoHTTP(v, res)
 			case *config.GRPCConfig:
 				cfg.Release()
-				config.Release(cfgToFile)
+				// config.Release(cfgToFile)
+				cfgToFile.ReleaseClone()
 				continue
 			}
 
@@ -188,7 +190,8 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					zap.Error(err))
 				continue
 			}
-			config.Release(cfg)
+			// config.Release(cfg)
+			cfg.ReleaseClone()
 
 			buf.Write(data)
 			cnt++

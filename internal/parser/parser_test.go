@@ -11,7 +11,7 @@ import (
 
 var raw = []byte(`
 	[http_config]
-	Url:http://localhost:8080
+	URL:http://localhost:8080
 	Method:GET
 	Body:hello
 	Headers:Content-Type:application/json

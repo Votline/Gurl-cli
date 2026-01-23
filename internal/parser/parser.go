@@ -47,7 +47,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 
 		tID := targets[i]
 		if tID != -1 {
-			execCfg = cache[tID]
+			execCfg = config.Alloc(cache[tID])
 			if execCfg == nil {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}

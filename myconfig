@@ -1,5 +1,93 @@
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaAaaA",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaAaaA",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaAaaA",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\rep]
+
+[http_config]
+URL:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "Vvvviiz",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "Vvvviiz",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaAaaA",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\rep]
+
+[http_config]
+URL:{RESPONSE id=0 json:token}
+Method:GET
+Body:`
+			pretty
+			body
+`
+Headers:plain/text
+Type:http
+Response:
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -23,7 +111,7 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
@@ -31,7 +119,7 @@ Response:`root{
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -43,7 +131,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -67,17 +176,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -89,7 +196,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -113,17 +220,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -135,28 +240,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -180,17 +264,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -202,7 +284,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -226,17 +329,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -248,7 +349,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -272,17 +373,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -294,28 +393,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -339,17 +417,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -361,7 +437,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -385,17 +482,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -407,7 +502,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -431,17 +526,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -453,28 +546,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -498,17 +570,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -520,7 +590,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -544,17 +635,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -566,7 +655,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -590,17 +679,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -612,28 +699,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -657,17 +723,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -679,7 +743,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -703,17 +788,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -725,7 +808,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -749,17 +832,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -771,28 +852,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -816,17 +876,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -838,7 +896,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -862,17 +941,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -884,7 +961,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -908,17 +985,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -930,28 +1005,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -975,17 +1029,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -997,7 +1049,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1021,17 +1094,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1043,7 +1114,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1067,17 +1138,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1089,28 +1158,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1134,17 +1182,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1156,7 +1202,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1180,17 +1247,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1202,7 +1267,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1226,17 +1291,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1248,28 +1311,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1293,17 +1335,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1315,7 +1355,28 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
+Method:POST
+Body:`
+	{
+		"name": "vizaa",
+		"email": "yomi@duck.com",
+		"role": "admin",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`root{
+"name": "vizaa",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1339,17 +1400,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1361,7 +1420,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1385,17 +1444,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1407,28 +1464,7 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
@@ -1452,17 +1488,15 @@ Response:`root{
 Target_ID:0
 Type:repeat
 Response:`root{
-"name": "vizaa",
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
-}
-ssword"
 }`
 [\rep]
 
 [http_config]
-Url:{RESPONSE id=0 json:token}
+URL:{RESPONSE id=0 json:token}
 Method:GET
 Body:`
 			pretty
@@ -1474,11 +1508,11 @@ Response:
 [\http_config]
 
 [http_config]
-Url:http://localhost:8443/api/users/reg
+URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
-		"name": "vizaa",
+		"name": "ggg",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
@@ -1487,99 +1521,7 @@ Body:`
 Headers:Content-Type: application/json
 Type:http
 Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[rep]
-Target_ID:0
-Type:repeat
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}
-ssword"
-}`
-[\rep]
-
-[http_config]
-Url:{RESPONSE id=0 json:token}
-Method:GET
-Body:`
-			pretty
-			body
-`
-Headers:plain/text
-Type:http
-Response:
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "vizaa",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\http_config]
-
-[rep]
-Target_ID:0
-Type:repeat
-Response:`root{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}
-ssword"
-}`
-[\rep]
-
-[http_config]
-Url:{RESPONSE id=0 json:token}
-Method:GET
-Body:`
-			pretty
-			body
-`
-Headers:plain/text
-Type:http
-Response:
-[\http_config]
-
-[http_config]
-Url:http://localhost:8443/api/users/reg
-Method:POST
-Body:`
-	{
-		"name": "fghhh",
-		"email": "yomi@duck.com",
-		"role": "admin",
-		"password": "password"
-	}
-`
-Headers:Content-Type: application/json
-Type:http
-Response:`root{
-"name": "fghhh",
+"name": "ggg",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"
@@ -1590,7 +1532,18 @@ Response:`root{
 Target_ID:99
 Type:repeat
 Response:`root{
-"name": "fghhh",
+"name": "ggg",
+"email": "yomi@duck.com",
+"role": "admin",
+"password": "password"
+}`
+[\rep]
+
+[rep]
+Target_ID:0
+Type:repeat
+Response:`root{
+"name": "vizaAaaA",
 "email": "yomi@duck.com",
 "role": "admin",
 "password": "password"

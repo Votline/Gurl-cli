@@ -16,7 +16,7 @@ import (
 
 type Result struct {
 	Raw    []byte
-	IsJson bool
+	IsJSON bool
 }
 
 func Init(putRes func(*Result)) {
@@ -42,7 +42,7 @@ func DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	}
 	defer res.Body.Close()
 
-	resObj.Raw, resObj.IsJson, err = readBody(res.Body, res)
+	resObj.Raw, resObj.IsJSON, err = readBody(res.Body, res)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -58,7 +58,7 @@ func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, e
 	}
 
 	mtd := unsafe.String(unsafe.SliceData(c.Method), len(c.Method))
-	url := unsafe.String(unsafe.SliceData(c.Url), len(c.Url))
+	url := unsafe.String(unsafe.SliceData(c.URL), len(c.URL))
 
 	var bRdr io.Reader
 	if c.Body != nil {

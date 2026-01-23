@@ -16,6 +16,7 @@ type Dependency struct {
 type Config interface {
 	Clone() Config
 	Release()
+	ReleaseClone()
 
 	GetName() string
 	SetName(string)
@@ -55,62 +56,6 @@ var (
 	rItabCl uintptr
 )
 
-func Clone(cfg Config) Config {
-	switch v := cfg.(type) {
-	case *HTTPConfig:
-		newCfg := hClBuf.Read()
-		*newCfg = *v
-		newCfg.Url = cloneBytes(v.Url)
-		newCfg.Method = cloneBytes(v.Method)
-		newCfg.Body = cloneBytes(v.Body)
-		newCfg.Headers = cloneBytes(v.Headers)
-
-		return newCfg
-	case *GRPCConfig:
-		newCfg := gClBuf.Read()
-		*newCfg = *v
-		return newCfg
-	case *RepeatConfig:
-		newCfg := rClBuf.Read()
-		*newCfg = *v
-		return newCfg
-	}
-	return nil
-}
-
-func Release(cfg Config) {
-	switch v := cfg.(type) {
-	case *HTTPConfig:
-		hClBuf.Write(v)
-	case *GRPCConfig:
-		gClBuf.Write(v)
-	case *RepeatConfig:
-		rClBuf.Write(v)
-	}
-}
-
-func Alloc(cfg Config) Config {
-	switch v := cfg.(type) {
-	case *HTTPConfig:
-		cp := new(HTTPConfig)
-		*cp = *v
-		cp.Url = cloneBytes(v.Url)
-		cp.Method = cloneBytes(v.Method)
-		cp.Body = cloneBytes(v.Body)
-		cp.Headers = cloneBytes(v.Headers)
-		return cp
-	case *GRPCConfig:
-		cp := new(GRPCConfig)
-		*cp = *v
-		return cp
-	case *RepeatConfig:
-		cp := new(RepeatConfig)
-		*cp = *v
-		return cp
-	}
-	return nil
-}
-
 func Init() {
 	hBuf = buffer.NewRb[*HTTPConfig]()
 	gBuf = buffer.NewRb[*GRPCConfig]()
@@ -147,6 +92,28 @@ func Init() {
 	}
 }
 
+func Alloc(cfg Config) Config {
+	switch v := cfg.(type) {
+	case *HTTPConfig:
+		cp := new(HTTPConfig)
+		*cp = *v
+		cp.URL = cloneBytes(v.URL)
+		cp.Method = cloneBytes(v.Method)
+		cp.Body = cloneBytes(v.Body)
+		cp.Headers = cloneBytes(v.Headers)
+		return cp
+	case *GRPCConfig:
+		cp := new(GRPCConfig)
+		*cp = *v
+		return cp
+	case *RepeatConfig:
+		cp := new(RepeatConfig)
+		*cp = *v
+		return cp
+	}
+	return nil
+}
+
 type BaseConfig struct {
 	ID        int
 	End       int
@@ -172,6 +139,7 @@ func (c *BaseConfig) UnwrapExec() Config                       { return c }
 func (c *BaseConfig) SetOrig(Config)                           {}
 func (c *BaseConfig) Apply(int, int, string, []byte)           {}
 func (c *BaseConfig) Release()                                 {}
+func (c *BaseConfig) ReleaseClone()                            {}
 func (c *BaseConfig) Clone() Config                            { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                          { return c.Name }
 func (c *BaseConfig) SetName(nName string)                     { c.Name = nName }
@@ -205,7 +173,7 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 }
 
 type HTTPConfig struct {
-	Url     []byte `gurlf:"Url"`
+	URL     []byte `gurlf:"URL"`
 	Method  []byte `gurlf:"Method"`
 	Body    []byte `gurlf:"Body"`
 	Headers []byte `gurlf:"Headers"`
@@ -214,15 +182,12 @@ type HTTPConfig struct {
 
 func GetHTTP() (*HTTPConfig, uintptr)    { return hBuf.Read(), hItab }
 func (c *HTTPConfig) UnwrapExec() Config { return c }
-func (c *HTTPConfig) Release() {
-	*c = HTTPConfig{}
-	hBuf.Write(c)
-}
-
+func (c *HTTPConfig) Release()           { *c = HTTPConfig{}; hBuf.Write(c) }
+func (c *HTTPConfig) ReleaseClone()      { *c = HTTPConfig{}; hClBuf.Write(c) }
 func (c *HTTPConfig) Clone() Config {
-	newCfg := hBuf.Read()
+	newCfg := hClBuf.Read()
 	*newCfg = *c
-	newCfg.Url = cloneBytes(c.Url)
+	newCfg.URL = cloneBytes(c.URL)
 	newCfg.Method = cloneBytes(c.Method)
 	newCfg.Body = cloneBytes(c.Body)
 	newCfg.Headers = cloneBytes(c.Headers)
@@ -231,8 +196,8 @@ func (c *HTTPConfig) Clone() Config {
 
 func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
-	case "Url":
-		c.Url = splice(c.Url, val, start, end)
+	case "URL":
+		c.URL = splice(c.URL, val, start, end)
 	case "Method":
 		c.Method = splice(c.Method, val, start, end)
 	case "Body":
@@ -245,8 +210,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
 	var source []byte
 	switch key {
-	case "Url":
-		source = c.Url
+	case "URL":
+		source = c.URL
 	case "Method":
 		source = c.Method
 	case "Body":
@@ -269,8 +234,9 @@ type GRPCConfig struct {
 func GetGRPC() (*GRPCConfig, uintptr)    { return gBuf.Read(), gItab }
 func (c *GRPCConfig) UnwrapExec() Config { return c }
 func (c *GRPCConfig) Release()           { *c = GRPCConfig{}; gBuf.Write(c) }
+func (c *GRPCConfig) ReleaseClone()      { *c = GRPCConfig{}; gClBuf.Write(c) }
 func (c *GRPCConfig) Clone() Config {
-	newCfg := gBuf.Read()
+	newCfg := gClBuf.Read()
 	*newCfg = *c
 	return newCfg
 }
@@ -292,24 +258,30 @@ func (c *RepeatConfig) UnwrapExec() Config {
 	}
 	return c.Orig
 }
-func (c *RepeatConfig) Release()      { *c = RepeatConfig{}; rBuf.Write(c) }
-func (c *RepeatConfig) SetID(nID int) { c.TargetID = nID }
-func (c *RepeatConfig) SetOrig(nc Config) {
-	c.Orig = nc
+func (c *RepeatConfig) SetID(nID int)        { c.TargetID = nID }
+func (c *RepeatConfig) SetOrig(nc Config)    { c.Orig = nc }
+func (c *RepeatConfig) SetResp(nResp string) { c.Resp = nResp }
+func (c *RepeatConfig) Release() {
+	*c = RepeatConfig{}
+	rBuf.Write(c)
 }
 
-func (c *RepeatConfig) SetResp(nResp string) {
-	c.Resp = nResp
+func (c *RepeatConfig) ReleaseClone() {
+	if c.Orig != nil {
+		c.Orig.ReleaseClone()
+	}
+	*c = RepeatConfig{}
+	rClBuf.Write(c)
 }
 
 func (c *RepeatConfig) Clone() Config {
-	newCfg := rBuf.Read()
+	newCfg := rClBuf.Read()
 	*newCfg = *c
+
 	if c.Orig != nil {
 		newCfg.Orig = c.Orig.Clone()
-	} else {
-		newCfg.Orig = nil
 	}
+
 	return newCfg
 }
 
