@@ -2,14 +2,18 @@ package parser
 
 import (
 	"bytes"
+	"net/http"
+	"net/url"
+	"strings"
 )
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	for len(hdrs) != 0 {
 		kS := 0
-		for kS < len(hdrs) && isSpace(hdrs[kS]) {
+		for kS < len(hdrs) && (isSpace(hdrs[kS]) || hdrs[kS] == '{') {
 			kS++
 		}
+
 		kE := bytes.IndexByte(hdrs, ':')
 		if kE == -1 {
 			return
@@ -95,7 +99,6 @@ func ParseBody(b []byte) []byte {
 	}
 
 	return res
-
 }
 
 func ParseResponse(res *[]byte, inst []byte) {
@@ -106,7 +109,7 @@ func ParseResponse(res *[]byte, inst []byte) {
 		return
 	}
 
-	var tpEnd int = len(inst)
+	tpEnd := len(inst)
 	for tpEnd > tpStart && isSpace(inst[tpEnd-1]) {
 		tpEnd--
 	}
@@ -121,7 +124,7 @@ func ParseResponse(res *[]byte, inst []byte) {
 		jsonStart++
 	}
 
-	var jsonEnd int = jsonStart + 1
+	jsonEnd := jsonStart + 1
 	for jsonEnd < len(*res) {
 		if (*res)[jsonEnd] == '"' && (*res)[jsonEnd-1] != '\\' {
 			break
@@ -130,6 +133,55 @@ func ParseResponse(res *[]byte, inst []byte) {
 	}
 
 	(*res) = (*res)[jsonStart+1 : jsonEnd]
+}
+
+var buf bytes.Buffer
+
+func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
+	const op = "parser.ParseCookies"
+
+	if len(cookies) == 0 {
+		return nil
+	}
+
+	buf.Reset()
+	buf.WriteByte('\n')
+	buf.WriteByte('[')
+	buf.WriteString(url.Host)
+	buf.WriteByte(']')
+	buf.WriteByte('\n')
+	buf.WriteByte(' ')
+
+	for _, c := range cookies {
+		parts := strings.SplitSeq(c.Raw, ";")
+
+		for p := range parts {
+			if len(p) == 0 {
+				continue
+			}
+
+			key, val, found := strings.Cut(p, "=")
+			if !found {
+				buf.WriteString(p)
+				buf.WriteByte(':')
+				buf.WriteByte('\n')
+				continue
+			}
+			buf.WriteString(key)
+			buf.WriteByte(':')
+			buf.WriteString(val)
+
+			buf.WriteByte('\n')
+		}
+	}
+
+	buf.WriteByte('[')
+	buf.WriteByte('\\')
+	buf.WriteString(url.Host)
+	buf.WriteByte(']')
+	buf.WriteByte('\n')
+
+	return buf.Bytes()
 }
 
 func isSpace(r byte) bool {

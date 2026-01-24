@@ -37,7 +37,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
 	resB := buffer.NewRb[*transport.Result]()
-	transport.Init(resB.Write)
+	trnsp := transport.NewTransport(resB.Write)
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
@@ -48,7 +48,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				break
 			}
 
-			// cfgToFile := config.Clone(cfg)
 			cfgToFile := cfg.Clone()
 
 			cfg.RangeDeps(func(d config.Dependency) {
@@ -77,10 +76,9 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			execCfg := cfg.UnwrapExec()
 			switch v := execCfg.(type) {
 			case *config.HTTPConfig:
-				err = transport.DoHTTP(v, res)
+				err = trnsp.DoHTTP(v, res)
 			case *config.GRPCConfig:
 				cfg.Release()
-				// config.Release(cfgToFile)
 				cfgToFile.ReleaseClone()
 				continue
 			}
@@ -99,6 +97,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 
 			resStr := unsafe.String(unsafe.SliceData(tmp), len(tmp))
 			cfgToFile.SetResp(resStr)
+			cfgToFile.SetCookie(res.Cookie)
 
 			cfgFileBuf.Write(cfgToFile)
 
@@ -136,8 +135,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				}
 
 				orig, err := os.Open(cPath)
-
-				defer orig.Close()
 				if err == nil {
 					if _, err = orig.Seek(pendingOffset, io.SeekStart); err == nil {
 						if _, err := io.Copy(f, orig); err != nil {
@@ -158,6 +155,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 						zap.String("path", cPath),
 						zap.Error(err))
 				}
+				defer orig.Close()
 			}
 
 			if err := f.Sync(); err != nil {
@@ -190,7 +188,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					zap.Error(err))
 				continue
 			}
-			// config.Release(cfg)
 			cfg.ReleaseClone()
 
 			buf.Write(data)

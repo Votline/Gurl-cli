@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"time"
 	"unsafe"
 
@@ -15,42 +16,57 @@ import (
 )
 
 type Result struct {
-	Raw    []byte
 	IsJSON bool
+	Raw    []byte
+	Cookie []byte
+}
+type Transport struct {
+	jar *cookiejar.Jar
+	cl  *http.Client
 }
 
-func Init(putRes func(*Result)) {
+func NewTransport(putRes func(*Result)) *Transport {
 	for i := 0; i < 10; i++ {
 		putRes(&Result{})
 	}
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{
+		Jar: jar,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	return &Transport{jar: jar, cl: client}
 }
 
-func DoHTTP(c *config.HTTPConfig, resObj *Result) error {
+func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	const op = "transport.DoHTTP"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	req, err := prepareRequest(c, ctx)
+	req, err := t.prepareRequest(c, ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := clientDo(req, false)
+	res, err := t.clientDo(req, false)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer res.Body.Close()
 
-	resObj.Raw, resObj.IsJSON, err = readBody(res.Body, res)
+	resObj.Raw, resObj.IsJSON, err = t.readBody(res.Body, res)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
+	resObj.Cookie = parser.ParseCookies(req.URL, res.Cookies())
 
 	return nil
 }
 
-func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, error) {
+func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, error) {
 	const op = "transport.prepareRequest"
 
 	if c == nil {
@@ -85,21 +101,23 @@ func prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, e
 	return req, nil
 }
 
-func clientDo(req *http.Request, ic bool) (*http.Response, error) {
+func (t *Transport) clientDo(req *http.Request, ic bool) (*http.Response, error) {
 	const op = "transport.clientDo"
-
-	cl := &http.Client{}
-
 	if ic {
-		cl.Transport = &http.Transport{
+		t.cl.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
 
-	return cl.Do(req)
+	res, err := t.cl.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%s: do request: %w", op, err)
+	}
+
+	return res, nil
 }
 
-func readBody(body io.ReadCloser, res *http.Response) ([]byte, bool, error) {
+func (t *Transport) readBody(body io.ReadCloser, res *http.Response) ([]byte, bool, error) {
 	const op = "transport.readBody"
 
 	b, err := io.ReadAll(body)
