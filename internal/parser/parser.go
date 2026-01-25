@@ -17,12 +17,13 @@ type instruction struct {
 	start int
 	end   int
 	key   string
+	insTp string
 }
 
 func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
-	insts := [][]byte{[]byte("RESPONSE id=")}
+	insts := [][]byte{[]byte("RESPONSE id="), []byte("COOKIES id=")}
 	instsPos := make([]instruction, 0, 6)
 
 	targets := make([]int, n)
@@ -89,7 +90,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			for _, inst := range instsPos {
 				if inst.tID < n {
 					execCfg.SetDependency(config.Dependency{
-						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end,
+						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
 					})
 				}
 			}
@@ -145,7 +146,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 	for _, inst := range *insts {
 		pIdx := bytes.Index(d.RawData[start+1:], inst)
 		if pIdx == -1 {
-			return -1, nil
+			continue
 		}
 		pIdx += start
 
@@ -155,6 +156,8 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 				op, string(inst))
 		}
 		idOffset += pIdx
+
+		instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx+1:idOffset-1]), len(d.RawData[pIdx+1:idOffset-1]))
 
 		valStart := idOffset + 3
 		for valStart < len(d.RawData) && isSpace(d.RawData[valStart]) {
@@ -191,6 +194,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 			start: start,
 			end:   end,
 			key:   instKey,
+			insTp: instTp,
 		})
 	}
 

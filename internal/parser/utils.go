@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unsafe"
 )
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
@@ -135,7 +136,7 @@ func ParseResponse(res *[]byte, inst []byte) {
 	(*res) = (*res)[jsonStart+1 : jsonEnd]
 }
 
-var buf bytes.Buffer
+var ckBuf bytes.Buffer
 
 func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 	const op = "parser.ParseCookies"
@@ -144,13 +145,13 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 		return nil
 	}
 
-	buf.Reset()
-	buf.WriteByte('\n')
-	buf.WriteByte('[')
-	buf.WriteString(url.Host)
-	buf.WriteByte(']')
-	buf.WriteByte('\n')
-	buf.WriteByte(' ')
+	ckBuf.Reset()
+	ckBuf.WriteByte('\n')
+	ckBuf.WriteByte('[')
+	ckBuf.WriteString(url.Host)
+	ckBuf.WriteByte(']')
+	ckBuf.WriteByte('\n')
+	ckBuf.WriteByte(' ')
 
 	for _, c := range cookies {
 		parts := strings.SplitSeq(c.Raw, ";")
@@ -162,26 +163,73 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 
 			key, val, found := strings.Cut(p, "=")
 			if !found {
-				buf.WriteString(p)
-				buf.WriteByte(':')
-				buf.WriteByte('\n')
+				ckBuf.WriteString(p)
+				ckBuf.WriteByte(':')
+				ckBuf.WriteByte('\n')
 				continue
 			}
-			buf.WriteString(key)
-			buf.WriteByte(':')
-			buf.WriteString(val)
+			ckBuf.WriteString(key)
+			ckBuf.WriteByte(':')
+			ckBuf.WriteString(val)
 
-			buf.WriteByte('\n')
+			ckBuf.WriteByte('\n')
 		}
 	}
 
-	buf.WriteByte('[')
-	buf.WriteByte('\\')
-	buf.WriteString(url.Host)
-	buf.WriteByte(']')
-	buf.WriteByte('\n')
+	ckBuf.WriteByte('[')
+	ckBuf.WriteByte('\\')
+	ckBuf.WriteString(url.Host)
+	ckBuf.WriteByte(']')
+	ckBuf.WriteByte('\n')
 
-	return buf.Bytes()
+	return ckBuf.Bytes()
+}
+
+var unpBuf bytes.Buffer
+
+func UnparseCookies(data []byte) []*http.Cookie {
+	const op = "parser.ParseLoadCookie"
+
+	unpBuf.Reset()
+
+	start := bytes.Index(data, []byte("]\n"))
+	end := bytes.LastIndex(data, []byte("\n[\\"))
+	if start == -1 || end == -1 || end <= start {
+		return nil
+	}
+	data = data[start+3 : end]
+
+	for len(data) > 0 {
+		var line []byte
+		i := bytes.IndexByte(data, '\n')
+		if i == -1 {
+			line = data
+			data = nil
+		} else {
+			line = data[:i]
+			data = data[i+1:]
+		}
+
+		key, val, found := bytes.Cut(line, []byte(":"))
+		if !found || len(val) == 0 {
+			unpBuf.Write(key)
+			unpBuf.WriteByte(';')
+			continue
+		}
+
+		unpBuf.Write(key)
+		unpBuf.WriteByte('=')
+		unpBuf.Write(val)
+		unpBuf.WriteByte(';')
+	}
+
+	raw := unpBuf.Bytes()
+	ckStr := unsafe.String(unsafe.SliceData(raw), len(raw))
+	header := http.Header{}
+	header.Set("Cookie", ckStr)
+	cookies := (&http.Request{Header: header}).Cookies()
+
+	return cookies
 }
 
 func isSpace(r byte) bool {

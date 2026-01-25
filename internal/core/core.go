@@ -17,6 +17,28 @@ import (
 	"go.uber.org/zap"
 )
 
+type DepBindigs struct {
+	From func(res *transport.Result) []byte
+	To   func(cfg config.Config, start, end int, key string, val []byte)
+}
+
+var depBindings = map[string]DepBindigs{
+	"RESPONSE": {
+		From: func(res *transport.Result) []byte { return res.Raw },
+		To: func(cfg config.Config, s, e int, k string, v []byte) {
+			raw := cfg.GetRaw(k, s, e)
+			parser.ParseResponse(&v, raw)
+			cfg.Apply(s, e, k, v)
+		},
+	},
+	"COOKIES": {
+		From: func(res *transport.Result) []byte { return res.Cookie },
+		To: func(cfg config.Config, s, e int, k string, v []byte) {
+			cfg.Apply(s, e, k, v)
+		},
+	},
+}
+
 func Start(cType, cPath, ckPath string, cCreate, ic bool, log *zap.Logger) error {
 	if cCreate {
 		return config.Create(cType, cPath)
@@ -33,7 +55,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
-	resHub := make([][]byte, 0, len(sData))
+	resHub := make([]*transport.Result, 0, len(sData))
 	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
 	resB := buffer.NewRb[*transport.Result]()
@@ -51,6 +73,14 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			cfgToFile := cfg.Clone()
 
 			cfg.RangeDeps(func(d config.Dependency) {
+				bind, ok := depBindings[d.InsTp]
+				if !ok {
+					log.Error("Dependency points to non-exists key",
+						zap.String("op", op),
+						zap.String("key", d.InsTp))
+					return
+				}
+
 				if d.TargetID >= len(resHub) {
 					log.Error("Dependency points to non-exists config",
 						zap.String("op", op),
@@ -66,9 +96,14 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					return
 				}
 
-				inst := cfg.GetRaw(d.Key, d.Start, d.End)
-				parser.ParseResponse(&resp, inst)
-				cfg.Apply(d.Start, d.End, d.Key, resp)
+				val := bind.From(resp)
+
+				log.Warn("COOKIES val",
+					zap.Int("len", len(val)),
+					zap.ByteString("val", val),
+				)
+
+				bind.To(cfg, d.Start, d.End, d.Key, val)
 			})
 
 			res := resB.Read()
@@ -90,10 +125,10 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					zap.String("config type", cfg.GetType()),
 					zap.Error(err))
 			}
+			resHub = append(resHub, res)
 
 			tmp := make([]byte, len(res.Raw))
 			copy(tmp, res.Raw)
-			resHub = append(resHub, tmp)
 
 			resStr := unsafe.String(unsafe.SliceData(tmp), len(tmp))
 			cfgToFile.SetResp(resStr)

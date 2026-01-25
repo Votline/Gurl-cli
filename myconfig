@@ -3,7 +3,7 @@ URL:http://localhost:8443/api/users/reg
 Method:POST
 Body:`
 	{
-		"name": "vizaa",
+		"name": "Viz",
 		"email": "yomi@duck.com",
 		"role": "admin",
 		"password": "password"
@@ -11,56 +11,70 @@ Body:`
 `
 Headers:Content-Type: application/json
 Type:http
-Response:`root
-method: POST
-url: /api/users/reg
-headers:
-  Content-Type: application/json
-  Accept-Encoding: gzip
-  User-Agent: Go-http-client/1.1
-  Content-Length: 86
-cookies:
-body:
-{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
+Response:`rpc error: code = Unknown desc = UserService.ReqUser: add user: UserPostgresRepository.AddUser: execute query: pq: duplicate key value violates unique constraint "users_user_name_key"
+`
 Cookie:
 [\http_config]
 
-[rep]
-Target_ID:0
-Type:repeat
-Response:`root
-method: POST
-url: /api/users/reg
-headers:
-  Content-Type: application/json
-  Accept-Encoding: gzip
-  User-Agent: Go-http-client/1.1
-  Content-Length: 86
-cookies:
-body:
-{
-"name": "vizaa",
-"email": "yomi@duck.com",
-"role": "admin",
-"password": "password"
-}`
-[\rep]
+[http_config]
+URL:http://localhost:8443/api/users/log
+Method:POST
+Body:`
+	{
+		"name": "Viz",
+		"email": "yomi@duck.com",
+		"password": "password"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjkzMjYyNTQsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.l-dK695kyWC6KC2XEg1oaJ8dKjkWUOBr17qbjpp-4Po"}
+`
+Cookie:`
+[localhost:8443]
+ session_key:71036f77-b331-447d-8684-e7fa0fc925a7
+ Path:/
+ Max-Age:86400
+ HttpOnly:
+ SameSite:Lax
+[\localhost:8443]
+`
+[\http_config]
 
 [http_config]
-URL:{RESPONSE id=0 json:token}
+URL:http://localhost:8080/api/user/reg
 Method:GET
 Body:`
 			pretty
-			body
+			{COOKIES id=1}
 `
-Headers:plain/text
+Headers:`{
+	Authorization: {RESPONSE id=1}
+	Content-Type: application/json
+}`
 Type:http
-Response:
+Response:`root
+method: GET
+url: /api/user/reg
+headers:
+  Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+  Content-Length: 135
+  Authorization: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjkzMjYyNTQsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.l-dK695kyWC6KC2XEg1oaJ8dKjkWUOBr17qbjpp-4Po"}
+  Content-Type: application/json
+  Cookie: session_key=71036f77-b331-447d-8684-e7fa0fc925a7
+cookies:
+  session_key=71036f77-b331-447d-8684-e7fa0fc925a7
+body:
+pretty
+
+[localhost:8443]
+session_key:71036f77-b331-447d-8684-e7fa0fc925a7
+Path:/
+Max-Age:86400
+HttpOnly:
+SameSite:Lax
+[\localhost:8443]`
 Cookie:
 [\http_config]
 

@@ -167,3 +167,35 @@ func BenchmarkParseCookies(b *testing.B) {
 		ParseCookies(&url.URL{Scheme: "https", Host: "google.com"}, []*http.Cookie{{Raw: "a=b"}})
 	}
 }
+
+func TestUnparseCookies(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []*http.Cookie
+	}{
+		{"\n[localhost.com]\n a:b\n[\\localhost.com]\n", []*http.Cookie{{Name: "a", Value: "b"}}},
+		{"\n[localhost.com]\n a:b\n c:d\n[\\localhost.com]\n", []*http.Cookie{{Name: "a", Value: "b"}, {Name: "c", Value: "d"}}},
+		{"\n[localhost.com]\n a:b\n c:d\n e:f\n[\\localhost.com]\n", []*http.Cookie{{Name: "a", Value: "b"}, {Name: "c", Value: "d"}, {Name: "e", Value: "f"}}},
+	}
+
+	for i, tt := range tests {
+		res := UnparseCookies([]byte(tt.input))
+		if len(res) != len(tt.expected) {
+			t.Errorf("[%d]: expected len: %d, but got %d\n got: %q",
+				i, len(tt.expected), len(res), tt.expected)
+		}
+
+		for j := range res {
+			if res[j].String() != tt.expected[j].String() {
+				t.Errorf("[%d]: expected %q, but got %q",
+					i, tt.expected[j].Raw, res[j].Raw)
+			}
+		}
+	}
+}
+
+func BenchmarkUnparseCookies(b *testing.B) {
+	for b.Loop() {
+		UnparseCookies([]byte("\n[localhost.com]\n a:b\n[\\localhost.com]\n"))
+	}
+}

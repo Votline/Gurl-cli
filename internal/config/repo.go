@@ -11,6 +11,7 @@ type Dependency struct {
 	Start    int
 	End      int
 	Key      string
+	InsTp    string
 }
 
 type Config interface {
