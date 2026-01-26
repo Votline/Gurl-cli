@@ -51,7 +51,7 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := t.clientDo(req, false)
+	res, err := t.clientDo(req, c, false)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -101,12 +101,18 @@ func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*
 	return req, nil
 }
 
-func (t *Transport) clientDo(req *http.Request, ic bool) (*http.Response, error) {
+func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (*http.Response, error) {
 	const op = "transport.clientDo"
 	if ic {
 		t.cl.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
+	}
+
+	if c.HasFlag(config.FlagUseFileCookies) {
+		jar, _ := cookiejar.New(nil)
+		jar.SetCookies(req.URL, parser.UnparseCookies(c.GetCookie()))
+		t.cl.Jar = jar
 	}
 
 	res, err := t.cl.Do(req)

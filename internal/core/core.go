@@ -35,6 +35,7 @@ var depBindings = map[string]DepBindigs{
 		From: func(res *transport.Result) []byte { return res.Cookie },
 		To: func(cfg config.Config, s, e int, k string, v []byte) {
 			cfg.Apply(s, e, k, v)
+			cfg.SetFlag(config.FlagUseFileCookies)
 		},
 	},
 }
@@ -81,6 +82,12 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					return
 				}
 
+				if d.TargetID == parser.FileData {
+					cfg.SetFlag(config.FlagUseFileCookies)
+					cfg.Apply(d.Start, d.End, d.Key, nil)
+					return
+				}
+
 				if d.TargetID >= len(resHub) {
 					log.Error("Dependency points to non-exists config",
 						zap.String("op", op),
@@ -97,11 +104,6 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 				}
 
 				val := bind.From(resp)
-
-				log.Warn("COOKIES val",
-					zap.Int("len", len(val)),
-					zap.ByteString("val", val),
-				)
 
 				bind.To(cfg, d.Start, d.End, d.Key, val)
 			})

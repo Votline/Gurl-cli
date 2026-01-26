@@ -6,6 +6,8 @@ import (
 	"gcli/internal/buffer"
 )
 
+const FlagUseFileCookies uint32 = 1 << iota
+
 type Dependency struct {
 	TargetID int
 	Start    int
@@ -25,23 +27,29 @@ type Config interface {
 	GetID() int
 	SetID(int)
 
-	GetEnd() int
-	SetEnd(int)
-
 	GetType() string
 	SetType(string)
+
+	GetEnd() int
+	SetEnd(int)
 
 	GetResp() string
 	SetResp(string)
 
+	GetCookie() []byte
 	SetCookie([]byte)
 
 	SetOrig(Config)
 	UnwrapExec() Config
+
 	RangeDeps(func(d Dependency))
 	SetDependency(Dependency)
+
 	Apply(int, int, string, []byte)
 	GetRaw(string, int, int) []byte
+
+	HasFlag(uint32) bool
+	SetFlag(uint32)
 }
 
 var (
@@ -127,6 +135,7 @@ type BaseConfig struct {
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
 	DepsLen   uint8
+	flag      uint32
 }
 
 func defBase() *BaseConfig {
@@ -137,24 +146,28 @@ func defBase() *BaseConfig {
 	}
 }
 
-func (c *BaseConfig) GetRaw(key string, start, end int) []byte { return nil }
-func (c *BaseConfig) UnwrapExec() Config                       { return c }
-func (c *BaseConfig) SetOrig(Config)                           {}
-func (c *BaseConfig) SetCookie([]byte)                         {}
-func (c *BaseConfig) Apply(int, int, string, []byte)           {}
+func (c *BaseConfig) Clone() Config                            { cp := *c; return &cp }
 func (c *BaseConfig) Release()                                 {}
 func (c *BaseConfig) ReleaseClone()                            {}
-func (c *BaseConfig) Clone() Config                            { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                          { return c.Name }
 func (c *BaseConfig) SetName(nName string)                     { c.Name = nName }
 func (c *BaseConfig) GetID() int                               { return c.ID }
 func (c *BaseConfig) SetID(nID int)                            { c.ID = nID }
-func (c *BaseConfig) GetEnd() int                              { return c.End }
-func (c *BaseConfig) SetEnd(nEnd int)                          { c.End = nEnd }
 func (c *BaseConfig) GetType() string                          { return c.Type }
 func (c *BaseConfig) SetType(nType string)                     { c.Type = nType }
+func (c *BaseConfig) GetEnd() int                              { return c.End }
+func (c *BaseConfig) SetEnd(nEnd int)                          { c.End = nEnd }
 func (c *BaseConfig) GetResp() string                          { return c.Resp }
 func (c *BaseConfig) SetResp(nResp string)                     { c.Resp = nResp }
+func (c *BaseConfig) GetCookie() []byte                        { return nil }
+func (c *BaseConfig) SetCookie([]byte)                         {}
+func (c *BaseConfig) UnwrapExec() Config                       { return c }
+func (c *BaseConfig) SetOrig(Config)                           {}
+func (c *BaseConfig) GetRaw(key string, start, end int) []byte { return nil }
+func (c *BaseConfig) Apply(int, int, string, []byte)           {}
+func (c *BaseConfig) HasFlag(f uint32) bool                    { return c.flag&f != 0 }
+func (c *BaseConfig) SetFlag(f uint32)                         { c.flag |= f }
+
 func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 	limit := c.DepsLen
 	limit = min(limit, 6)
@@ -182,11 +195,13 @@ type HTTPConfig struct {
 	Body    []byte `gurlf:"Body"`
 	Headers []byte `gurlf:"Headers"`
 	BaseConfig
-	Cookie []byte `gurlf:"Cookie"`
+	CookieIn  []byte `gurlf:"CookieIn"`
+	CookieOut []byte `gurlf:"CookieOut"`
 }
 
 func GetHTTP() (*HTTPConfig, uintptr)    { return hBuf.Read(), hItab }
-func (c *HTTPConfig) SetCookie(b []byte) { c.Cookie = b }
+func (c *HTTPConfig) GetCookie() []byte  { return c.CookieIn }
+func (c *HTTPConfig) SetCookie(b []byte) { c.CookieOut = b }
 func (c *HTTPConfig) UnwrapExec() Config { return c }
 func (c *HTTPConfig) Release()           { *c = HTTPConfig{}; hBuf.Write(c) }
 func (c *HTTPConfig) ReleaseClone()      { *c = HTTPConfig{}; hClBuf.Write(c) }
@@ -211,7 +226,7 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	case "Headers":
 		c.Headers = splice(c.Headers, val, start, end)
 	case "Cookie":
-		c.Cookie = splice(c.Cookie, val, start, end)
+		c.CookieIn = splice(c.CookieIn, val, start, end)
 	}
 }
 
@@ -227,7 +242,7 @@ func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
 	case "Headers":
 		source = c.Headers
 	case "Cookie":
-		source = c.Cookie
+		source = c.CookieIn
 	}
 
 	if start < 0 || end < 0 || start >= len(source) || end > len(source) || start == end {

@@ -12,6 +12,8 @@ import (
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
+const FileData = -2
+
 type instruction struct {
 	tID   int
 	start int
@@ -175,9 +177,15 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 
 		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd + 1
 
-		tID := atoi(d.RawData[valStart:valEnd])
-		if tID == -1 {
-			return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+		tID := -1
+		args := d.RawData[valStart:valEnd]
+		if bytes.Equal(args, []byte("file")) {
+			tID = FileData
+		} else {
+			tID = atoi(d.RawData[valStart:valEnd])
+			if tID == -1 {
+				return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+			}
 		}
 
 		instKey := ""
