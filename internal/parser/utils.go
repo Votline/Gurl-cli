@@ -5,8 +5,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"unsafe"
 )
+
+var bufPool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	for len(hdrs) != 0 {
@@ -136,8 +143,6 @@ func ParseResponse(res *[]byte, inst []byte) {
 	(*res) = (*res)[jsonStart+1 : jsonEnd]
 }
 
-var ckBuf bytes.Buffer
-
 func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 	const op = "parser.ParseCookies"
 
@@ -145,13 +150,16 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 		return nil
 	}
 
-	ckBuf.Reset()
-	ckBuf.WriteByte('\n')
-	ckBuf.WriteByte('[')
-	ckBuf.WriteString(url.Host)
-	ckBuf.WriteByte(']')
-	ckBuf.WriteByte('\n')
-	ckBuf.WriteByte(' ')
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+
+	buf.WriteByte('\n')
+	buf.WriteByte('[')
+	buf.WriteString(url.Host)
+	buf.WriteByte(']')
+	buf.WriteByte('\n')
+	buf.WriteByte(' ')
 
 	for _, c := range cookies {
 		parts := strings.SplitSeq(c.Raw, ";")
@@ -163,41 +171,51 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 
 			key, val, found := strings.Cut(p, "=")
 			if !found {
-				ckBuf.WriteString(p)
-				ckBuf.WriteByte(':')
-				ckBuf.WriteByte('\n')
+				buf.WriteString(p)
+				buf.WriteByte(':')
+				buf.WriteByte('\n')
 				continue
 			}
-			ckBuf.WriteString(key)
-			ckBuf.WriteByte(':')
-			ckBuf.WriteString(val)
+			buf.WriteString(key)
+			buf.WriteByte(':')
+			buf.WriteString(val)
 
-			ckBuf.WriteByte('\n')
+			buf.WriteByte('\n')
 		}
 	}
 
-	ckBuf.WriteByte('[')
-	ckBuf.WriteByte('\\')
-	ckBuf.WriteString(url.Host)
-	ckBuf.WriteByte(']')
-	ckBuf.WriteByte('\n')
+	buf.WriteByte('[')
+	buf.WriteByte('\\')
+	buf.WriteString(url.Host)
+	buf.WriteByte(']')
+	buf.WriteByte('\n')
 
-	return ckBuf.Bytes()
+	return buf.Bytes()
 }
 
-var unpBuf bytes.Buffer
+var skip = map[string]struct{}{
+	"path":     {},
+	"domain":   {},
+	"expires":  {},
+	"max-age":  {},
+	"httponly": {},
+	"secure":   {},
+	"samesite": {},
+}
 
-func UnparseCookies(data []byte) []*http.Cookie {
+func UnparseCookies(data []byte, yield func(string)) {
 	const op = "parser.ParseLoadCookie"
-
-	unpBuf.Reset()
 
 	start := bytes.Index(data, []byte("]\n"))
 	end := bytes.LastIndex(data, []byte("\n[\\"))
 	if start == -1 || end == -1 || end <= start {
-		return nil
+		return
 	}
-	data = data[start+3 : end]
+	data = data[start+2 : end]
+
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
 
 	for len(data) > 0 {
 		var line []byte
@@ -211,27 +229,58 @@ func UnparseCookies(data []byte) []*http.Cookie {
 		}
 
 		key, val, found := bytes.Cut(line, []byte(":"))
-		if !found || len(val) == 0 {
-			unpBuf.Write(key)
-			unpBuf.WriteByte(';')
+		key = bytes.TrimSpace(key)
+		val = bytes.TrimSpace(val)
+
+		if isMetadata(key) {
 			continue
 		}
 
-		unpBuf.Write(key)
-		unpBuf.WriteByte('=')
-		unpBuf.Write(val)
-		unpBuf.WriteByte(';')
+		if !found || len(val) == 0 {
+			buf.Write(key)
+			buf.WriteByte(';')
+			continue
+		}
+
+		buf.Write(key)
+		buf.WriteByte('=')
+		buf.Write(val)
+		buf.WriteByte(';')
 	}
 
-	raw := unpBuf.Bytes()
-	ckStr := unsafe.String(unsafe.SliceData(raw), len(raw))
-	header := http.Header{}
-	header.Set("Cookie", ckStr)
-	cookies := (&http.Request{Header: header}).Cookies()
+	cks := buf.Bytes()
+	cksStr := unsafe.String(unsafe.SliceData(cks), len(cks))
 
-	return cookies
+	yield(cksStr)
 }
 
 func isSpace(r byte) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\v' || r == '\f'
+}
+
+func isMetadata(k []byte) bool {
+	switch len(k) {
+	case 4:
+		return equalFold(k, "path")
+	case 6:
+		return equalFold(k, "domain") || equalFold(k, "secure")
+	case 7:
+		return equalFold(k, "expires") || equalFold(k, "max-age")
+	case 8:
+		return equalFold(k, "httponly") || equalFold(k, "samesite")
+	default:
+		return false
+	}
+}
+
+func equalFold(b []byte, lower string) bool {
+	if len(b) != len(lower) {
+		return false
+	}
+	for i := range b {
+		if (b[i] | 0x20) != lower[i] {
+			return false
+		}
+	}
+	return true
 }

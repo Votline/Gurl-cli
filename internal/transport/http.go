@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
+	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -15,13 +16,19 @@ import (
 	"gcli/internal/parser"
 )
 
+var builderPool = sync.Pool{
+	New: func() any {
+		return new(strings.Builder)
+	},
+}
+
 type Result struct {
 	IsJSON bool
 	Raw    []byte
 	Cookie []byte
 }
 type Transport struct {
-	jar *cookiejar.Jar
+	jar map[string]string
 	cl  *http.Client
 }
 
@@ -29,15 +36,14 @@ func NewTransport(putRes func(*Result)) *Transport {
 	for i := 0; i < 10; i++ {
 		putRes(&Result{})
 	}
-	jar, _ := cookiejar.New(nil)
 	client := &http.Client{
-		Jar: jar,
+		Jar: nil,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
 
-	return &Transport{jar: jar, cl: client}
+	return &Transport{jar: map[string]string{}, cl: client}
 }
 
 func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
@@ -109,10 +115,30 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (
 		}
 	}
 
+	if len(t.jar) > 0 {
+		sb := builderPool.Get().(*strings.Builder)
+		sb.Reset()
+		for k, v := range t.jar {
+			if sb.Len() > 0 {
+				sb.WriteByte(';')
+			}
+			sb.WriteString(k)
+			sb.WriteByte('=')
+			sb.WriteString(v)
+		}
+		req.Header.Set("Cookie", sb.String())
+		builderPool.Put(sb)
+	}
+
 	if c.HasFlag(config.FlagUseFileCookies) {
-		jar, _ := cookiejar.New(nil)
-		jar.SetCookies(req.URL, parser.UnparseCookies(c.GetCookie()))
-		t.cl.Jar = jar
+		req.Header.Set("Cookie", "")
+		parser.UnparseCookies(c.GetCookie(), func(ck string) {
+			if req.Header.Get("Cookie") != "" {
+				req.Header.Set("Cookie", req.Header.Get("Cookie")+"; "+ck)
+			} else {
+				req.Header.Set("Cookie", ck)
+			}
+		})
 	}
 
 	res, err := t.cl.Do(req)
@@ -120,7 +146,31 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (
 		return nil, fmt.Errorf("%s: do request: %w", op, err)
 	}
 
+	t.updateJar(res.Header["Set-Cookie"])
+
 	return res, nil
+}
+
+func (t *Transport) updateJar(cookies []string) {
+	const op = "transport.updateJar"
+
+	for _, c := range cookies {
+		if len(c) == 0 {
+			continue
+		}
+
+		semi := strings.IndexByte(c, ';')
+		if semi != -1 {
+			c = c[:semi]
+		}
+
+		k, v, found := strings.Cut(c, "=")
+		if !found {
+			continue
+		}
+
+		t.jar[k] = v
+	}
 }
 
 func (t *Transport) readBody(body io.ReadCloser, res *http.Response) ([]byte, bool, error) {

@@ -29,12 +29,12 @@ Body:`
 `
 Headers:Content-Type: application/json
 Type:http
-Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjkzNDYyODIsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.gMH18_xsIHK6_zzaUIav_kPRAGZWv8kX6hUCcaHOkLo"}
+Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk0OTQyMzEsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.i6bX_sGEO4hutf2TSx0WzI3CjU9d1f8223Xpb0YDTH4"}
 `
 CookieIn:
 CookieOut:`
 [localhost:8443]
- session_key:5b71464a-e20d-4345-af44-3de06dc12d76
+ session_key:f3d04513-be31-4581-b98f-f8149816a2bd
  Path:/
  Max-Age:86400
  HttpOnly:
@@ -46,7 +46,7 @@ CookieOut:`
 [rep]
 Target_ID:1
 Type:repeat
-Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjkzNDYyODIsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.gMH18_xsIHK6_zzaUIav_kPRAGZWv8kX6hUCcaHOkLo"}
+Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk0OTQyMzEsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.i6bX_sGEO4hutf2TSx0WzI3CjU9d1f8223Xpb0YDTH4"}
 `
 [\rep]
 
@@ -68,23 +68,19 @@ url: /api/user/reg
 headers:
   User-Agent: Go-http-client/1.1
   Content-Length: 11
-  Authorization: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjkzNDYyODIsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.gMH18_xsIHK6_zzaUIav_kPRAGZWv8kX6hUCcaHOkLo"}
+  Authorization: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk0OTQyMzEsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIxOTYzZGI5NC03Mzg2LTQyOGYtODZmMi00N2MzMjRhNzFmYjMifQ.i6bX_sGEO4hutf2TSx0WzI3CjU9d1f8223Xpb0YDTH4"}
   Content-Type: application/json
-  Cookie: session_key=WWWWW; Path=/; Max-Age=86400; HttpOnly=; SameSite=Lax
+  Cookie: session_key=7d184e81-506c-49f6-9f31-a5069550134b;
   Accept-Encoding: gzip
 cookies:
-  session_key=WWWWW
-  Path=/
-  Max-Age=86400
-  HttpOnly=
-  SameSite=Lax
+  session_key=7d184e81-506c-49f6-9f31-a5069550134b
 body:
 pretty
 body`
 CookieIn:`
 {COOKIES id=file}
 [localhost:8443]
- session_key:WWWWW
+ session_key:7d184e81-506c-49f6-9f31-a5069550134b
  Path:/
  Max-Age:86400
  HttpOnly:
