@@ -5,6 +5,6 @@ go 1.25.5
 require go.uber.org/zap v1.27.1
 
 require (
-	github.com/Votline/Gurlf v1.1.2-0.20260117155033-e116c6f30119 // indirect
+	github.com/Votline/Gurlf v1.1.2-0.20260127131512-819450497426 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )

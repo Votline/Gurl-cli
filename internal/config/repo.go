@@ -46,7 +46,7 @@ type Config interface {
 	SetDependency(Dependency)
 
 	Apply(int, int, string, []byte)
-	GetRaw(string, int, int) []byte
+	GetRaw(string) []byte
 
 	HasFlag(uint32) bool
 	SetFlag(uint32)
@@ -146,27 +146,27 @@ func defBase() *BaseConfig {
 	}
 }
 
-func (c *BaseConfig) Clone() Config                            { cp := *c; return &cp }
-func (c *BaseConfig) Release()                                 {}
-func (c *BaseConfig) ReleaseClone()                            {}
-func (c *BaseConfig) GetName() string                          { return c.Name }
-func (c *BaseConfig) SetName(nName string)                     { c.Name = nName }
-func (c *BaseConfig) GetID() int                               { return c.ID }
-func (c *BaseConfig) SetID(nID int)                            { c.ID = nID }
-func (c *BaseConfig) GetType() string                          { return c.Type }
-func (c *BaseConfig) SetType(nType string)                     { c.Type = nType }
-func (c *BaseConfig) GetEnd() int                              { return c.End }
-func (c *BaseConfig) SetEnd(nEnd int)                          { c.End = nEnd }
-func (c *BaseConfig) GetResp() string                          { return c.Resp }
-func (c *BaseConfig) SetResp(nResp string)                     { c.Resp = nResp }
-func (c *BaseConfig) GetCookie() []byte                        { return nil }
-func (c *BaseConfig) SetCookie([]byte)                         {}
-func (c *BaseConfig) UnwrapExec() Config                       { return c }
-func (c *BaseConfig) SetOrig(Config)                           {}
-func (c *BaseConfig) GetRaw(key string, start, end int) []byte { return nil }
-func (c *BaseConfig) Apply(int, int, string, []byte)           {}
-func (c *BaseConfig) HasFlag(f uint32) bool                    { return c.flag&f != 0 }
-func (c *BaseConfig) SetFlag(f uint32)                         { c.flag |= f }
+func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
+func (c *BaseConfig) Release()                       {}
+func (c *BaseConfig) ReleaseClone()                  {}
+func (c *BaseConfig) GetName() string                { return c.Name }
+func (c *BaseConfig) SetName(nName string)           { c.Name = nName }
+func (c *BaseConfig) GetID() int                     { return c.ID }
+func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
+func (c *BaseConfig) GetType() string                { return c.Type }
+func (c *BaseConfig) SetType(nType string)           { c.Type = nType }
+func (c *BaseConfig) GetEnd() int                    { return c.End }
+func (c *BaseConfig) SetEnd(nEnd int)                { c.End = nEnd }
+func (c *BaseConfig) GetResp() string                { return c.Resp }
+func (c *BaseConfig) SetResp(nResp string)           { c.Resp = nResp }
+func (c *BaseConfig) GetCookie() []byte              { return nil }
+func (c *BaseConfig) SetCookie([]byte)               {}
+func (c *BaseConfig) UnwrapExec() Config             { return c }
+func (c *BaseConfig) SetOrig(Config)                 {}
+func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
+func (c *BaseConfig) Apply(int, int, string, []byte) {}
+func (c *BaseConfig) HasFlag(f uint32) bool          { return c.flag&f != 0 }
+func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
 
 func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 	limit := c.DepsLen
@@ -230,26 +230,20 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	}
 }
 
-func (c *HTTPConfig) GetRaw(key string, start, end int) []byte {
-	var source []byte
+func (c *HTTPConfig) GetRaw(key string) []byte {
 	switch key {
 	case "URL":
-		source = c.URL
+		return c.URL
 	case "Method":
-		source = c.Method
+		return c.Method
 	case "Body":
-		source = c.Body
+		return c.Body
 	case "Headers":
-		source = c.Headers
+		return c.Headers
 	case "Cookie":
-		source = c.CookieIn
+		return c.CookieIn
 	}
-
-	if start < 0 || end < 0 || start >= len(source) || end > len(source) || start == end {
-		return nil
-	}
-
-	return source[start:end]
+	return nil
 }
 
 type GRPCConfig struct {
@@ -271,7 +265,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 }
 
 type RepeatConfig struct {
-	TargetID int `gurlf:"Target_ID"`
+	TargetID int    `gurlf:"Target_ID"`
+	Replace  []byte `gurlf:"Replace"`
 	Orig     Config
 	BaseConfig
 }

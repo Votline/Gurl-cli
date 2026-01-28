@@ -26,7 +26,13 @@ var depBindings = map[string]DepBindigs{
 	"RESPONSE": {
 		From: func(res *transport.Result) []byte { return res.Raw },
 		To: func(cfg config.Config, s, e int, k string, v []byte) {
-			raw := cfg.GetRaw(k, s, e)
+			raw := cfg.GetRaw(k)
+			if s < 0 || e < 0 || s >= len(raw) || e > len(raw) || s == e {
+				raw = nil
+			} else {
+				raw = raw[s:e]
+			}
+
 			parser.ParseResponse(&v, raw)
 			cfg.Apply(s, e, k, v)
 		},

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"testing"
 
 	"gcli/internal/config"
@@ -202,5 +203,68 @@ func TestAtoi(t *testing.T) {
 func BenchmarkAtoi(b *testing.B) {
 	for b.Loop() {
 		atoi([]byte("2"))
+	}
+}
+
+func TestApplyReplace(t *testing.T) {
+	const op = "parser.TestApplyReplace"
+
+	cfg := config.RepeatConfig{
+		Replace: []byte(`
+			[repa]
+			URL:http://localhost:8080
+			Body:hello
+			[\repa]
+		`),
+		Orig: &config.HTTPConfig{
+			URL: []byte("http://localhost:8443"),
+			Body: []byte(`
+				{
+					"name": "Viz",
+					"email": "yomi@duck.com",
+					"password": "password"
+				}
+			`),
+		},
+	}
+
+	if err := applyReplace(&cfg); err != nil {
+		t.Fatalf("%s: %v", op, err)
+	}
+
+	orig := cfg.Orig.(*config.HTTPConfig)
+	if !bytes.Equal(orig.URL, []byte("http://localhost:8080")) {
+		t.Errorf("%s: expected %q, but got %q", op, orig.URL, []byte("http://localhost:8080"))
+	}
+
+	if !bytes.Equal(orig.Body, []byte("hello")) {
+		t.Errorf("%s: expected %q, but got %q", op, orig.Body, []byte("hello"))
+	}
+}
+
+func BenchmarkApplyReplace(b *testing.B) {
+	cfg := config.RepeatConfig{
+		Replace: []byte(`
+			[repa]
+			URL:http://localhost:8080
+			Body:hello
+			[\repa]
+		`),
+		Orig: &config.HTTPConfig{
+			URL: []byte("http://localhost:8443"),
+			Body: []byte(`
+				{
+					"name": "Viz",
+					"email": "yomi@duck.com",
+					"password": "password"
+				}
+			`),
+		},
+	}
+
+	for b.Loop() {
+		if err := applyReplace(&cfg); err != nil {
+			b.Fatalf("%v", err)
+		}
 	}
 }

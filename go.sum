@@ -12,6 +12,10 @@ github.com/Votline/Gurlf v1.1.2-0.20260117132210-4707a9da9b93 h1:lF8SKkEvok0endM
 github.com/Votline/Gurlf v1.1.2-0.20260117132210-4707a9da9b93/go.mod h1:geqfTrGwRiG/7v0VkOnWtEyK8bJyQR0R4gjA5LhbwgI=
 github.com/Votline/Gurlf v1.1.2-0.20260117155033-e116c6f30119 h1:torE5RMSMSupF5GXklo1hPzOW4CwFlYJFDus7M/egBc=
 github.com/Votline/Gurlf v1.1.2-0.20260117155033-e116c6f30119/go.mod h1:geqfTrGwRiG/7v0VkOnWtEyK8bJyQR0R4gjA5LhbwgI=
+github.com/Votline/Gurlf v1.1.2-0.20260127115543-9b297517b854 h1:L3KVFp1+WN80sYiEWaCW7zVjsI1+qUN/H/smWKeRwuM=
+github.com/Votline/Gurlf v1.1.2-0.20260127115543-9b297517b854/go.mod h1:geqfTrGwRiG/7v0VkOnWtEyK8bJyQR0R4gjA5LhbwgI=
+github.com/Votline/Gurlf v1.1.2-0.20260127131512-819450497426 h1:TIDjhGZZIQtry52hPMc8cL9m7qxmwU1Lrll8AfwJins=
+github.com/Votline/Gurlf v1.1.2-0.20260127131512-819450497426/go.mod h1:geqfTrGwRiG/7v0VkOnWtEyK8bJyQR0R4gjA5LhbwgI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

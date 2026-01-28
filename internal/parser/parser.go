@@ -98,6 +98,12 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			}
 		}
 
+		if r, ok := cfg.(*config.RepeatConfig); ok {
+			if err := applyReplace(r); err != nil {
+				return fmt.Errorf("%s: %w", op, err)
+			}
+		}
+
 		if (needed[i/64] & (1 << (i % 64))) != 0 {
 			nw := config.Alloc(execCfg)
 			cache[i] = nw
@@ -264,4 +270,41 @@ func atoi(data []byte) int {
 	}
 
 	return res
+}
+
+func applyReplace(r *config.RepeatConfig) error {
+	const op = "parser.applyReplace"
+
+	if len(r.Replace) == 0 {
+		return nil
+	}
+
+	sData, err := gurlf.Scan(r.Replace)
+	if err != nil {
+		return fmt.Errorf("%s: scan replace: %w", op, err)
+	}
+
+	for _, d := range sData {
+		if len(d.RawData) == 0 {
+			continue
+		}
+
+		for _, ent := range d.Entries {
+			if ent.ValEnd == 0 {
+				continue
+			}
+
+			key := unsafe.String(unsafe.SliceData(d.RawData[ent.KeyStart:ent.KeyEnd]), ent.KeyEnd-ent.KeyStart)
+			val := d.RawData[ent.ValStart:ent.ValEnd]
+
+			field := r.Orig.GetRaw(key)
+			if field == nil {
+				continue
+			}
+
+			r.Orig.Apply(0, len(field), key, val)
+		}
+
+	}
+	return nil
 }
