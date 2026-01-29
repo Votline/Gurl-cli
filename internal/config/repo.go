@@ -22,24 +22,14 @@ type Config interface {
 	ReleaseClone()
 
 	GetName() string
-	SetName(string)
-
-	GetID() int
 	SetID(int)
-
 	GetType() string
-	SetType(string)
 
 	GetEnd() int
 	SetEnd(int)
 
-	GetResp() string
-	SetResp(string)
+	Update([]byte, []byte)
 
-	GetCookie() []byte
-	SetCookie([]byte)
-
-	SetOrig(Config)
 	UnwrapExec() Config
 
 	RangeDeps(func(d Dependency))
@@ -131,7 +121,7 @@ type BaseConfig struct {
 	Len       int
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
-	Resp      string `gurlf:"Response"`
+	Resp      []byte `gurlf:"Response"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
 	DepsLen   uint8
@@ -142,29 +132,21 @@ func defBase() *BaseConfig {
 	return &BaseConfig{
 		Type: "http",
 		Name: "http_config",
-		Resp: "",
+		Resp: nil,
 	}
 }
-
-func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) Release()                       {}
 func (c *BaseConfig) ReleaseClone()                  {}
+func (c *BaseConfig) Update(raw, cookie []byte)      {}
+func (c *BaseConfig) Apply(int, int, string, []byte) {}
+func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                { return c.Name }
-func (c *BaseConfig) SetName(nName string)           { c.Name = nName }
-func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
 func (c *BaseConfig) GetType() string                { return c.Type }
-func (c *BaseConfig) SetType(nType string)           { c.Type = nType }
 func (c *BaseConfig) GetEnd() int                    { return c.End }
 func (c *BaseConfig) SetEnd(nEnd int)                { c.End = nEnd }
-func (c *BaseConfig) GetResp() string                { return c.Resp }
-func (c *BaseConfig) SetResp(nResp string)           { c.Resp = nResp }
-func (c *BaseConfig) GetCookie() []byte              { return nil }
-func (c *BaseConfig) SetCookie([]byte)               {}
 func (c *BaseConfig) UnwrapExec() Config             { return c }
-func (c *BaseConfig) SetOrig(Config)                 {}
 func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
-func (c *BaseConfig) Apply(int, int, string, []byte) {}
 func (c *BaseConfig) HasFlag(f uint32) bool          { return c.flag&f != 0 }
 func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
 
@@ -215,6 +197,13 @@ func (c *HTTPConfig) Clone() Config {
 	return newCfg
 }
 
+func (c *HTTPConfig) Update(res, cks []byte) {
+	tmp := make([]byte, len(res))
+	copy(tmp, res)
+	c.Resp = tmp
+	c.CookieOut = cks
+}
+
 func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
 	case "URL":
@@ -247,6 +236,13 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 }
 
 type GRPCConfig struct {
+	Target      string `gurlf:"Target"`
+	Endpoint    string `gurlf:"Endpoint"`
+	Data        []byte `gurlf:"Data"`
+	Metadata    []byte `gurlf:"Metadata"`
+	ProtoPath   string `gurlf:"ProtoPath"`
+	ImportPaths string `gurlf:"ImportPaths"`
+	DialOpts    string `gurlf:"DialOpts"`
 	BaseConfig
 }
 
@@ -260,8 +256,16 @@ func (c *GRPCConfig) Clone() Config {
 	return newCfg
 }
 
-func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
-	return
+func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {}
+
+func (c *GRPCConfig) GetRaw(key string) []byte {
+	return nil
+}
+
+func (c *GRPCConfig) Update(res, cks []byte) {
+	tmp := make([]byte, len(res))
+	copy(tmp, res)
+	c.Resp = tmp
 }
 
 type RepeatConfig struct {
@@ -278,9 +282,7 @@ func (c *RepeatConfig) UnwrapExec() Config {
 	}
 	return c.Orig
 }
-func (c *RepeatConfig) SetID(nID int)        { c.TargetID = nID }
-func (c *RepeatConfig) SetOrig(nc Config)    { c.Orig = nc }
-func (c *RepeatConfig) SetResp(nResp string) { c.Resp = nResp }
+func (c *RepeatConfig) SetID(nID int) { c.TargetID = nID }
 func (c *RepeatConfig) Release() {
 	*c = RepeatConfig{}
 	rBuf.Write(c)
@@ -303,6 +305,13 @@ func (c *RepeatConfig) Clone() Config {
 	}
 
 	return newCfg
+}
+
+func (c *RepeatConfig) Update(res, cks []byte) {
+	tmp := make([]byte, len(res))
+	copy(tmp, res)
+	c.Resp = tmp
+	c.Orig.Update(nil, cks)
 }
 
 func splice(orig, val []byte, start, end int) []byte {

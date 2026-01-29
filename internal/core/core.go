@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"unsafe"
 
 	"gcli/internal/buffer"
 	"gcli/internal/config"
@@ -121,9 +120,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			case *config.HTTPConfig:
 				err = trnsp.DoHTTP(v, res)
 			case *config.GRPCConfig:
-				cfg.Release()
-				cfgToFile.ReleaseClone()
-				continue
+				err = transport.DoGRPC(v, res)
 			}
 
 			if err != nil {
@@ -135,17 +132,10 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			}
 			resHub = append(resHub, res)
 
-			tmp := make([]byte, len(res.Raw))
-			copy(tmp, res.Raw)
-
-			resStr := unsafe.String(unsafe.SliceData(tmp), len(tmp))
-			cfgToFile.SetResp(resStr)
-			cfgToFile.SetCookie(res.Cookie)
-
+			cfgToFile.Update(res.Raw, res.Cookie)
 			cfgFileBuf.Write(cfgToFile)
 
 			cfg.Release()
-
 			resB.Write(res)
 		}
 		cfgFileBuf.Close()

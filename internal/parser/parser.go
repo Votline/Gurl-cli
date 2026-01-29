@@ -59,7 +59,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			tp := "repeat"
 			handleType(&rep, &tp, &d)
 			rep.SetID(tID)
-			rep.SetOrig(execCfg)
+			rep.(*config.RepeatConfig).Orig = execCfg
 
 			cfg = rep
 		} else {
