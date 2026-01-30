@@ -45,7 +45,11 @@ func DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 func doReflect(c *config.GRPCConfig) (Result, error) {
 	const op = "transport.doReflect"
 
-	conn, err := getConn(c.Target, c.DialOpts)
+	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
+	endpoint := unsafe.String(unsafe.SliceData(c.Endpoint), len(c.Endpoint))
+	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
+
+	conn, err := getConn(target, dialOpts)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -54,7 +58,7 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 	ctx := getContext(c.Metadata)
 
 	rc := refl.NewClient(ctx, reflectpb.NewServerReflectionClient(conn))
-	svcName, mtName := parseEndpoint(c.Endpoint)
+	svcName, mtName := parseEndpoint(endpoint)
 
 	svc, err := rc.ResolveService(svcName)
 	if err != nil {
@@ -88,7 +92,13 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 func doProto(c *config.GRPCConfig) (Result, error) {
 	const op = "transport.doProto"
 
-	conn, err := getConn(c.Target, c.DialOpts)
+	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
+	endpoint := unsafe.String(unsafe.SliceData(c.Endpoint), len(c.Endpoint))
+	protoPath := unsafe.String(unsafe.SliceData(c.ProtoPath), len(c.ProtoPath))
+	importPaths := unsafe.String(unsafe.SliceData(c.ImportPaths), len(c.ImportPaths))
+	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
+
+	conn, err := getConn(target, dialOpts)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -96,10 +106,10 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 
 	ctx := getContext(c.Metadata)
 
-	protoDir := filepath.Dir(c.ProtoPath)
-	protoFile := filepath.Base(c.ProtoPath)
+	protoDir := filepath.Dir(protoPath)
+	protoFile := filepath.Base(protoPath)
 
-	allImportPaths := getDependencyPaths(c.ImportPaths)
+	allImportPaths := getDependencyPaths(importPaths)
 	allImportPaths = append(allImportPaths, protoDir)
 	allImportPaths = append(allImportPaths, ".")
 
@@ -111,7 +121,7 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 		return Result{}, fmt.Errorf("%s: parse file: %w", op, err)
 	}
 
-	svcName, mtName := parseEndpoint(c.Endpoint)
+	svcName, mtName := parseEndpoint(endpoint)
 
 	svc := getFilesSvc(svcName, fds)
 	if svc == nil {

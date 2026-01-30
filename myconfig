@@ -3,7 +3,7 @@ Target:localhost:50052
 Endpoint:users.UserService/RegUser
 Data:`
 	{
-		"name": "Vizz",
+		"name": "Vizgggsd",
 		"email": "yomi@duck.com",
 		"role": "dev",
 		"password": "something"
@@ -14,6 +14,97 @@ ProtoPath:../3l1/protos/user-service.proto
 ImportPaths:/home/hypnogen/go/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v1.2.1/
 DialOpts:
 Type:grpc
-Response:rpc error: code = Unknown desc = UserService.ReqUser: add user: UserPostgresRepository.AddUser: execute query: pq: duplicate key value violates unique constraint "users_user_name_key"
+Response:rpc error: code = Unknown desc = UserService.ReqUser: user with this email or username already exists
+[\grpc_config]
+
+[http_config]
+URL:http://localhost:8443/api/users/log
+Method:POST
+Body:`
+	{
+		"name":"Vizgggsd",
+		"email":"yomi@duck.com",
+		"role":"dev",
+		"password":"something"
+	}
+`
+Headers:Content-Type: application/json
+Type:http
+Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk3NTMwMDQsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiNTYwZDc3NmQtYjIyNC00YjZiLTg3YWItMWVjZWFmZjgwNDNlIn0.CdHQ0YaU2MwSCxlnJRmg2bjxlfiBi0h1QvSM4Gqhy-E"}
+`
+CookieIn:
+CookieOut:`
+[localhost:8443]
+ session_key:9a813e52-c261-4922-b72e-a4efe8c5a95e
+ Path:/
+ Max-Age:86400
+ HttpOnly:
+ SameSite:Lax
+[\localhost:8443]
+`
+[\http_config]
+
+[http_config]
+URL:http://localhost:8080
+Method:DELETE
+Body:
+Headers:`
+	{
+		Content-Type: application/json
+		Authorization: Bearer {RESPONSE id=1 json:token}
+	}
+`
+Type:http
+Response:`root
+method: DELETE
+url: /
+headers:
+  Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk3NTMwMDQsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiNTYwZDc3NmQtYjIyNC00YjZiLTg3YWItMWVjZWFmZjgwNDNlIn0.CdHQ0YaU2MwSCxlnJRmg2bjxlfiBi0h1QvSM4Gqhy-E
+  Content-Type: application/json
+  Cookie: session_key=9a813e52-c261-4922-b72e-a4efe8c5a95e
+cookies:
+  session_key=9a813e52-c261-4922-b72e-a4efe8c5a95e
+body:
+`
+CookieIn:
+CookieOut:
+[\http_config]
+
+[rep]
+Target_ID:0
+Replace:`
+[repa]
+Data:`
+	{
+		"name": "Vizsssa",
+		"email": "yomi@duck.com",
+		"role": "dev",
+		"password": "something"
+	}`
+[\repa]
+`
+Type:repeat
+Response:rpc error: code = Unknown desc = UserService.ReqUser: user with this email or username already exists
+[\rep]
+
+[grpc_config]
+Target:localhost:50052
+Endpoint:users.UserService/RegUser
+Data:`
+	{
+		"name": "{RESPONSE id=1 json:token}",
+		"email": "yomi@duck.com",
+		"role": "dev",
+		"password": "something"
+	}
+`
+Metadata:
+ProtoPath:../3l1/protos/user-service.proto
+ImportPaths:/home/hypnogen/go/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v1.2.1/
+DialOpts:
+Type:grpc
+Response:rpc error: code = Unknown desc = UserService.ReqUser validate: invalid RegReq.Name: value length must be between 2 and 50 runes, inclusive
 [\grpc_config]
 

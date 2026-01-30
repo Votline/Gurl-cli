@@ -87,7 +87,7 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 					return
 				}
 
-				if d.TargetID == parser.FileData {
+				if d.TargetID == config.DataFromFile {
 					cfg.SetFlag(config.FlagUseFileCookies)
 					cfg.Apply(d.Start, d.End, d.Key, nil)
 					return

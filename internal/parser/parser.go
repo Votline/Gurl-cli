@@ -12,8 +12,6 @@ import (
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
-const FileData = -2
-
 type instruction struct {
 	tID   int
 	start int
@@ -49,7 +47,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		instsPos = instsPos[:0]
 
 		tID := targets[i]
-		if tID != -1 {
+		if tID != config.NoRepeatConfig {
 			execCfg = config.Alloc(cache[tID])
 			if execCfg == nil {
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
@@ -186,7 +184,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 		tID := -1
 		args := d.RawData[valStart:valEnd]
 		if bytes.Equal(args, []byte("file")) {
-			tID = FileData
+			tID = config.DataFromFile
 		} else {
 			tID = atoi(d.RawData[valStart:valEnd])
 			if tID == -1 {
@@ -297,12 +295,7 @@ func applyReplace(r *config.RepeatConfig) error {
 			key := unsafe.String(unsafe.SliceData(d.RawData[ent.KeyStart:ent.KeyEnd]), ent.KeyEnd-ent.KeyStart)
 			val := d.RawData[ent.ValStart:ent.ValEnd]
 
-			field := r.Orig.GetRaw(key)
-			if field == nil {
-				continue
-			}
-
-			r.Orig.Apply(0, len(field), key, val)
+			r.Orig.Apply(0, config.MaxLen, key, val)
 		}
 
 	}

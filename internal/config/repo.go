@@ -6,7 +6,12 @@ import (
 	"gcli/internal/buffer"
 )
 
-const FlagUseFileCookies uint32 = 1 << iota
+const (
+	NoRepeatConfig     int    = -1
+	DataFromFile       int    = -2
+	MaxLen             int    = -3
+	FlagUseFileCookies uint32 = 1 << iota
+)
 
 type Dependency struct {
 	TargetID int
@@ -29,6 +34,7 @@ type Config interface {
 	SetEnd(int)
 
 	Update([]byte, []byte)
+	GetRaw(string) []byte
 
 	UnwrapExec() Config
 
@@ -36,7 +42,6 @@ type Config interface {
 	SetDependency(Dependency)
 
 	Apply(int, int, string, []byte)
-	GetRaw(string) []byte
 
 	HasFlag(uint32) bool
 	SetFlag(uint32)
@@ -139,6 +144,7 @@ func (c *BaseConfig) Release()                       {}
 func (c *BaseConfig) ReleaseClone()                  {}
 func (c *BaseConfig) Update(raw, cookie []byte)      {}
 func (c *BaseConfig) Apply(int, int, string, []byte) {}
+func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                { return c.Name }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
@@ -146,7 +152,6 @@ func (c *BaseConfig) GetType() string                { return c.Type }
 func (c *BaseConfig) GetEnd() int                    { return c.End }
 func (c *BaseConfig) SetEnd(nEnd int)                { c.End = nEnd }
 func (c *BaseConfig) UnwrapExec() Config             { return c }
-func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) HasFlag(f uint32) bool          { return c.flag&f != 0 }
 func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
 
@@ -204,21 +209,6 @@ func (c *HTTPConfig) Update(res, cks []byte) {
 	c.CookieOut = cks
 }
 
-func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
-	switch key {
-	case "URL":
-		c.URL = splice(c.URL, val, start, end)
-	case "Method":
-		c.Method = splice(c.Method, val, start, end)
-	case "Body":
-		c.Body = splice(c.Body, val, start, end)
-	case "Headers":
-		c.Headers = splice(c.Headers, val, start, end)
-	case "Cookie":
-		c.CookieIn = splice(c.CookieIn, val, start, end)
-	}
-}
-
 func (c *HTTPConfig) GetRaw(key string) []byte {
 	switch key {
 	case "URL":
@@ -235,14 +225,29 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 	return nil
 }
 
+func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
+	switch key {
+	case "URL":
+		c.URL = splice(c.URL, val, start, end)
+	case "Method":
+		c.Method = splice(c.Method, val, start, end)
+	case "Body":
+		c.Body = splice(c.Body, val, start, end)
+	case "Headers":
+		c.Headers = splice(c.Headers, val, start, end)
+	case "Cookie":
+		c.CookieIn = splice(c.CookieIn, val, start, end)
+	}
+}
+
 type GRPCConfig struct {
-	Target      string `gurlf:"Target"`
-	Endpoint    string `gurlf:"Endpoint"`
+	Target      []byte `gurlf:"Target"`
+	Endpoint    []byte `gurlf:"Endpoint"`
 	Data        []byte `gurlf:"Data"`
 	Metadata    []byte `gurlf:"Metadata"`
-	ProtoPath   string `gurlf:"ProtoPath"`
-	ImportPaths string `gurlf:"ImportPaths"`
-	DialOpts    string `gurlf:"DialOpts"`
+	ProtoPath   []byte `gurlf:"ProtoPath"`
+	ImportPaths []byte `gurlf:"ImportPaths"`
+	DialOpts    []byte `gurlf:"DialOpts"`
 	BaseConfig
 }
 
@@ -256,16 +261,49 @@ func (c *GRPCConfig) Clone() Config {
 	return newCfg
 }
 
-func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {}
-
-func (c *GRPCConfig) GetRaw(key string) []byte {
-	return nil
-}
-
 func (c *GRPCConfig) Update(res, cks []byte) {
 	tmp := make([]byte, len(res))
 	copy(tmp, res)
 	c.Resp = tmp
+}
+
+func (c *GRPCConfig) GetRaw(key string) []byte {
+	switch key {
+	case "Target":
+		return c.Target
+	case "Endpoint":
+		return c.Endpoint
+	case "Data":
+		return c.Data
+	case "Metadata":
+		return c.Metadata
+	case "ProtoPath":
+		return c.ProtoPath
+	case "ImportPaths":
+		return c.ImportPaths
+	case "DialOpts":
+		return c.DialOpts
+	}
+	return nil
+}
+
+func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
+	switch key {
+	case "Target":
+		c.Target = splice(c.Target, val, start, end)
+	case "Endpoint":
+		c.Endpoint = splice(c.Endpoint, val, start, end)
+	case "Data":
+		c.Data = splice(c.Data, val, start, end)
+	case "Metadata":
+		c.Metadata = splice(c.Metadata, val, start, end)
+	case "ProtoPath":
+		c.ProtoPath = splice(c.ProtoPath, val, start, end)
+	case "ImportPaths":
+		c.ImportPaths = splice(c.ImportPaths, val, start, end)
+	case "DialOpts":
+		c.DialOpts = splice(c.DialOpts, val, start, end)
+	}
 }
 
 type RepeatConfig struct {
@@ -314,7 +352,28 @@ func (c *RepeatConfig) Update(res, cks []byte) {
 	c.Orig.Update(nil, cks)
 }
 
+func (c *RepeatConfig) GetRaw(key string) []byte {
+	switch key {
+	case "Replace":
+		return c.Replace
+	}
+	return nil
+}
+
+func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
+	switch key {
+	case "Replace":
+		c.Replace = splice(c.Replace, val, start, end)
+	}
+}
+
 func splice(orig, val []byte, start, end int) []byte {
+	if end == MaxLen {
+		end = len(orig)
+	}
+	if start < 0 || end < 0 || start >= len(orig) || end > len(orig) || start == end {
+		return nil
+	}
 	res := make([]byte, 0, len(orig)+len(val))
 	res = append(res, orig[:start]...)
 	res = append(res, val...)
