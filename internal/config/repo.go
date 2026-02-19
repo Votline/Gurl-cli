@@ -126,7 +126,7 @@ type BaseConfig struct {
 	Len       int
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
-	Resp      []byte `gurlf:"Response"`
+	Resp      []byte `gurlf:"Response,omitempty"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
 	DepsLen   uint8
@@ -178,12 +178,12 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 
 type HTTPConfig struct {
 	URL     []byte `gurlf:"URL"`
-	Method  []byte `gurlf:"Method"`
-	Body    []byte `gurlf:"Body"`
-	Headers []byte `gurlf:"Headers"`
+	Method  []byte `gurlf:"Method,omitempty"`
+	Body    []byte `gurlf:"Body,omitempty"`
+	Headers []byte `gurlf:"Headers,omitempty"`
 	BaseConfig
-	CookieIn  []byte `gurlf:"CookieIn"`
-	CookieOut []byte `gurlf:"CookieOut"`
+	CookieIn  []byte `gurlf:"CookieIn,omitempty"`
+	CookieOut []byte `gurlf:"CookieOut,omitempty"`
 }
 
 func GetHTTP() (*HTTPConfig, uintptr)    { return hBuf.Read(), hItab }
@@ -243,11 +243,11 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 type GRPCConfig struct {
 	Target      []byte `gurlf:"Target"`
 	Endpoint    []byte `gurlf:"Endpoint"`
-	Data        []byte `gurlf:"Data"`
-	Metadata    []byte `gurlf:"Metadata"`
-	ProtoPath   []byte `gurlf:"ProtoPath"`
-	ImportPaths []byte `gurlf:"ImportPaths"`
-	DialOpts    []byte `gurlf:"DialOpts"`
+	Data        []byte `gurlf:"Data,omitempty"`
+	Metadata    []byte `gurlf:"Metadata,omitempty"`
+	ProtoPath   []byte `gurlf:"ProtoPath,omitempty"`
+	ImportPaths []byte `gurlf:"ImportPaths,omitempty"`
+	DialOpts    []byte `gurlf:"DialOpts,omitempty"`
 	BaseConfig
 }
 

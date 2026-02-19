@@ -3,7 +3,7 @@ module gcli
 go 1.25.5
 
 require (
-	github.com/Votline/Gurlf v1.1.2-0.20260127131512-819450497426
+	github.com/Votline/Gurlf v1.2.1-0.20260218184901-bfa19cd86806
 	github.com/jhump/protoreflect v1.18.0
 	go.uber.org/zap v1.27.1
 	google.golang.org/grpc v1.78.0
