@@ -2,9 +2,11 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"gcli/internal/buffer"
@@ -45,14 +47,14 @@ var depBindings = map[string]DepBindigs{
 	},
 }
 
-func Start(cType, cPath, ckPath string, cCreate, ic bool, log *zap.Logger) error {
+func Start(cType, cPath, ckPath string, cCreate, ic, disablePrint bool, log *zap.Logger) error {
 	if cCreate {
 		return config.Create(cType, cPath)
 	}
-	return handleConfig(cPath, ckPath, log)
+	return handleConfig(cPath, ckPath, disablePrint, log)
 }
 
-func handleConfig(cPath, ckPath string, log *zap.Logger) error {
+func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
 	config.Init()
@@ -65,7 +67,12 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
 	resB := buffer.NewRb[*transport.Result]()
+	resPrintBuf := buffer.NewRb[*transport.Result]()
 	trnsp := transport.NewTransport(resB.Write)
+
+	if disablePrint {
+		resPrintBuf = buffer.NewNop[*transport.Result]()
+	}
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
@@ -136,9 +143,11 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 			cfgFileBuf.Write(cfgToFile)
 
 			cfg.Release()
+			resPrintBuf.Write(res)
 			resB.Write(res)
 		}
 		cfgFileBuf.Close()
+		resPrintBuf.Close()
 	})
 
 	wg.Go(func() {
@@ -246,6 +255,23 @@ func handleConfig(cPath, ckPath string, log *zap.Logger) error {
 		}
 	})
 
+	if !disablePrint {
+		wg.Go(func() {
+			for !resPrintBuf.IsClosed() {
+				res := resPrintBuf.Read()
+				if res == nil {
+					break
+				}
+
+				if err := prettyPrint(res); err != nil {
+					log.Error("Failed to print response",
+						zap.String("op", op),
+						zap.Error(err))
+				}
+			}
+		})
+	}
+
 	if err := parser.ParseStream(&sData, rb.Write); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -273,5 +299,43 @@ func flush(buf *bytes.Buffer, f *os.File) error {
 	}
 
 	buf.Reset()
+	return nil
+}
+
+func prettyPrint(res *transport.Result) error {
+	const op = "core.prettyPrint"
+
+	fmt.Println(strings.Repeat("-", 20))
+
+	switch {
+	case res.Status >= 200 && res.Status < 300:
+		fmt.Printf("\n\033[32m[HTTP %d]\033[0m\n", res.Status)
+	case res.Status >= 300 && res.Status < 400:
+		fmt.Printf("\n\033[33m[HTTP %d]\033[0m\n", res.Status)
+	case res.Status >= 400 && res.Status < 500:
+		fmt.Printf("\n\033[31m[HTTP %d]\033[0m\n", res.Status)
+	default:
+		fmt.Printf("\n\033[31m[HTTP %d]\033[0m\n", res.Status)
+	}
+
+	if len(res.Raw) == 0 {
+		fmt.Printf("\n\033[90m[Empty body]\033[0m")
+		return nil
+	}
+
+	if res.IsJSON {
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, res.Raw, "", "  "); err != nil {
+			return fmt.Errorf("%s: indent: %w", op, err)
+		}
+		fmt.Printf("\n[JSON Response]\n%s\n", prettyJSON.String())
+	} else {
+		if len(res.Raw) > 1024 {
+			res.Raw = res.Raw[:1024]
+			res.Raw = append(res.Raw, []byte("(truncated)")...)
+		}
+		fmt.Printf("\n[Raw Response]\n%s\n", res.Raw)
+	}
+
 	return nil
 }

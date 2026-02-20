@@ -32,6 +32,7 @@ func main() {
 	cfgPath := flag.String("config", defPath, "Specifies the name and path for creating the config")
 
 	dbg := flag.Bool("debug", false, "Set debug log level")
+	disPrint := flag.Bool("disablePrint", false, "Disable printing response")
 
 	flag.Parse()
 
@@ -43,7 +44,7 @@ func main() {
 	log, _ := cfg.Build()
 	defer log.Sync()
 
-	if err := core.Start(*cfgType, *cfgPath, *ckPath, *cfgCreate, *ignoreCert, log); err != nil {
+	if err := core.Start(*cfgType, *cfgPath, *ckPath, *cfgCreate, *ignoreCert, *disPrint, log); err != nil {
 		log.Error("failed", zap.Error(err))
 	}
 }

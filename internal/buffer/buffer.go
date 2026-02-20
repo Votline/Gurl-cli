@@ -8,13 +8,20 @@ import (
 
 const bufSize uint64 = 10
 
+type Buffer[T any] interface {
+	Write(val T)
+	Read() T
+	Close()
+	IsClosed() bool
+}
+
 type ringBuffer[T any] struct {
 	wPos, rPos uint64
 	closed     uint32
 	buf        [bufSize]T
 }
 
-func NewRb[T any]() *ringBuffer[T] {
+func NewRb[T any]() Buffer[T] {
 	return &ringBuffer[T]{
 		wPos: 0,
 		rPos: 0,
@@ -81,3 +88,27 @@ func (b *ringBuffer[T]) IsClosed() bool {
 	return atomic.LoadUint32(&b.closed) == 1
 }
 
+type nopBuffer[T any] struct {
+	buf []T
+}
+
+func NewNop[T any]() Buffer[T] {
+	return &nopBuffer[T]{
+		buf: make([]T, 0),
+	}
+}
+
+func (b *nopBuffer[T]) Write(val T) {
+}
+
+func (b *nopBuffer[T]) Read() T {
+	var zero T
+	return zero
+}
+
+func (b *nopBuffer[T]) Close() {
+}
+
+func (b *nopBuffer[T]) IsClosed() bool {
+	return false
+}

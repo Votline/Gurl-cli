@@ -23,6 +23,7 @@ var builderPool = sync.Pool{
 }
 
 type Result struct {
+	Status int
 	IsJSON bool
 	Raw    []byte
 	Cookie []byte
@@ -68,6 +69,8 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	resObj.Cookie = parser.ParseCookies(req.URL, res.Cookies())
+
+	resObj.Status = res.StatusCode
 
 	return nil
 }

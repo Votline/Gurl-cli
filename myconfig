@@ -12,7 +12,7 @@ Data:`
 ProtoPath:../3l1/protos/user-service.proto
 ImportPaths:/home/hypnogen/go/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v1.2.1/
 Type:grpc
-Response:{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzE1Mjc2ODcsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiYjhjZDE5NTktZWFhZS00OWM0LTk4MjgtZWIzODBlNzAxZDg2In0.nk3BcLdKTtVExh6buKV-jui3CDruOmkFvu1mC6VzSKM","sessionKey":"343fe5ba-6b4c-46ea-81e2-91a6f8d8c419"}
+Response:rpc error: code = Unknown desc = UserService.ReqUser: user with this email or username already exists
 [\grpc_config]
 
 [http_config]
@@ -28,11 +28,11 @@ Body:`
 `
 Headers:Content-Type: application/json
 Type:http
-Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzE1Mjc2ODcsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiYjhjZDE5NTktZWFhZS00OWM0LTk4MjgtZWIzODBlNzAxZDg2In0.nk3BcLdKTtVExh6buKV-jui3CDruOmkFvu1mC6VzSKM"}
+Response:`{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzE2MDM5MzYsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiYjhjZDE5NTktZWFhZS00OWM0LTk4MjgtZWIzODBlNzAxZDg2In0.T09DFh4ntVCxYbIqywVkDxc2j9WoW2O-_cVwdo_L5x8"}
 `
 CookieOut:`
 [localhost:8443]
- session_key:834fefc1-414f-4a29-a624-243cee2657c9
+ session_key:0e85484d-8937-4ba7-97f7-f09df263aaaf
  Path:/
  Max-Age:86400
  HttpOnly:
@@ -55,13 +55,13 @@ Response:`root
 method: DELETE
 url: /
 headers:
-  User-Agent: Go-http-client/1.1
-  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzE1Mjc2ODcsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiYjhjZDE5NTktZWFhZS00OWM0LTk4MjgtZWIzODBlNzAxZDg2In0.nk3BcLdKTtVExh6buKV-jui3CDruOmkFvu1mC6VzSKM
   Content-Type: application/json
-  Cookie: session_key=834fefc1-414f-4a29-a624-243cee2657c9
+  Cookie: session_key=0e85484d-8937-4ba7-97f7-f09df263aaaf
   Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzE2MDM5MzYsInJvbGUiOiJkZXYiLCJ1c2VyX2lkIjoiYjhjZDE5NTktZWFhZS00OWM0LTk4MjgtZWIzODBlNzAxZDg2In0.T09DFh4ntVCxYbIqywVkDxc2j9WoW2O-_cVwdo_L5x8
 cookies:
-  session_key=834fefc1-414f-4a29-a624-243cee2657c9
+  session_key=0e85484d-8937-4ba7-97f7-f09df263aaaf
 body:
 `
 [\http_config]
