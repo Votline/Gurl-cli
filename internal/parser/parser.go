@@ -150,64 +150,79 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 	}
 
 	for _, inst := range *insts {
-		pIdx := bytes.Index(d.RawData[start+1:], inst)
-		if pIdx == -1 {
-			continue
-		}
-		pIdx += start
-
-		idOffset := bytes.Index(d.RawData[pIdx:], []byte("id="))
-		if idOffset == -1 {
-			return -1, fmt.Errorf("%s: instruction %q: no id",
-				op, string(inst))
-		}
-		idOffset += pIdx
-
-		instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx+1:idOffset-1]), len(d.RawData[pIdx+1:idOffset-1]))
-
-		valStart := idOffset + 3
-		for valStart < len(d.RawData) && isSpace(d.RawData[valStart]) {
-			valStart++
-		}
-
-		valEnd := valStart
-		for valEnd < len(d.RawData) && !isSpace(d.RawData[valEnd]) && d.RawData[valEnd] != '}' {
-			valEnd++
-		}
-
-		if valStart == valEnd {
-			return -1, fmt.Errorf("%s: empty id value", op)
-		}
-
-		end = bytes.IndexByte(d.RawData[valEnd:], '}') + valEnd + 1
-
-		tID := -1
-		args := d.RawData[valStart:valEnd]
-		if bytes.Equal(args, []byte("file")) {
-			tID = config.DataFromFile
-		} else {
-			tID = atoi(d.RawData[valStart:valEnd])
-			if tID == -1 {
-				return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+		curOffset := start + 1
+		for {
+			pIdx := bytes.Index(d.RawData[curOffset:], inst)
+			if pIdx == -1 {
+				break
 			}
-		}
+			pIdx += curOffset
 
-		instKey := ""
-		for _, ent := range d.Entries {
-			if pIdx >= ent.ValStart && pIdx <= ent.ValEnd {
-				start = pIdx - ent.ValStart
-				end = end - ent.ValStart
-				instKey = unsafe.String(unsafe.SliceData(d.RawData[ent.KeyStart:ent.KeyEnd]), ent.KeyEnd-ent.KeyStart)
+			idOffset := bytes.Index(d.RawData[pIdx:], []byte("id="))
+			if idOffset == -1 {
+				return -1, fmt.Errorf("%s: instruction %q: no id",
+					op, string(inst))
 			}
-		}
+			idOffset += pIdx
 
-		yield(instruction{
-			tID:   tID,
-			start: start,
-			end:   end,
-			key:   instKey,
-			insTp: instTp,
-		})
+			instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx:idOffset-1]), len(d.RawData[pIdx:idOffset-1]))
+
+			valStart := idOffset + 3
+			for valStart < len(d.RawData) && isSpace(d.RawData[valStart]) {
+				valStart++
+			}
+
+			valEnd := valStart
+			for valEnd < len(d.RawData) && !isSpace(d.RawData[valEnd]) && d.RawData[valEnd] != '}' {
+				valEnd++
+			}
+
+			if valStart == valEnd {
+				return -1, fmt.Errorf("%s: empty id value", op)
+			}
+
+			end = bytes.IndexByte(d.RawData[pIdx:], '}')
+			if end == -1 {
+				return -1, fmt.Errorf("%s: instruction %q: no end", op, string(inst))
+			}
+			absEnd := pIdx + end + 1 // catch '}'
+
+			absStart := pIdx
+			for absStart > 0 && d.RawData[absStart] != '{' {
+				absStart--
+			}
+
+			tID := -1
+			args := d.RawData[valStart:valEnd]
+			if bytes.Equal(args, []byte("file")) {
+				tID = config.DataFromFile
+			} else {
+				tID = atoi(d.RawData[valStart:valEnd])
+				if tID == -1 {
+					return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+				}
+			}
+
+			localStart := start
+			localEnd := absEnd
+			instKey := ""
+			for _, ent := range d.Entries {
+				if pIdx >= ent.ValStart && pIdx <= ent.ValEnd {
+					localStart = absStart - ent.ValStart
+					localEnd = absEnd - ent.ValStart
+					instKey = unsafe.String(unsafe.SliceData(d.RawData[ent.KeyStart:ent.KeyEnd]), ent.KeyEnd-ent.KeyStart)
+				}
+			}
+
+			yield(instruction{
+				tID:   tID,
+				start: localStart,
+				end:   localEnd,
+				key:   instKey,
+				insTp: instTp,
+			})
+			curOffset = absEnd
+		}
 	}
 
 	return 0, nil

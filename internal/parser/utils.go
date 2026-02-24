@@ -112,27 +112,41 @@ func ParseBody(b []byte) []byte {
 func ParseResponse(res *[]byte, inst []byte) {
 	const op = "parser.parseResponse"
 
-	tpStart := bytes.IndexByte(inst, ':')
-	if tpStart == -1 {
+	prefix := []byte("json:")
+	jIdx := bytes.Index(inst, prefix)
+	if jIdx == -1 {
+		(*res) = nil
 		return
 	}
 
-	tpEnd := len(inst)
-	for tpEnd > tpStart && isSpace(inst[tpEnd-1]) {
-		tpEnd--
+	kS := jIdx + len(prefix)
+	for kS < len(inst) && isSpace(inst[kS]) {
+		kS++
 	}
+	kE := len(inst)
+	for kE > kS && (isSpace(inst[kE-1]) || inst[kE-1] == '}') {
+		kE--
+	}
+	key := inst[kS:kE]
+	pattern := append([]byte{'"'}, append(key, '"', ':')...)
 
-	jsonStart := bytes.IndexByte(*res, ':')
+	jsonStart := bytes.Index(*res, pattern)
 	if jsonStart == -1 {
+		(*res) = nil
 		return
 	}
+	jsonStart += len(pattern)
 
-	jsonStart++
 	for jsonStart < len(*res) && isSpace((*res)[jsonStart]) {
 		jsonStart++
 	}
+	if jsonStart >= len(*res) || (*res)[jsonStart] != '"' {
+		(*res) = nil
+		return
+	}
+	jsonStart++
 
-	jsonEnd := jsonStart + 1
+	jsonEnd := jsonStart
 	for jsonEnd < len(*res) {
 		if (*res)[jsonEnd] == '"' && (*res)[jsonEnd-1] != '\\' {
 			break
@@ -140,7 +154,12 @@ func ParseResponse(res *[]byte, inst []byte) {
 		jsonEnd++
 	}
 
-	(*res) = (*res)[jsonStart+1 : jsonEnd]
+	if jsonEnd >= len(*res) {
+		(*res) = nil
+		return
+	}
+
+	(*res) = (*res)[jsonStart:jsonEnd]
 }
 
 func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -20,27 +21,20 @@ import (
 
 type DepBindigs struct {
 	From func(res *transport.Result) []byte
-	To   func(cfg config.Config, start, end int, key string, val []byte)
+	To   func(cfg config.Config, start, end int, key string, val, inst []byte)
 }
 
 var depBindings = map[string]DepBindigs{
 	"RESPONSE": {
 		From: func(res *transport.Result) []byte { return res.Raw },
-		To: func(cfg config.Config, s, e int, k string, v []byte) {
-			raw := cfg.GetRaw(k)
-			if s < 0 || e < 0 || s >= len(raw) || e > len(raw) || s == e {
-				raw = nil
-			} else {
-				raw = raw[s:e]
-			}
-
-			parser.ParseResponse(&v, raw)
+		To: func(cfg config.Config, s, e int, k string, v, inst []byte) {
+			parser.ParseResponse(&v, inst)
 			cfg.Apply(s, e, k, v)
 		},
 	},
 	"COOKIES": {
 		From: func(res *transport.Result) []byte { return res.Cookie },
-		To: func(cfg config.Config, s, e int, k string, v []byte) {
+		To: func(cfg config.Config, s, e int, k string, v, inst []byte) {
 			cfg.Apply(s, e, k, v)
 			cfg.SetFlag(config.FlagUseFileCookies)
 		},
@@ -85,13 +79,21 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 			cfgToFile := cfg.Clone()
 
+			allDeps := make([]config.Dependency, 0, cfg.GetDepsLen())
 			cfg.RangeDeps(func(d config.Dependency) {
+				allDeps = append(allDeps, d)
+			})
+			sort.Slice(allDeps, func(i, j int) bool {
+				return allDeps[i].Start > allDeps[j].Start
+			})
+
+			for _, d := range allDeps {
 				bind, ok := depBindings[d.InsTp]
 				if !ok {
 					log.Error("Dependency points to non-exists key",
 						zap.String("op", op),
 						zap.String("key", d.InsTp))
-					return
+					continue
 				}
 
 				if d.TargetID == config.DataFromFile {
@@ -117,8 +119,13 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 				val := bind.From(resp)
 
-				bind.To(cfg, d.Start, d.End, d.Key, val)
-			})
+				rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+				copy(rawSnapshot, cfg.GetRaw(d.Key))
+
+				instructionBytes := rawSnapshot[d.Start:d.End]
+
+				bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
+			}
 
 			res := resB.Read()
 

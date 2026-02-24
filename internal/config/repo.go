@@ -39,6 +39,7 @@ type Config interface {
 	UnwrapExec() Config
 
 	RangeDeps(func(d Dependency))
+	GetDepsLen() uint8
 	SetDependency(Dependency)
 
 	Apply(int, int, string, []byte)
@@ -144,6 +145,7 @@ func (c *BaseConfig) Release()                       {}
 func (c *BaseConfig) ReleaseClone()                  {}
 func (c *BaseConfig) Update(raw, cookie []byte)      {}
 func (c *BaseConfig) Apply(int, int, string, []byte) {}
+func (c *BaseConfig) GetDepsLen() uint8              { return c.DepsLen }
 func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                { return c.Name }
@@ -374,6 +376,7 @@ func splice(orig, val []byte, start, end int) []byte {
 	if start < 0 || end < 0 || start >= len(orig) || end > len(orig) || start == end {
 		return nil
 	}
+
 	res := make([]byte, 0, len(orig)+len(val))
 	res = append(res, orig[:start]...)
 	res = append(res, val...)

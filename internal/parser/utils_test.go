@@ -125,7 +125,7 @@ func TestParseResponse(t *testing.T) {
 
 	for i, tt := range tests {
 		res := []byte(tt.input)
-		ParseResponse(&res, []byte(tt.input))
+		ParseResponse(&res, []byte(tt.inst))
 		if string(res) != tt.expected {
 			t.Errorf("[%d]: expected %q, but got %q",
 				i, tt.expected, string(res))
