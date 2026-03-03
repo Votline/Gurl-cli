@@ -99,14 +99,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				if d.TargetID == config.DataFromFile {
 					cfg.SetFlag(config.FlagUseFileCookies)
 					cfg.Apply(d.Start, d.End, d.Key, nil)
-					return
+					continue
 				}
 
 				if d.TargetID >= len(resHub) {
 					log.Error("Dependency points to non-exists config",
 						zap.String("op", op),
 						zap.Int("TargetID", d.TargetID))
-					return
+					continue
 				}
 
 				resp := resHub[d.TargetID]
@@ -114,7 +114,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 					log.Warn("Response for dependency is empty",
 						zap.String("op", op),
 						zap.Int("TargetID for resp", d.TargetID))
-					return
+					continue
 				}
 
 				val := bind.From(resp)
