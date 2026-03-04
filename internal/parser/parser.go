@@ -10,6 +10,7 @@ import (
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
+	"go.uber.org/zap"
 )
 
 type instruction struct {
@@ -20,17 +21,26 @@ type instruction struct {
 	insTp string
 }
 
-func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
+func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
 	insts := [][]byte{[]byte("RESPONSE id="), []byte("COOKIES id=")}
 	instsPos := make([]instruction, 0, 6)
+
+	log.Debug("preparing configs",
+		zap.String("op", op),
+		zap.Int("count", n))
 
 	targets := make([]int, n)
 	needed := make([]uint64, (n/64)+1)
 	for i, d := range *sData {
 		tID, err := handleRepeat(&d)
 		if err != nil {
+			log.Debug("check cfg failed",
+				zap.String("op", op),
+				zap.String("name", string(d.Name)),
+				zap.String("raw", string(d.RawData)))
+
 			return fmt.Errorf("%s: check cfg №[%d] failed: %w", op, i, err)
 		}
 		targets[i] = tID
@@ -39,6 +49,10 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		}
 	}
 
+	log.Debug("processing configs",
+		zap.String("op", op),
+		zap.Int("count", n))
+
 	absEnd := 0
 	cache := make([]config.Config, n)
 	for i, d := range *sData {
@@ -46,10 +60,26 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		var execCfg config.Config
 		instsPos = instsPos[:0]
 
+		log.Debug("processing config",
+			zap.String("op", op),
+			zap.String("name", string(d.Name)),
+			zap.Int("id", i))
+
 		tID := targets[i]
 		if tID != config.NoRepeatConfig {
+
+			log.Debug("alloc repeat config",
+				zap.String("op", op),
+				zap.String("name", string(d.Name)),
+				zap.Int("id", tID))
+
 			execCfg = config.Alloc(cache[tID])
 			if execCfg == nil {
+				log.Debug("repeat config not found",
+					zap.String("op", op),
+					zap.String("name", string(d.Name)),
+					zap.String("raw", string(d.RawData)))
+
 				return fmt.Errorf("%s: cfg №[%d] target id not found", op, i)
 			}
 
@@ -64,9 +94,17 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
 
 			if tp == "" {
+				log.Debug("no config type",
+					zap.String("op", op),
+					zap.String("name", string(d.Name)),
+					zap.String("raw", string(d.RawData)))
 				return fmt.Errorf("%s: no config type", op)
 			} else {
 				if err := handleType(&cfg, &tp, &d); err != nil {
+					log.Debug("check cfg failed",
+						zap.String("op", op),
+						zap.String("name", string(d.Name)),
+						zap.String("raw", string(d.RawData)))
 					return fmt.Errorf("%s: cfg №[%d] failed: %w", op, i, err)
 				}
 			}
@@ -80,11 +118,22 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 		execCfg.SetID(i)
 		cfg.SetEnd(absEnd)
 
+		log.Debug("set config end",
+			zap.String("op", op),
+			zap.String("name", string(d.Name)),
+			zap.Int("id", i),
+			zap.Int("end", absEnd))
+
 		tID, err := handleInstructions(&d, &insts, func(inst instruction) {
 			instsPos = append(instsPos, inst)
 		})
 		if err != nil {
-			return fmt.Errorf("%s: check instr. execCfg's №[%d]: %w", op, i, err)
+			log.Debug("check instr. execCfg failed",
+				zap.String("op", op),
+				zap.String("name", string(d.Name)),
+				zap.String("raw", string(d.RawData)))
+			return fmt.Errorf("%s: check instruction execCfg №[%d]: %w",
+				op, i, err)
 		}
 		if tID != -1 && tID < n {
 			for _, inst := range instsPos {
@@ -92,6 +141,15 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config)) error {
 					execCfg.SetDependency(config.Dependency{
 						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
 					})
+					log.Debug("set dependency",
+						zap.String("op", op),
+						zap.String("name", string(d.Name)),
+						zap.Int("id", i),
+						zap.Int("target", inst.tID),
+						zap.String("key", inst.key),
+						zap.Int("start", inst.start),
+						zap.Int("end", inst.end),
+						zap.String("type", inst.insTp))
 				}
 			}
 		}

@@ -78,6 +78,9 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			}
 
 			cfgToFile := cfg.Clone()
+			log.Debug("cloned config",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()))
 
 			allDeps := make([]config.Dependency, 0, cfg.GetDepsLen())
 			cfg.RangeDeps(func(d config.Dependency) {
@@ -127,13 +130,34 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
 			}
 
+			log.Debug("applied dependencies",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()))
+
 			res := resB.Read()
 
 			execCfg := cfg.UnwrapExec()
 			switch v := execCfg.(type) {
 			case *config.HTTPConfig:
 				err = trnsp.DoHTTP(v, res)
+				log.Debug("send http",
+					zap.String("op", op),
+					zap.String("url", string(v.URL)),
+					zap.String("method", string(v.Method)),
+					zap.String("body", string(v.Body)),
+					zap.String("headers", string(v.Headers)),
+					zap.String("cookie", string(v.CookieIn)))
+
 			case *config.GRPCConfig:
+				log.Debug("send grpc",
+					zap.String("op", op),
+					zap.String("target", string(v.Target)),
+					zap.String("endpoint", string(v.Endpoint)),
+					zap.String("body", string(v.Data)),
+					zap.String("protoPath", string(v.ProtoPath)),
+					zap.String("importPaths", string(v.ImportPaths)),
+					zap.String("dialOpts", string(v.DialOpts)))
+
 				err = transport.DoGRPC(v, res)
 			}
 
@@ -152,6 +176,10 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			cfg.Release()
 			resPrintBuf.Write(res)
 			resB.Write(res)
+
+			log.Debug("processing finished",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()))
 		}
 		cfgFileBuf.Close()
 		resPrintBuf.Close()
@@ -239,9 +267,18 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			}
 			cfg.ReleaseClone()
 
+			log.Debug("marshaled config",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()))
+
 			buf.Write(data)
 			cnt++
 			pendingOffset = int64(cfg.GetEnd())
+
+			log.Debug("wrote config",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.Int("size", cnt))
 
 			if cnt == bufSize {
 				cnt = 0
@@ -250,6 +287,10 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 						zap.String("op", op),
 						zap.Error(err))
 				}
+
+				log.Debug("flushed buffer",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()))
 			}
 		}
 
@@ -279,7 +320,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 		})
 	}
 
-	if err := parser.ParseStream(&sData, rb.Write); err != nil {
+	if err := parser.ParseStream(&sData, rb.Write, log); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	rb.Close()
