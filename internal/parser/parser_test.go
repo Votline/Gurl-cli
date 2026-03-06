@@ -23,7 +23,7 @@ var raw = []byte(`
 
 var repRaw = append(raw, []byte(`
 		[rep]
-		Target_ID:0
+		TargetID:0
 		Type:repeat
 		Response:something {RESPONSE id=0 json:token}
 		[\rep]

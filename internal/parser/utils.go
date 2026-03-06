@@ -115,7 +115,6 @@ func ParseResponse(res *[]byte, inst []byte) {
 	prefix := []byte("json:")
 	jIdx := bytes.Index(inst, prefix)
 	if jIdx == -1 {
-		(*res) = nil
 		return
 	}
 
