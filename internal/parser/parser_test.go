@@ -8,6 +8,7 @@ import (
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
+	"go.uber.org/zap"
 )
 
 var raw = []byte(`
@@ -32,21 +33,24 @@ func yield(c config.Config) { c.Release() }
 
 func TestParseStream(t *testing.T) {
 	config.Init()
+	log := zap.NewNop()
+
 	d, _ := gurlf.Scan(raw)
 	if err := ParseStream(&d, func(c config.Config) {
 		if c.GetType() != "http" && c.GetType() != "repeat" {
 			t.Errorf("expected %q, but got %q", "http or repeat", c.GetType())
 		}
-	}); err != nil {
+	}, log); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func BenchmarkParseStream(b *testing.B) {
 	d, _ := gurlf.Scan(raw)
+	log := zap.NewNop()
 
 	for b.Loop() {
-		if err := ParseStream(&d, yield); err != nil {
+		if err := ParseStream(&d, yield, log); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}

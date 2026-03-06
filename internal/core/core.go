@@ -120,6 +120,12 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 					continue
 				}
 
+				log.Debug("Dependency",
+					zap.String("op", op),
+					zap.Int("TargetID for resp", d.TargetID),
+					zap.String("key", d.Key),
+					zap.String("name", cfg.GetName()))
+
 				val := bind.From(resp)
 
 				rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
@@ -128,11 +134,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				instructionBytes := rawSnapshot[d.Start:d.End]
 
 				bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
-			}
 
-			log.Debug("applied dependencies",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()))
+				log.Debug("applied dependencies",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()),
+					zap.String("key", d.Key),
+					zap.String("inst", string(instructionBytes)),
+					zap.String("val", string(val)))
+			}
 
 			res := resB.Read()
 

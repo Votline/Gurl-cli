@@ -86,10 +86,16 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			var rep config.Config
 			tp := "repeat"
 			handleType(&rep, &tp, &d)
-			rep.SetID(tID)
+			rep.(*config.RepeatConfig).SetTargetID(tID)
 			rep.(*config.RepeatConfig).Orig = execCfg
 
 			cfg = rep
+
+			nD, err := getReplaceData(rep.(*config.RepeatConfig))
+			if err != nil {
+				return fmt.Errorf("%s: get replace data: %w", op, err)
+			}
+			d = nD
 		} else {
 			tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
 
@@ -110,13 +116,6 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			}
 			execCfg = cfg
 		}
-
-		tagOverhead := (len(d.Name) + 2) + (len(d.Name) + 3) + 2
-		localEnd := len(d.RawData) + tagOverhead
-		absEnd += localEnd
-
-		execCfg.SetID(i)
-		cfg.SetEnd(absEnd)
 
 		log.Debug("set config end",
 			zap.String("op", op),
@@ -154,6 +153,13 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			}
 		}
 
+		tagOverhead := (len(d.Name) + 2) + (len(d.Name) + 3) + 2
+		localEnd := len(d.RawData) + tagOverhead
+		absEnd += localEnd
+
+		cfg.SetID(i)
+		cfg.SetEnd(absEnd)
+
 		if r, ok := cfg.(*config.RepeatConfig); ok {
 			if err := applyReplace(r); err != nil {
 				return fmt.Errorf("%s: %w", op, err)
@@ -179,7 +185,7 @@ func handleRepeat(d *gscan.Data) (int, error) {
 		return -1, fmt.Errorf("%s: no config type", op)
 	}
 	if tp == "repeat" {
-		tID := fastExtract(d.RawData, &d.Entries, []byte("Target_ID"))
+		tID := fastExtract(d.RawData, &d.Entries, []byte("TargetID"))
 		if tID == "" {
 			return -1, fmt.Errorf("%s: no target id", op)
 		}
@@ -373,4 +379,20 @@ func applyReplace(r *config.RepeatConfig) error {
 
 	}
 	return nil
+}
+
+func getReplaceData(r *config.RepeatConfig) (gscan.Data, error) {
+	const op = "parser.getReplaceData"
+	var zero gscan.Data
+
+	sData, err := gurlf.Scan(r.Replace)
+	if err != nil {
+		return zero, fmt.Errorf("%s: scan replace: %w", op, err)
+	}
+
+	if len(sData) == 0 {
+		return zero, nil
+	}
+
+	return sData[0], nil
 }

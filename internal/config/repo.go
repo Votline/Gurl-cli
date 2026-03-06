@@ -122,7 +122,7 @@ func Alloc(cfg Config) Config {
 }
 
 type BaseConfig struct {
-	ID        int
+	ID        int `gurlf:"ID"`
 	End       int
 	Len       int
 	Name      string `gurlf:"config_name"`
@@ -170,6 +170,19 @@ func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 }
 
 func (c *BaseConfig) SetDependency(nDep Dependency) {
+	limit := min(c.DepsLen, 6)
+
+	for i := range limit {
+		if c.Deps[i].Start == nDep.Start && c.Deps[i].End == nDep.End && c.Deps[i].Key == nDep.Key {
+			return
+		}
+	}
+	for _, d := range c.ExtraDeps {
+		if d.Start == nDep.Start && d.End == nDep.End && d.Key == nDep.Key {
+			return
+		}
+	}
+
 	if c.DepsLen < 6 {
 		c.Deps[c.DepsLen] = nDep
 	} else {
@@ -309,20 +322,37 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 }
 
 type RepeatConfig struct {
-	TargetID int    `gurlf:"Target_ID"`
-	Replace  []byte `gurlf:"Replace"`
+	TargetID int    `gurlf:"TargetID"`
+	Replace  []byte `gurlf:"Replace,omitempty"`
 	Orig     Config
 	BaseConfig
 }
 
-func GetRepeat() (*RepeatConfig, uintptr) { return rBuf.Read(), rItab }
+func GetRepeat() (*RepeatConfig, uintptr)   { return rBuf.Read(), rItab }
+func (c *RepeatConfig) SetTargetID(nID int) { c.TargetID = nID }
+
 func (c *RepeatConfig) UnwrapExec() Config {
 	if c.Orig == nil {
 		return nil
 	}
 	return c.Orig
 }
-func (c *RepeatConfig) SetID(nID int) { c.TargetID = nID }
+
+func (c *RepeatConfig) RangeDeps(fn func(d Dependency)) {
+	if c.Orig != nil {
+		c.Orig.RangeDeps(fn)
+	} else {
+		c.BaseConfig.RangeDeps(fn)
+	}
+}
+
+func (c *RepeatConfig) GetDepsLen() uint8 {
+	if c.Orig != nil {
+		return c.Orig.GetDepsLen()
+	}
+	return c.BaseConfig.GetDepsLen()
+}
+func (c *RepeatConfig) SetID(nID int) { c.ID = nID }
 func (c *RepeatConfig) Release() {
 	*c = RepeatConfig{}
 	rBuf.Write(c)
@@ -358,6 +388,10 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 	switch key {
 	case "Replace":
 		return c.Replace
+	default:
+		if c.Orig != nil {
+			return c.Orig.GetRaw(key)
+		}
 	}
 	return nil
 }
@@ -366,6 +400,10 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
 	case "Replace":
 		c.Replace = splice(c.Replace, val, start, end)
+	default:
+		if c.Orig != nil {
+			c.Orig.Apply(start, end, key, val)
+		}
 	}
 }
 
