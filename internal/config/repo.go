@@ -28,6 +28,7 @@ type Config interface {
 
 	GetName() string
 	SetID(int)
+	GetID() int
 	GetType() string
 
 	GetEnd() int
@@ -150,6 +151,7 @@ func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                { return c.Name }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
+func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) GetType() string                { return c.Type }
 func (c *BaseConfig) GetEnd() int                    { return c.End }
 func (c *BaseConfig) SetEnd(nEnd int)                { c.End = nEnd }

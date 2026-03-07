@@ -24,6 +24,7 @@ var builderPool = sync.Pool{
 
 type Result struct {
 	Status int
+	CfgID  int
 	IsJSON bool
 	Raw    []byte
 	Cookie []byte

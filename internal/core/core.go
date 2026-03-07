@@ -182,6 +182,8 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			cfgToFile.Update(res.Raw, res.Cookie)
 			cfgFileBuf.Write(cfgToFile)
 
+			res.CfgID = cfg.GetID()
+
 			cfg.Release()
 			resPrintBuf.Write(res)
 			resB.Write(res)
@@ -364,15 +366,16 @@ func prettyPrint(res *transport.Result) error {
 
 	fmt.Println(strings.Repeat("-", 20))
 
+	fmt.Printf("\n\033[90m[ID %d]\033[0m", res.CfgID)
 	switch {
 	case res.Status >= 200 && res.Status < 300:
-		fmt.Printf("\n\033[32m[HTTP %d]\033[0m\n", res.Status)
+		fmt.Printf("\n\033[32m[HTTP %d]\033[0m", res.Status)
 	case res.Status >= 300 && res.Status < 400:
-		fmt.Printf("\n\033[33m[HTTP %d]\033[0m\n", res.Status)
+		fmt.Printf("\n\033[33m[HTTP %d]\033[0m", res.Status)
 	case res.Status >= 400 && res.Status < 500:
-		fmt.Printf("\n\033[31m[HTTP %d]\033[0m\n", res.Status)
+		fmt.Printf("\n\033[31m[HTTP %d]\033[0m", res.Status)
 	default:
-		fmt.Printf("\n\033[31m[HTTP %d]\033[0m\n", res.Status)
+		fmt.Printf("\n\033[31m[HTTP %d]\033[0m", res.Status)
 	}
 
 	if len(res.Raw) == 0 {
