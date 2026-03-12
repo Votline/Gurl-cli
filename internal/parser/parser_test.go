@@ -92,22 +92,17 @@ func TestHandleInstructions(t *testing.T) {
 	d, _ := gurlf.Scan(repRaw)
 
 	tests := []struct {
-		input    *gscan.Data
-		expected int
+		input *gscan.Data
 	}{
-		{&d[0], -1},
-		{&d[1], 0},
+		{&d[0]},
+		{&d[1]},
 	}
 	insts := [][]byte{[]byte("RESPONSE id=")}
 	instsPos := make([]instruction, 0, len(d))
 
-	for i, tt := range tests {
-		tID, err := handleInstructions(tt.input, &insts, func(inst instruction) { instsPos = append(instsPos, inst) })
-		if err != nil {
+	for _, tt := range tests {
+		if err := handleInstructions(tt.input, &insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
 			t.Fatalf("unexpected error: %v", err)
-		}
-		if tID != tt.expected {
-			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
 		}
 	}
 }
@@ -120,7 +115,7 @@ func BenchmarkHandleInstructions(b *testing.B) {
 
 	for b.Loop() {
 		instsPos = instsPos[:0]
-		if _, err := handleInstructions(&d[1], &insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
+		if err := handleInstructions(&d[1], &insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}

@@ -68,6 +68,14 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 		tID := targets[i]
 		if tID != config.NoRepeatConfig {
 
+			if tID > n || tID > len(cache) {
+				log.Error("invalid repeat target id",
+					zap.String("op", op),
+					zap.String("name", string(d.Name)),
+					zap.Int("id", tID))
+				return fmt.Errorf("%s: invalid repeat target id", op)
+			}
+
 			log.Debug("alloc repeat config",
 				zap.String("op", op),
 				zap.String("name", string(d.Name)),
@@ -117,16 +125,9 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			execCfg = cfg
 		}
 
-		log.Debug("set config end",
-			zap.String("op", op),
-			zap.String("name", string(d.Name)),
-			zap.Int("id", i),
-			zap.Int("end", absEnd))
-
-		tID, err := handleInstructions(&d, &insts, func(inst instruction) {
+		if err := handleInstructions(&d, &insts, func(inst instruction) {
 			instsPos = append(instsPos, inst)
-		})
-		if err != nil {
+		}); err != nil {
 			log.Debug("check instr. execCfg failed",
 				zap.String("op", op),
 				zap.String("name", string(d.Name)),
@@ -134,23 +135,27 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			return fmt.Errorf("%s: check instruction execCfg №[%d]: %w",
 				op, i, err)
 		}
-		if tID != -1 && tID < n {
-			for _, inst := range instsPos {
-				if inst.tID < n {
-					execCfg.SetDependency(config.Dependency{
-						TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
-					})
-					log.Debug("set dependency",
-						zap.String("op", op),
-						zap.String("name", string(d.Name)),
-						zap.Int("id", i),
-						zap.Int("target", inst.tID),
-						zap.String("key", inst.key),
-						zap.Int("start", inst.start),
-						zap.Int("end", inst.end),
-						zap.String("type", inst.insTp))
-				}
+		for _, inst := range instsPos {
+			if inst.tID > n {
+				log.Error("invalid instruction target id",
+					zap.String("op", op),
+					zap.String("name", string(d.Name)),
+					zap.Int("id", inst.tID))
+				return fmt.Errorf("%s: invalid instruction target id", op)
 			}
+
+			execCfg.SetDependency(config.Dependency{
+				TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
+			})
+			log.Debug("set dependency",
+				zap.String("op", op),
+				zap.String("name", string(d.Name)),
+				zap.Int("id", i),
+				zap.Int("target", inst.tID),
+				zap.String("key", inst.key),
+				zap.Int("start", inst.start),
+				zap.Int("end", inst.end),
+				zap.String("type", inst.insTp))
 		}
 
 		tagOverhead := (len(d.Name) + 2) + (len(d.Name) + 3) + 2
@@ -159,6 +164,12 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 
 		cfg.SetID(i)
 		cfg.SetEnd(absEnd)
+
+		log.Debug("set config end",
+			zap.String("op", op),
+			zap.String("name", string(d.Name)),
+			zap.Int("id", i),
+			zap.Int("end", absEnd))
 
 		if r, ok := cfg.(*config.RepeatConfig); ok {
 			if err := applyReplace(r); err != nil {
@@ -201,16 +212,16 @@ func handleRepeat(d *gscan.Data) (int, error) {
 	return -1, nil
 }
 
-func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruction)) (int, error) {
+func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruction)) error {
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
 	if start == -1 {
-		return -1, nil
+		return nil
 	}
 	end := bytes.IndexByte(d.RawData, '}')
 	if end == -1 {
-		return -1, nil
+		return nil
 	}
 
 	for _, inst := range *insts {
@@ -224,7 +235,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 
 			idOffset := bytes.Index(d.RawData[pIdx:], []byte("id="))
 			if idOffset == -1 {
-				return -1, fmt.Errorf("%s: instruction %q: no id",
+				return fmt.Errorf("%s: instruction %q: no id",
 					op, string(inst))
 			}
 			idOffset += pIdx
@@ -242,12 +253,12 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 			}
 
 			if valStart == valEnd {
-				return -1, fmt.Errorf("%s: empty id value", op)
+				return fmt.Errorf("%s: empty id value", op)
 			}
 
 			end = bytes.IndexByte(d.RawData[pIdx:], '}')
 			if end == -1 {
-				return -1, fmt.Errorf("%s: instruction %q: no end", op, string(inst))
+				return fmt.Errorf("%s: instruction %q: no end", op, string(inst))
 			}
 			absEnd := pIdx + end + 1 // catch '}'
 
@@ -263,7 +274,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 			} else {
 				tID = atoi(d.RawData[valStart:valEnd])
 				if tID == -1 {
-					return -1, fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+					return fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
 				}
 			}
 
@@ -289,7 +300,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 		}
 	}
 
-	return 0, nil
+	return nil
 }
 
 func handleType(c *config.Config, tp *string, d *gscan.Data) error {
