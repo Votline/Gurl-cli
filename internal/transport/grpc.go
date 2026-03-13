@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
+	"google.golang.org/grpc/status"
 )
 
 func DoGRPC(c *config.GRPCConfig, resObj *Result) error {
@@ -39,6 +40,7 @@ func DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 	}
 
 	resObj.Raw = res.Raw
+	resObj.Info = res.Info
 	return nil
 }
 
@@ -77,8 +79,15 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 	stub := grpcdynamic.NewStub(conn)
 	rpcRes, err := stub.InvokeRpc(ctx, mthd, msg)
 	if err != nil {
-		// TODO: log warn
-		return Result{Raw: []byte(err.Error())}, nil
+		st, ok := status.FromError(err)
+		if !ok {
+			return Result{Raw: []byte(err.Error())}, nil
+		}
+		return Result{Raw: []byte(st.Message()), Info: Status{
+			Code:       int(st.Code()),
+			Message:    st.Message(),
+			ConfigType: "grpc",
+		}}, nil
 	}
 
 	dMsg, ok := rpcRes.(*dynamic.Message)
@@ -86,7 +95,11 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 		return Result{}, fmt.Errorf("%s: type assert response: invalid response type", op)
 	}
 
-	return Result{Raw: parseMsg(dMsg)}, nil
+	return Result{Raw: parseMsg(dMsg), Info: Status{
+		Code:       0,
+		Message:    "0 OK",
+		ConfigType: "grpc",
+	}}, nil
 }
 
 func doProto(c *config.GRPCConfig) (Result, error) {
@@ -140,8 +153,15 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 	stub := grpcdynamic.NewStub(conn)
 	rpcRes, err := stub.InvokeRpc(ctx, mthd, msg)
 	if err != nil {
-		// TODO: log warn
-		return Result{Raw: []byte(err.Error())}, nil
+		st, ok := status.FromError(err)
+		if !ok {
+			return Result{Raw: []byte(err.Error())}, nil
+		}
+		return Result{Raw: []byte(st.Message()), Info: Status{
+			Code:       int(st.Code()),
+			Message:    st.Message(),
+			ConfigType: "grpc",
+		}}, nil
 	}
 
 	dMsg, ok := rpcRes.(*dynamic.Message)
@@ -149,7 +169,11 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 		return Result{}, fmt.Errorf("%s: type assert response: invalid response type", op)
 	}
 
-	return Result{Raw: parseMsg(dMsg)}, nil
+	return Result{Raw: parseMsg(dMsg), Info: Status{
+		Code:       0,
+		Message:    "0 OK",
+		ConfigType: "grpc",
+	}}, nil
 }
 
 func getDialOpts(rawOpts string, yield func(grpc.DialOption)) error {

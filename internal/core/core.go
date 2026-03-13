@@ -368,14 +368,24 @@ func prettyPrint(res *transport.Result) error {
 
 	fmt.Printf("\n\033[90m[ID %d]\033[0m", res.CfgID)
 	switch {
-	case res.Status >= 200 && res.Status < 300:
-		fmt.Printf("\n\033[32m[HTTP %d]\033[0m", res.Status)
-	case res.Status >= 300 && res.Status < 400:
-		fmt.Printf("\n\033[33m[HTTP %d]\033[0m", res.Status)
-	case res.Status >= 400 && res.Status < 500:
-		fmt.Printf("\n\033[31m[HTTP %d]\033[0m", res.Status)
+	case res.Info.Code >= 200 && res.Info.Code < 300:
+		fmt.Printf("\n\033[32m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code >= 300 && res.Info.Code < 400:
+		fmt.Printf("\n\033[33m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code >= 400 && res.Info.Code < 500:
+		fmt.Printf("\n\033[31m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code == 0 && res.Info.ConfigType == "grpc":
+		fmt.Printf("\n\033[32m[GRPC %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code != 0 && res.Info.ConfigType == "grpc":
+		fmt.Printf("\n\033[31m[GRPC %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
 	default:
-		fmt.Printf("\n\033[31m[HTTP %d]\033[0m", res.Status)
+		fmt.Printf("\n\033[31m[NOP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
 	}
 
 	if len(res.Raw) == 0 {
