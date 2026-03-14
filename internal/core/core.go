@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"gcli/internal/buffer"
 	"gcli/internal/config"
@@ -70,7 +71,6 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
-		var err error
 		for {
 			cfg := rb.Read()
 			if cfg == nil {
@@ -146,6 +146,24 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			res := resB.Read()
 
 			execCfg := cfg.UnwrapExec()
+			if cfg.GetWait() == nil && execCfg.GetWait() != nil {
+				cfg.SetWait(execCfg.GetWait())
+			}
+
+			dur, err := parser.ParseWait(cfg.GetWait())
+			if err != nil {
+				log.Error("Failed to parse wait",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()))
+			} else {
+				log.Debug("sleep",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()),
+					zap.Duration("dur", dur),
+					zap.String("wait", string(execCfg.GetWait())))
+				time.Sleep(dur)
+			}
+
 			switch v := execCfg.(type) {
 			case *config.HTTPConfig:
 				err = trnsp.DoHTTP(v, res)

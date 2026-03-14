@@ -27,9 +27,14 @@ type Config interface {
 	ReleaseClone()
 
 	GetName() string
-	SetID(int)
+
 	GetID() int
+	SetID(int)
+
 	GetType() string
+
+	GetWait() []byte
+	SetWait([]byte)
 
 	GetEnd() int
 	SetEnd(int)
@@ -109,14 +114,25 @@ func Alloc(cfg Config) Config {
 		cp.Method = cloneBytes(v.Method)
 		cp.Body = cloneBytes(v.Body)
 		cp.Headers = cloneBytes(v.Headers)
+		cp.CookieIn = cloneBytes(v.CookieIn)
+		cp.CookieOut = cloneBytes(v.CookieOut)
+		cp.Wait = cloneBytes(v.Wait)
 		return cp
 	case *GRPCConfig:
 		cp := new(GRPCConfig)
 		*cp = *v
+		cp.Target = cloneBytes(v.Target)
+		cp.Endpoint = cloneBytes(v.Endpoint)
+		cp.Data = cloneBytes(v.Data)
+		cp.ProtoPath = cloneBytes(v.ProtoPath)
+		cp.ImportPaths = cloneBytes(v.ImportPaths)
+		cp.DialOpts = cloneBytes(v.DialOpts)
+		cp.Wait = cloneBytes(v.Wait)
 		return cp
 	case *RepeatConfig:
 		cp := new(RepeatConfig)
 		*cp = *v
+		cp.Wait = cloneBytes(v.Wait)
 		return cp
 	}
 	return nil
@@ -128,6 +144,7 @@ type BaseConfig struct {
 	Len       int
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
+	Wait      []byte `gurlf:"Wait,omitempty"`
 	Resp      []byte `gurlf:"Response,omitempty"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
@@ -148,8 +165,9 @@ func (c *BaseConfig) Update(raw, cookie []byte)      {}
 func (c *BaseConfig) Apply(int, int, string, []byte) {}
 func (c *BaseConfig) GetDepsLen() uint8              { return c.DepsLen }
 func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
-func (c *BaseConfig) Clone() Config                  { cp := *c; return &cp }
 func (c *BaseConfig) GetName() string                { return c.Name }
+func (c *BaseConfig) GetWait() []byte                { return c.Wait }
+func (c *BaseConfig) SetWait(nWait []byte)           { c.Wait = nWait }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
 func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) GetType() string                { return c.Type }
@@ -158,6 +176,11 @@ func (c *BaseConfig) SetEnd(nEnd int)                { c.End = nEnd }
 func (c *BaseConfig) UnwrapExec() Config             { return c }
 func (c *BaseConfig) HasFlag(f uint32) bool          { return c.flag&f != 0 }
 func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
+func (c *BaseConfig) Clone() Config {
+	cp := *c
+	cp.Wait = cloneBytes(c.Wait)
+	return &cp
+}
 
 func (c *BaseConfig) RangeDeps(fn func(d Dependency)) {
 	limit := c.DepsLen
@@ -216,6 +239,9 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.Method = cloneBytes(c.Method)
 	newCfg.Body = cloneBytes(c.Body)
 	newCfg.Headers = cloneBytes(c.Headers)
+	newCfg.CookieIn = cloneBytes(c.CookieIn)
+	newCfg.CookieOut = cloneBytes(c.CookieOut)
+	newCfg.Wait = cloneBytes(c.Wait)
 	return newCfg
 }
 
@@ -238,6 +264,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Headers
 	case "Cookie":
 		return c.CookieIn
+	case "Wait":
+		return c.Wait
 	}
 	return nil
 }
@@ -254,6 +282,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Headers = splice(c.Headers, val, start, end)
 	case "Cookie":
 		c.CookieIn = splice(c.CookieIn, val, start, end)
+	case "Wait":
+		c.Wait = splice(c.Wait, val, start, end)
 	}
 }
 
@@ -275,6 +305,13 @@ func (c *GRPCConfig) ReleaseClone()      { *c = GRPCConfig{}; gClBuf.Write(c) }
 func (c *GRPCConfig) Clone() Config {
 	newCfg := gClBuf.Read()
 	*newCfg = *c
+	newCfg.Target = cloneBytes(c.Target)
+	newCfg.Endpoint = cloneBytes(c.Endpoint)
+	newCfg.Data = cloneBytes(c.Data)
+	newCfg.ProtoPath = cloneBytes(c.ProtoPath)
+	newCfg.ImportPaths = cloneBytes(c.ImportPaths)
+	newCfg.DialOpts = cloneBytes(c.DialOpts)
+	newCfg.Wait = cloneBytes(c.Wait)
 	return newCfg
 }
 
@@ -300,6 +337,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.ImportPaths
 	case "DialOpts":
 		return c.DialOpts
+	case "Wait":
+		return c.Wait
 	}
 	return nil
 }
@@ -320,6 +359,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.ImportPaths = splice(c.ImportPaths, val, start, end)
 	case "DialOpts":
 		c.DialOpts = splice(c.DialOpts, val, start, end)
+	case "Wait":
+		c.Wait = splice(c.Wait, val, start, end)
 	}
 }
 
@@ -371,6 +412,7 @@ func (c *RepeatConfig) ReleaseClone() {
 func (c *RepeatConfig) Clone() Config {
 	newCfg := rClBuf.Read()
 	*newCfg = *c
+	newCfg.Wait = cloneBytes(c.Wait)
 
 	if c.Orig != nil {
 		newCfg.Orig = c.Orig.Clone()
@@ -402,6 +444,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
 	case "Replace":
 		c.Replace = splice(c.Replace, val, start, end)
+	case "Wait":
+		c.Wait = splice(c.Wait, val, start, end)
 	default:
 		if c.Orig != nil {
 			c.Orig.Apply(start, end, key, val)
@@ -410,9 +454,14 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 }
 
 func splice(orig, val []byte, start, end int) []byte {
+	if len(orig) == 0 {
+		return val
+	}
+
 	if end == MaxLen {
 		end = len(orig)
 	}
+
 	if start < 0 || end < 0 || start >= len(orig) || end > len(orig) || start == end {
 		return nil
 	}

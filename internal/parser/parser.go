@@ -343,23 +343,6 @@ func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 	return ""
 }
 
-func atoi(data []byte) int {
-	res := 0
-	foundDigit := false
-	cur := 0
-	for cur < len(data) && data[cur] >= '0' && data[cur] <= '9' {
-		res = res*10 + int(data[cur]-'0')
-		foundDigit = true
-		cur++
-	}
-
-	if !foundDigit {
-		return -1
-	}
-
-	return res
-}
-
 func applyReplace(r *config.RepeatConfig) error {
 	const op = "parser.applyReplace"
 

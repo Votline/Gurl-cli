@@ -181,30 +181,6 @@ func BenchmarkFastExtract(b *testing.B) {
 	}
 }
 
-func TestAtoi(t *testing.T) {
-	tests := []struct {
-		input    []byte
-		expected int
-	}{
-		{[]byte("10"), 10},
-		{[]byte("15 "), 15},
-		{[]byte("02"), 2},
-	}
-
-	for i, tt := range tests {
-		tID := atoi(tt.input)
-		if tID != tt.expected {
-			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
-		}
-	}
-}
-
-func BenchmarkAtoi(b *testing.B) {
-	for b.Loop() {
-		atoi([]byte("2"))
-	}
-}
-
 func TestApplyReplace(t *testing.T) {
 	const op = "parser.TestApplyReplace"
 

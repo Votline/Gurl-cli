@@ -2,10 +2,13 @@ package parser
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -272,6 +275,32 @@ func UnparseCookies(data []byte, yield func(string)) {
 	yield(cksStr)
 }
 
+func ParseWait(wait []byte) (time.Duration, error) {
+	const op = "parser.ParseWait"
+
+	if len(wait) == 0 {
+		return 0, nil
+	}
+
+	t := wait[:len(wait)-1]
+	d := atoi(t)
+	if d == -1 {
+		waitString := unsafe.String(unsafe.SliceData(wait), len(wait))
+		return -1, errors.New(op + ": invalid wait value: " + waitString)
+	}
+
+	switch wait[len(wait)-1] {
+	case 's':
+		return time.Duration(d) * time.Second, nil
+	case 'm':
+		return time.Duration(d) * time.Minute, nil
+	case 'h':
+		return time.Duration(d) * time.Hour, nil
+	default:
+		return -1, fmt.Errorf("%s: invalid wait unit: %q", op, wait[len(wait)-1])
+	}
+}
+
 func isSpace(r byte) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\v' || r == '\f'
 }
@@ -301,4 +330,21 @@ func equalFold(b []byte, lower string) bool {
 		}
 	}
 	return true
+}
+
+func atoi(data []byte) int {
+	res := 0
+	foundDigit := false
+	cur := 0
+	for cur < len(data) && data[cur] >= '0' && data[cur] <= '9' {
+		res = res*10 + int(data[cur]-'0')
+		foundDigit = true
+		cur++
+	}
+
+	if !foundDigit {
+		return -1
+	}
+
+	return res
 }

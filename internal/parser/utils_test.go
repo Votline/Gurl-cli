@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"slices"
 	"testing"
+	"time"
 )
 
 func TestParseHeaders(t *testing.T) {
@@ -198,5 +199,55 @@ func TestUnparseCookies(t *testing.T) {
 func BenchmarkUnparseCookies(b *testing.B) {
 	for b.Loop() {
 		UnparseCookies([]byte("\n[localhost.com]\n a:b\n[\\localhost.com]\n"), func(ck string) {})
+	}
+}
+
+func TestParseWait(t *testing.T) {
+	tests := []struct {
+		input    []byte
+		expected time.Duration
+	}{
+		{[]byte("10s"), 10 * time.Second},
+		{[]byte("15m"), 15 * time.Minute},
+		{[]byte("02h"), 2 * time.Hour},
+		{[]byte("1"), -1},
+		{[]byte("1s"), 1 * time.Second},
+	}
+
+	for i, tt := range tests {
+		dur, _ := ParseWait(tt.input)
+		if dur != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, dur)
+		}
+	}
+}
+
+func BenchmarkParseWait(b *testing.B) {
+	for b.Loop() {
+		ParseWait([]byte("10s"))
+	}
+}
+
+func TestAtoi(t *testing.T) {
+	tests := []struct {
+		input    []byte
+		expected int
+	}{
+		{[]byte("10"), 10},
+		{[]byte("15 "), 15},
+		{[]byte("02"), 2},
+	}
+
+	for i, tt := range tests {
+		tID := atoi(tt.input)
+		if tID != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, tID)
+		}
+	}
+}
+
+func BenchmarkAtoi(b *testing.B) {
+	for b.Loop() {
+		atoi([]byte("2"))
 	}
 }
