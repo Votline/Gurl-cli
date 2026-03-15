@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"gcli/internal/buffer"
 	"gcli/internal/config"
@@ -91,6 +92,9 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			})
 
 			for _, d := range allDeps {
+				if d.Key == "Response" {
+					continue
+				}
 				bind, ok := depBindings[d.InsTp]
 				if !ok {
 					log.Error("Dependency points to non-exists key",
@@ -102,6 +106,25 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				if d.TargetID == config.DataFromFile {
 					cfg.SetFlag(config.FlagUseFileCookies)
 					cfg.Apply(d.Start, d.End, d.Key, nil)
+					continue
+				} else if d.TargetID == config.RandomData {
+					rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+					copy(rawSnapshot, cfg.GetRaw(d.Key))
+					instructionBytes := rawSnapshot[d.Start:d.End]
+
+					val := make([]byte, 32)
+					parser.ParseRandom(instructionBytes, &val)
+					if val == nil {
+						log.Error("Failed to parse random",
+							zap.String("op", op),
+							zap.String("key", d.Key),
+							zap.String("inst", string(instructionBytes)),
+							zap.Error(err))
+						continue
+					}
+
+					cfg.Apply(d.Start, d.End, d.Key, val)
+
 					continue
 				}
 
@@ -150,12 +173,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				cfg.SetWait(execCfg.GetWait())
 			}
 
-			dur, err := parser.ParseWait(cfg.GetWait())
-			if err != nil {
+			dur := parser.ParseWait(cfg.GetWait())
+			if dur == -1 {
+				waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
 				log.Error("Failed to parse wait",
 					zap.String("op", op),
-					zap.String("name", cfg.GetName()))
-			} else {
+					zap.String("name", cfg.GetName()),
+					zap.String("wait", waitStr))
+			} else if dur != 0 {
 				log.Debug("sleep",
 					zap.String("op", op),
 					zap.String("name", cfg.GetName()),

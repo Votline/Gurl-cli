@@ -24,7 +24,11 @@ type instruction struct {
 func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
-	insts := [][]byte{[]byte("RESPONSE id="), []byte("COOKIES id=")}
+	insts := [][]byte{
+		[]byte("RESPONSE id="),
+		[]byte("COOKIES id="),
+		[]byte("RANDOM oneof="),
+	}
 	instsPos := make([]instruction, 0, 6)
 
 	log.Debug("preparing configs",
@@ -226,6 +230,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 
 	for _, inst := range *insts {
 		curOffset := start + 1
+
 		for {
 			pIdx := bytes.Index(d.RawData[curOffset:], inst)
 			if pIdx == -1 {
@@ -233,16 +238,19 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 			}
 			pIdx += curOffset
 
-			idOffset := bytes.Index(d.RawData[pIdx:], []byte("id="))
-			if idOffset == -1 {
-				return fmt.Errorf("%s: instruction %q: no id",
-					op, string(inst))
+			depType := bytes.Index(d.RawData[pIdx:], []byte("id="))
+			if depType == -1 {
+				depType = bytes.Index(d.RawData[pIdx:], []byte("oneof="))
+				if depType == -1 {
+					return fmt.Errorf("%s: instruction %q: no id",
+						op, string(inst))
+				}
 			}
-			idOffset += pIdx
+			depType += pIdx
 
-			instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx:idOffset-1]), len(d.RawData[pIdx:idOffset-1]))
+			instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx:depType-1]), len(d.RawData[pIdx:depType-1]))
 
-			valStart := idOffset + 3
+			valStart := depType + 3
 			for valStart < len(d.RawData) && isSpace(d.RawData[valStart]) {
 				valStart++
 			}
@@ -269,7 +277,9 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 
 			tID := -1
 			args := d.RawData[valStart:valEnd]
-			if bytes.Equal(args, []byte("file")) {
+			if instTp == "RANDOM" {
+				tID = config.RandomData
+			} else if bytes.Equal(args, []byte("file")) {
 				tID = config.DataFromFile
 			} else {
 				tID = atoi(d.RawData[valStart:valEnd])

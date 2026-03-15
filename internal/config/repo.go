@@ -10,7 +10,8 @@ const (
 	NoRepeatConfig     int    = -1
 	DataFromFile       int    = -2
 	MaxLen             int    = -3
-	FlagUseFileCookies uint32 = 1 << iota
+	RandomData         int    = -4
+	FlagUseFileCookies uint32 = 1
 )
 
 type Dependency struct {

@@ -2,14 +2,15 @@ package parser
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/google/uuid"
 )
 
 var bufPool = sync.Pool{
@@ -275,30 +276,93 @@ func UnparseCookies(data []byte, yield func(string)) {
 	yield(cksStr)
 }
 
-func ParseWait(wait []byte) (time.Duration, error) {
-	const op = "parser.ParseWait"
-
+func ParseWait(wait []byte) time.Duration {
 	if len(wait) == 0 {
-		return 0, nil
+		return 0
 	}
 
 	t := wait[:len(wait)-1]
 	d := atoi(t)
 	if d == -1 {
-		waitString := unsafe.String(unsafe.SliceData(wait), len(wait))
-		return -1, errors.New(op + ": invalid wait value: " + waitString)
+		return -1
 	}
 
 	switch wait[len(wait)-1] {
 	case 's':
-		return time.Duration(d) * time.Second, nil
+		return time.Duration(d) * time.Second
 	case 'm':
-		return time.Duration(d) * time.Minute, nil
+		return time.Duration(d) * time.Minute
 	case 'h':
-		return time.Duration(d) * time.Hour, nil
+		return time.Duration(d) * time.Hour
 	default:
-		return -1, fmt.Errorf("%s: invalid wait unit: %q", op, wait[len(wait)-1])
+		return -1
 	}
+}
+
+func ParseRandom(inst []byte, buf *[]byte) {
+	if len(inst) == 0 {
+		*buf = nil
+		return
+	}
+
+	start := bytes.IndexByte(inst, '=')
+	if start == -1 {
+		*buf = nil
+		return
+	}
+	start++
+
+	randType := start
+	for randType < len(inst) && !isSpace(inst[randType]) && inst[randType] != '(' && inst[randType] != '}' {
+		randType++
+	}
+
+	haveComma := bytes.IndexByte(inst, ',')
+	if haveComma != -1 && !bytes.Equal(inst[start:randType], []byte("int")) {
+		args := bytes.Split(inst[start:], []byte(","))
+		randIdx := rand.Intn(len(args))
+		*buf = args[randIdx]
+		return
+	}
+
+	if bytes.Equal(inst[start:randType], []byte("uuid")) {
+		u, _ := uuid.New().MarshalText()
+		*buf = u
+		return
+	} else if !bytes.Equal(inst[start:randType], []byte("int")) {
+		*buf = nil
+		return
+	}
+
+	startRange := bytes.IndexByte(inst[randType:], '(')
+	if startRange == -1 {
+		length := itoa(int(rand.Int63()), buf)
+		*buf = (*buf)[:length]
+		return
+	}
+
+	endRange := bytes.IndexByte(inst[randType:], ')')
+	if endRange == -1 {
+		*buf = nil
+		return
+	}
+
+	startRange += randType + 1
+	endRange += randType
+
+	numsRange := inst[startRange:endRange]
+	args := bytes.Split(numsRange, []byte(","))
+
+	if len(args) != 2 {
+		*buf = nil
+		return
+	}
+
+	num1 := atoi(args[0])
+	num2 := atoi(args[1])
+
+	length := itoa(num1+rand.Intn(num2-num1+1), buf)
+	*buf = (*buf)[:length]
 }
 
 func isSpace(r byte) bool {
@@ -347,4 +411,25 @@ func atoi(data []byte) int {
 	}
 
 	return res
+}
+
+func itoa(n int, buf *[]byte) int {
+	if n == 0 {
+		(*buf)[0] = '0'
+		return 1
+	}
+
+	var b [32]byte
+	pos := len(*buf)
+
+	for n > 0 && pos > 0 {
+		pos--
+		b[pos] = byte('0' + (n % 10))
+		n /= 10
+	}
+
+	length := len(*buf) - pos
+	copy((*buf)[:length], b[pos:])
+
+	return length
 }

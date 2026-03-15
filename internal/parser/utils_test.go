@@ -215,7 +215,7 @@ func TestParseWait(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		dur, _ := ParseWait(tt.input)
+		dur := ParseWait(tt.input)
 		if dur != tt.expected {
 			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, dur)
 		}
@@ -225,6 +225,34 @@ func TestParseWait(t *testing.T) {
 func BenchmarkParseWait(b *testing.B) {
 	for b.Loop() {
 		ParseWait([]byte("10s"))
+	}
+}
+
+func TestParseRandom(t *testing.T) {
+	tests := []struct {
+		input []byte
+	}{
+		{[]byte("oneof=some,more,value")},
+		{[]byte("oneof=uuid")},
+		{[]byte("oneof=int")},
+		{[]byte("oneof=int(1,10)")},
+	}
+
+	for i, tt := range tests {
+		buf := make([]byte, 32)
+		ParseRandom(tt.input, &buf)
+		if len(buf) == 0 {
+			t.Errorf("[%d]: expected len > 0, but got %d: %q", i, len(buf), string(buf))
+		}
+	}
+}
+
+func BenchmarkParseRandom(b *testing.B) {
+	buf := make([]byte, 32)
+	inst := []byte("")
+	b.ResetTimer()
+	for b.Loop() {
+		ParseRandom(inst, &buf)
 	}
 }
 
@@ -249,5 +277,41 @@ func TestAtoi(t *testing.T) {
 func BenchmarkAtoi(b *testing.B) {
 	for b.Loop() {
 		atoi([]byte("2"))
+	}
+}
+
+func TestItoa(t *testing.T) {
+	tests := []struct {
+		input    int
+		expected string
+	}{
+		{0, "0"},
+		{1, "1"},
+		{10, "10"},
+		{100, "100"},
+		{123, "123"},
+		{1234, "1234"},
+		{12345, "12345"},
+		{123456, "123456"},
+		{1234567, "1234567"},
+		{12345678, "12345678"},
+		{123456789, "123456789"},
+	}
+
+	for i, tt := range tests {
+		buf := make([]byte, 32)
+		length := itoa(tt.input, &buf)
+		buf = buf[:length]
+		if string(buf) != tt.expected {
+			t.Errorf("[%d]: expected %q, but got %q",
+				i, tt.expected, string(buf))
+		}
+	}
+}
+
+func BenchmarkItoa(b *testing.B) {
+	buf := make([]byte, 32)
+	for b.Loop() {
+		itoa(123456789, &buf)
 	}
 }
