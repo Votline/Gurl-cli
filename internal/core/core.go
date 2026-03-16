@@ -72,6 +72,9 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
+		defer cfgFileBuf.Close()
+		defer resPrintBuf.Close()
+
 		for {
 			cfg := rb.Read()
 			if cfg == nil {
@@ -93,13 +96,6 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 			for _, d := range allDeps {
 				if d.Key == "Response" {
-					continue
-				}
-				bind, ok := depBindings[d.InsTp]
-				if !ok {
-					log.Error("Dependency points to non-exists key",
-						zap.String("op", op),
-						zap.String("key", d.InsTp))
 					continue
 				}
 
@@ -125,6 +121,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 					cfg.Apply(d.Start, d.End, d.Key, val)
 
+					continue
+				}
+
+				bind, ok := depBindings[d.InsTp]
+				if !ok {
+					log.Error("Dependency points to non-exists key",
+						zap.String("op", op),
+						zap.String("key", d.InsTp))
 					continue
 				}
 
@@ -174,7 +178,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			}
 
 			dur := parser.ParseWait(cfg.GetWait())
-			if dur == -1 {
+			if dur == parser.Error {
 				waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
 				log.Error("Failed to parse wait",
 					zap.String("op", op),
@@ -220,23 +224,44 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 					zap.String("config type", cfg.GetType()),
 					zap.Error(err))
 			}
+
 			resHub = append(resHub, res)
+			res.CfgID = cfg.GetID()
 
 			cfgToFile.Update(res.Raw, res.Cookie)
 			cfgFileBuf.Write(cfgToFile)
+			resPrintBuf.Write(res)
 
-			res.CfgID = cfg.GetID()
+			if cfg.GetExpect() == nil && execCfg.GetExpect() != nil {
+				cfg.SetExpect(execCfg.GetExpect())
+			}
+
+			if ok := parser.ParseExpect(cfg.GetExpect(), res.Info.Code); ok == parser.Error {
+				expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
+				log.Error("Failed to parse expect",
+					zap.String("op", op),
+					zap.String("config name", cfg.GetName()),
+					zap.Int("config id", cfg.GetID()),
+					zap.String("expected", expStr))
+			} else if ok == parser.ExceptFail {
+				expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
+				log.Error("Expected fail",
+					zap.String("op", op),
+					zap.String("config name", cfg.GetName()),
+					zap.Int("config id", cfg.GetID()),
+					zap.Int("response code", res.Info.Code),
+					zap.String("expected", expStr))
+				return
+				// TODO: do some
+			}
 
 			cfg.Release()
-			resPrintBuf.Write(res)
 			resB.Write(res)
 
 			log.Debug("processing finished",
 				zap.String("op", op),
 				zap.String("name", cfg.GetName()))
 		}
-		cfgFileBuf.Close()
-		resPrintBuf.Close()
 	})
 
 	wg.Go(func() {

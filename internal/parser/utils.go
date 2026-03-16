@@ -13,6 +13,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	Error      = -1
+	ExceptFail = -2
+)
+
 var bufPool = sync.Pool{
 	New: func() any {
 		return new(bytes.Buffer)
@@ -284,7 +289,7 @@ func ParseWait(wait []byte) time.Duration {
 	t := wait[:len(wait)-1]
 	d := atoi(t)
 	if d == -1 {
-		return -1
+		return Error
 	}
 
 	switch wait[len(wait)-1] {
@@ -295,7 +300,7 @@ func ParseWait(wait []byte) time.Duration {
 	case 'h':
 		return time.Duration(d) * time.Hour
 	default:
-		return -1
+		return Error
 	}
 }
 
@@ -365,6 +370,28 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	*buf = (*buf)[:length]
 }
 
+// Expected:200,201...;fail=crash/{id}
+func ParseExpect(expect []byte, resCode int) int {
+	if len(expect) == 0 {
+		return 0
+	}
+
+	end := bytes.IndexByte(expect, ';')
+	if end == -1 {
+		end = len(expect)
+	}
+
+	codes := bytes.Split(expect[:end], []byte(","))
+	for _, code := range codes {
+		codeInt := atoi(code)
+		if codeInt == resCode {
+			return 1
+		}
+	}
+
+	return ExceptFail
+}
+
 func isSpace(r byte) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\v' || r == '\f'
 }
@@ -407,7 +434,7 @@ func atoi(data []byte) int {
 	}
 
 	if !foundDigit {
-		return -1
+		return Error
 	}
 
 	return res

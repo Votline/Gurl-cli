@@ -37,6 +37,9 @@ type Config interface {
 	GetWait() []byte
 	SetWait([]byte)
 
+	GetExpect() []byte
+	SetExpect([]byte)
+
 	GetEnd() int
 	SetEnd(int)
 
@@ -118,6 +121,7 @@ func Alloc(cfg Config) Config {
 		cp.CookieIn = cloneBytes(v.CookieIn)
 		cp.CookieOut = cloneBytes(v.CookieOut)
 		cp.Wait = cloneBytes(v.Wait)
+		cp.Expect = cloneBytes(v.Expect)
 		return cp
 	case *GRPCConfig:
 		cp := new(GRPCConfig)
@@ -129,11 +133,13 @@ func Alloc(cfg Config) Config {
 		cp.ImportPaths = cloneBytes(v.ImportPaths)
 		cp.DialOpts = cloneBytes(v.DialOpts)
 		cp.Wait = cloneBytes(v.Wait)
+		cp.Expect = cloneBytes(v.Expect)
 		return cp
 	case *RepeatConfig:
 		cp := new(RepeatConfig)
 		*cp = *v
 		cp.Wait = cloneBytes(v.Wait)
+		cp.Expect = cloneBytes(v.Expect)
 		return cp
 	}
 	return nil
@@ -146,6 +152,7 @@ type BaseConfig struct {
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
 	Wait      []byte `gurlf:"Wait,omitempty"`
+	Expect    []byte `gurlf:"Expect,omitempty"`
 	Resp      []byte `gurlf:"Response,omitempty"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
@@ -169,6 +176,8 @@ func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) GetName() string                { return c.Name }
 func (c *BaseConfig) GetWait() []byte                { return c.Wait }
 func (c *BaseConfig) SetWait(nWait []byte)           { c.Wait = nWait }
+func (c *BaseConfig) GetExpect() []byte              { return c.Expect }
+func (c *BaseConfig) SetExpect(nExpect []byte)       { c.Expect = nExpect }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
 func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) GetType() string                { return c.Type }
@@ -243,6 +252,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.CookieIn = cloneBytes(c.CookieIn)
 	newCfg.CookieOut = cloneBytes(c.CookieOut)
 	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Expect = cloneBytes(c.Expect)
 	return newCfg
 }
 
@@ -267,6 +277,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.CookieIn
 	case "Wait":
 		return c.Wait
+	case "Expect":
+		return c.Expect
 	}
 	return nil
 }
@@ -285,6 +297,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.CookieIn = splice(c.CookieIn, val, start, end)
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
+	case "Expect":
+		c.Expect = splice(c.Expect, val, start, end)
 	}
 }
 
@@ -313,6 +327,7 @@ func (c *GRPCConfig) Clone() Config {
 	newCfg.ImportPaths = cloneBytes(c.ImportPaths)
 	newCfg.DialOpts = cloneBytes(c.DialOpts)
 	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Expect = cloneBytes(c.Expect)
 	return newCfg
 }
 
@@ -340,6 +355,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.DialOpts
 	case "Wait":
 		return c.Wait
+	case "Expect":
+		return c.Expect
 	}
 	return nil
 }
@@ -362,6 +379,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.DialOpts = splice(c.DialOpts, val, start, end)
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
+	case "Expect":
+		c.Expect = splice(c.Expect, val, start, end)
 	}
 }
 
@@ -414,6 +433,7 @@ func (c *RepeatConfig) Clone() Config {
 	newCfg := rClBuf.Read()
 	*newCfg = *c
 	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Expect = cloneBytes(c.Expect)
 
 	if c.Orig != nil {
 		newCfg.Orig = c.Orig.Clone()
@@ -433,6 +453,10 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 	switch key {
 	case "Replace":
 		return c.Replace
+	case "Wait":
+		return c.Wait
+	case "Expect":
+		return c.Expect
 	default:
 		if c.Orig != nil {
 			return c.Orig.GetRaw(key)
@@ -447,6 +471,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		c.Replace = splice(c.Replace, val, start, end)
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
+	case "Expect":
+		c.Expect = splice(c.Expect, val, start, end)
 	default:
 		if c.Orig != nil {
 			c.Orig.Apply(start, end, key, val)
