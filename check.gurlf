@@ -10,7 +10,7 @@ Body:`
 `
 ID:0
 Type:http
-Expect:200
+Expect:201;fail=0
 Response:`root
 method: GET
 url: /
@@ -21,10 +21,10 @@ headers:
 cookies:
 body:
 {
-"name": "3064a554-c3f7-461b-bd9e-6a953b6e48fe",
-"role": "teacher",
-"age":  "45",
-"money":"4513632069936949418"
+"name": "d7046d7f-ff63-4825-b4dd-adb7d57b8c18",
+"role": "student",
+"age":  "42",
+"money":"4014925654649791728"
 }`
 [\http_config]
 

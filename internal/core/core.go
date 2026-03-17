@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -59,6 +60,9 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	resHub := make([]*transport.Result, 0, len(sData))
 	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
@@ -74,6 +78,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 	wg.Go(func() {
 		defer cfgFileBuf.Close()
 		defer resPrintBuf.Close()
+		defer cancel()
 
 		for {
 			cfg := rb.Read()
@@ -86,144 +91,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				zap.String("op", op),
 				zap.String("name", cfg.GetName()))
 
-			allDeps := make([]config.Dependency, 0, cfg.GetDepsLen())
-			cfg.RangeDeps(func(d config.Dependency) {
-				allDeps = append(allDeps, d)
-			})
-			sort.Slice(allDeps, func(i, j int) bool {
-				return allDeps[i].Start > allDeps[j].Start
-			})
-
-			for _, d := range allDeps {
-				if d.Key == "Response" {
-					continue
-				}
-
-				if d.TargetID == config.DataFromFile {
-					cfg.SetFlag(config.FlagUseFileCookies)
-					cfg.Apply(d.Start, d.End, d.Key, nil)
-					continue
-				} else if d.TargetID == config.RandomData {
-					rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
-					copy(rawSnapshot, cfg.GetRaw(d.Key))
-					instructionBytes := rawSnapshot[d.Start:d.End]
-
-					val := make([]byte, 32)
-					parser.ParseRandom(instructionBytes, &val)
-					if val == nil {
-						log.Error("Failed to parse random",
-							zap.String("op", op),
-							zap.String("key", d.Key),
-							zap.String("inst", string(instructionBytes)),
-							zap.Error(err))
-						continue
-					}
-
-					cfg.Apply(d.Start, d.End, d.Key, val)
-
-					continue
-				}
-
-				bind, ok := depBindings[d.InsTp]
-				if !ok {
-					log.Error("Dependency points to non-exists key",
-						zap.String("op", op),
-						zap.String("key", d.InsTp))
-					continue
-				}
-
-				if d.TargetID >= len(resHub) {
-					log.Error("Dependency points to non-exists config",
-						zap.String("op", op),
-						zap.Int("TargetID", d.TargetID))
-					continue
-				}
-
-				resp := resHub[d.TargetID]
-				if resp == nil {
-					log.Warn("Response for dependency is empty",
-						zap.String("op", op),
-						zap.Int("TargetID for resp", d.TargetID))
-					continue
-				}
-
-				log.Debug("Dependency",
-					zap.String("op", op),
-					zap.Int("TargetID for resp", d.TargetID),
-					zap.String("key", d.Key),
-					zap.String("name", cfg.GetName()))
-
-				val := bind.From(resp)
-
-				rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
-				copy(rawSnapshot, cfg.GetRaw(d.Key))
-
-				instructionBytes := rawSnapshot[d.Start:d.End]
-
-				bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
-
-				log.Debug("applied dependencies",
-					zap.String("op", op),
-					zap.String("name", cfg.GetName()),
-					zap.String("key", d.Key),
-					zap.String("inst", string(instructionBytes)),
-					zap.String("val", string(val)))
-			}
+			applyDeps(cfg, &resHub, log)
 
 			res := resB.Read()
 
 			execCfg := cfg.UnwrapExec()
-			if cfg.GetWait() == nil && execCfg.GetWait() != nil {
-				cfg.SetWait(execCfg.GetWait())
-			}
+			applyWait(cfg, execCfg, log)
 
-			dur := parser.ParseWait(cfg.GetWait())
-			if dur == parser.Error {
-				waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
-				log.Error("Failed to parse wait",
-					zap.String("op", op),
-					zap.String("name", cfg.GetName()),
-					zap.String("wait", waitStr))
-			} else if dur != 0 {
-				log.Debug("sleep",
-					zap.String("op", op),
-					zap.String("name", cfg.GetName()),
-					zap.Duration("dur", dur),
-					zap.String("wait", string(execCfg.GetWait())))
-				time.Sleep(dur)
-			}
-
-			switch v := execCfg.(type) {
-			case *config.HTTPConfig:
-				err = trnsp.DoHTTP(v, res)
-				log.Debug("send http",
-					zap.String("op", op),
-					zap.String("url", string(v.URL)),
-					zap.String("method", string(v.Method)),
-					zap.String("body", string(v.Body)),
-					zap.String("headers", string(v.Headers)),
-					zap.String("cookie", string(v.CookieIn)))
-
-			case *config.GRPCConfig:
-				log.Debug("send grpc",
-					zap.String("op", op),
-					zap.String("target", string(v.Target)),
-					zap.String("endpoint", string(v.Endpoint)),
-					zap.String("body", string(v.Data)),
-					zap.String("protoPath", string(v.ProtoPath)),
-					zap.String("importPaths", string(v.ImportPaths)),
-					zap.String("dialOpts", string(v.DialOpts)))
-
-				err = transport.DoGRPC(v, res)
-			}
-
-			if err != nil {
-				log.Error("Failed to send config",
-					zap.String("op", op),
-					zap.String("config name", cfg.GetName()),
-					zap.String("config type", cfg.GetType()),
-					zap.Error(err))
-			}
+			sendConfig(cfg, execCfg, trnsp, res, log)
 
 			resHub = append(resHub, res)
 			res.CfgID = cfg.GetID()
@@ -232,27 +107,10 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 			cfgFileBuf.Write(cfgToFile)
 			resPrintBuf.Write(res)
 
-			if cfg.GetExpect() == nil && execCfg.GetExpect() != nil {
-				cfg.SetExpect(execCfg.GetExpect())
-			}
-
-			if ok := parser.ParseExpect(cfg.GetExpect(), res.Info.Code); ok == parser.Error {
-				expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
-				log.Error("Failed to parse expect",
-					zap.String("op", op),
-					zap.String("config name", cfg.GetName()),
-					zap.Int("config id", cfg.GetID()),
-					zap.String("expected", expStr))
-			} else if ok == parser.ExceptFail {
-				expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
-				log.Error("Expected fail",
-					zap.String("op", op),
-					zap.String("config name", cfg.GetName()),
-					zap.Int("config id", cfg.GetID()),
-					zap.Int("response code", res.Info.Code),
-					zap.String("expected", expStr))
+			if expectCode := applyExpect(cfg, execCfg, res, log); expectCode == parser.ExpectFail {
+				cfg.Release()
+				resB.Write(res)
 				return
-				// TODO: do some
 			}
 
 			cfg.Release()
@@ -278,41 +136,14 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				zap.String("path", cPath),
 				zap.Error(err))
 		}
+		defer cancel()
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("Recovered from panic",
 					zap.String("op", op),
 					zap.Any("recovered", r))
-
-				if err := flush(&buf, f); err != nil {
-					log.Error("failed to flush buffer",
-						zap.String("op", op),
-						zap.Error(err))
-				}
-
-				orig, err := os.Open(cPath)
-				if err == nil {
-					if _, err = orig.Seek(pendingOffset, io.SeekStart); err == nil {
-						if _, err := io.Copy(f, orig); err != nil {
-							log.Error("Failed to copy file",
-								zap.String("op", op),
-								zap.String("path", cPath),
-								zap.Error(err))
-						}
-					} else {
-						log.Error("Failed to seek file",
-							zap.String("op", op),
-							zap.String("path", cPath),
-							zap.Error(err))
-					}
-				} else {
-					log.Error("Failed to open file",
-						zap.String("op", op),
-						zap.String("path", cPath),
-						zap.Error(err))
-				}
-				defer orig.Close()
 			}
+			copyTail(f, cPath, &buf, pendingOffset, log)
 
 			if err := f.Sync(); err != nil {
 				log.Error("Failed to sync file",
@@ -332,52 +163,50 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 		}()
 
 		for {
-			cfg = cfgFileBuf.Read()
-			if cfg == nil {
-				break
-			}
-
-			data, err := gurlf.Marshal(cfg)
-			if err != nil {
-				log.Error("Failed to Marshal config",
-					zap.String("op", op),
-					zap.Error(err))
-				continue
-			}
-			cfg.ReleaseClone()
-
-			log.Debug("marshaled config",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()))
-
-			buf.Write(data)
-			cnt++
-			pendingOffset = int64(cfg.GetEnd())
-
-			log.Debug("wrote config",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()),
-				zap.Int("size", cnt))
-
-			if cnt == bufSize {
-				cnt = 0
-				if err := flush(&buf, f); err != nil {
-					log.Error("failed to flush buffer",
-						zap.String("op", op),
-						zap.Error(err))
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				cfg = cfgFileBuf.Read()
+				if cfg == nil {
+					return
 				}
 
-				log.Debug("flushed buffer",
+				data, err := gurlf.Marshal(cfg)
+				if err != nil {
+					cfg.ReleaseClone()
+					log.Error("Failed to Marshal config",
+						zap.String("op", op),
+						zap.Error(err))
+					continue
+				}
+
+				log.Debug("marshaled config",
 					zap.String("op", op),
 					zap.String("name", cfg.GetName()))
-			}
-		}
 
-		if cnt > 0 {
-			if err := flush(&buf, f); err != nil {
-				log.Error("failed to flush buffer",
+				buf.Write(data)
+				cnt++
+				pendingOffset = int64(cfg.GetEnd())
+				cfg.ReleaseClone()
+
+				log.Debug("wrote config",
 					zap.String("op", op),
-					zap.Error(err))
+					zap.String("name", cfg.GetName()),
+					zap.Int("size", cnt))
+
+				if cnt == bufSize {
+					cnt = 0
+					if err := flush(&buf, f); err != nil {
+						log.Error("failed to flush buffer",
+							zap.String("op", op),
+							zap.Error(err))
+					}
+
+					log.Debug("flushed buffer",
+						zap.String("op", op),
+						zap.String("name", cfg.GetName()))
+				}
 			}
 		}
 	})
@@ -408,27 +237,6 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 	return nil
 }
 
-func flush(buf *bytes.Buffer, f *os.File) error {
-	const op = "core.flush"
-
-	if buf.Len() == 0 {
-		return nil
-	}
-
-	n, err := f.Write(buf.Bytes())
-	if err != nil {
-		return fmt.Errorf("%s: write file: %w", op, err)
-	}
-
-	if n != buf.Len() {
-		return fmt.Errorf("%s: short wrtie: expected %d, but got %d",
-			op, buf.Len(), n)
-	}
-
-	buf.Reset()
-	return nil
-}
-
 func prettyPrint(res *transport.Result) error {
 	const op = "core.prettyPrint"
 
@@ -442,7 +250,7 @@ func prettyPrint(res *transport.Result) error {
 	case res.Info.Code >= 300 && res.Info.Code < 400:
 		fmt.Printf("\n\033[33m[HTTP %d: %s]\033[0m",
 			res.Info.Code, res.Info.Message)
-	case res.Info.Code >= 400 && res.Info.Code < 500:
+	case res.Info.Code >= 400 && res.Info.Code < 600:
 		fmt.Printf("\n\033[31m[HTTP %d: %s]\033[0m",
 			res.Info.Code, res.Info.Message)
 	case res.Info.Code == 0 && res.Info.ConfigType == "grpc":
@@ -475,5 +283,246 @@ func prettyPrint(res *transport.Result) error {
 		fmt.Printf("\n[Raw Response]\n%s\n", res.Raw)
 	}
 
+	return nil
+}
+
+func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) {
+	const op = "core.applyDeps"
+
+	allDeps := make([]config.Dependency, 0, cfg.GetDepsLen())
+	cfg.RangeDeps(func(d config.Dependency) {
+		allDeps = append(allDeps, d)
+	})
+	sort.Slice(allDeps, func(i, j int) bool {
+		return allDeps[i].Start > allDeps[j].Start
+	})
+
+	for _, d := range allDeps {
+		if d.Key == "Response" {
+			continue
+		}
+
+		if d.TargetID == config.DataFromFile {
+			cfg.SetFlag(config.FlagUseFileCookies)
+			cfg.Apply(d.Start, d.End, d.Key, nil)
+			continue
+		} else if d.TargetID == config.RandomData {
+			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+			copy(rawSnapshot, cfg.GetRaw(d.Key))
+			instructionBytes := rawSnapshot[d.Start:d.End]
+
+			val := make([]byte, 32)
+			parser.ParseRandom(instructionBytes, &val)
+			if val == nil {
+				log.Error("Failed to parse random",
+					zap.String("op", op),
+					zap.String("key", d.Key),
+					zap.String("inst", string(instructionBytes)))
+				continue
+			}
+
+			cfg.Apply(d.Start, d.End, d.Key, val)
+
+			continue
+		}
+
+		bind, ok := depBindings[d.InsTp]
+		if !ok {
+			log.Error("Dependency points to non-exists key",
+				zap.String("op", op),
+				zap.String("key", d.InsTp))
+			continue
+		}
+
+		if d.TargetID >= len(*resHub) {
+			log.Error("Dependency points to non-exists config",
+				zap.String("op", op),
+				zap.Int("TargetID", d.TargetID))
+			continue
+		}
+
+		resp := (*resHub)[d.TargetID]
+		if resp == nil {
+			log.Warn("Response for dependency is empty",
+				zap.String("op", op),
+				zap.Int("TargetID for resp", d.TargetID))
+			continue
+		}
+
+		log.Debug("Dependency",
+			zap.String("op", op),
+			zap.Int("TargetID for resp", d.TargetID),
+			zap.String("key", d.Key),
+			zap.String("name", cfg.GetName()))
+
+		val := bind.From(resp)
+
+		rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+		copy(rawSnapshot, cfg.GetRaw(d.Key))
+
+		instructionBytes := rawSnapshot[d.Start:d.End]
+
+		bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
+
+		log.Debug("applied dependencies",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.String("key", d.Key),
+			zap.String("inst", string(instructionBytes)),
+			zap.String("val", string(val)))
+	}
+}
+
+func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
+	const op = "core.applyWait"
+
+	if cfg.GetWait() == nil && execCfg.GetWait() != nil {
+		cfg.SetWait(execCfg.GetWait())
+	}
+
+	dur := parser.ParseWait(cfg.GetWait())
+	if dur == parser.Error {
+		waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
+		log.Error("Failed to parse wait",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.String("wait", waitStr))
+	} else if dur != 0 {
+		log.Debug("sleep",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.Duration("dur", dur),
+			zap.String("wait", string(cfg.GetWait())))
+		time.Sleep(dur)
+	}
+}
+
+func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, log *zap.Logger) {
+	const op = "core.sendConfig"
+
+	var err error
+	switch v := execCfg.(type) {
+	case *config.HTTPConfig:
+		err = trnsp.DoHTTP(v, res)
+		log.Debug("send http",
+			zap.String("op", op),
+			zap.String("url", string(v.URL)),
+			zap.String("method", string(v.Method)),
+			zap.String("body", string(v.Body)),
+			zap.String("headers", string(v.Headers)),
+			zap.String("cookie", string(v.CookieIn)))
+
+	case *config.GRPCConfig:
+		log.Debug("send grpc",
+			zap.String("op", op),
+			zap.String("target", string(v.Target)),
+			zap.String("endpoint", string(v.Endpoint)),
+			zap.String("body", string(v.Data)),
+			zap.String("protoPath", string(v.ProtoPath)),
+			zap.String("importPaths", string(v.ImportPaths)),
+			zap.String("dialOpts", string(v.DialOpts)))
+
+		err = transport.DoGRPC(v, res)
+	}
+
+	if err != nil {
+		log.Error("Failed to send config",
+			zap.String("op", op),
+			zap.String("config name", cfg.GetName()),
+			zap.String("config type", cfg.GetType()),
+			zap.Error(err))
+	}
+}
+
+func applyExpect(cfg config.Config, execCfg config.Config, res *transport.Result, log *zap.Logger) int {
+	const op = "core.applyExpect"
+
+	if cfg.GetExpect() == nil && execCfg.GetExpect() != nil {
+		cfg.SetExpect(execCfg.GetExpect())
+	}
+
+	if id := parser.ParseExpect(cfg.GetExpect(), res.Info.Code); id == parser.Error {
+		expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
+		log.Error("Failed to parse expect",
+			zap.String("op", op),
+			zap.String("config name", cfg.GetName()),
+			zap.Int("config id", cfg.GetID()),
+			zap.String("expected", expStr))
+		return parser.ExpectDone
+	} else if id != parser.ExpectDone {
+		expStr := unsafe.String(unsafe.SliceData(cfg.GetExpect()), len(cfg.GetExpect()))
+		log.Error("Expected fail",
+			zap.String("op", op),
+			zap.String("config name", cfg.GetName()),
+			zap.Int("config id", cfg.GetID()),
+			zap.Int("response code", res.Info.Code),
+			zap.String("expected", expStr),
+			zap.Int("expected id", id))
+
+		if id == parser.ExpectCrash {
+			log.Debug("Expected action",
+				zap.String("op", op),
+				zap.String("action", "crash"))
+		} else {
+			log.Debug("Expected action",
+				zap.String("op", op),
+				zap.String("action", "ignore"))
+			return parser.ExpectDone
+		}
+
+		log.Debug("Expected action",
+			zap.String("op", op),
+			zap.Int("action: goto to id", id))
+
+		return parser.ExpectFail
+
+		// TODO: do some
+	}
+	return parser.ExpectDone //<- needed
+	// return parser.ExpectFail // <- debug
+}
+
+func copyTail(f *os.File, cPath string, buf *bytes.Buffer, pendingOffset int64, log *zap.Logger) {
+	const op = "core.copyTail"
+
+	if err := flush(buf, f); err != nil {
+		log.Error("failed to flush buffer", zap.String("op", op), zap.Error(err))
+	}
+
+	orig, err := os.Open(cPath)
+	if err != nil {
+		log.Error("Failed to open file", zap.String("op", op), zap.Error(err))
+		return
+	}
+	defer orig.Close()
+
+	if _, err = orig.Seek(pendingOffset, io.SeekStart); err != nil {
+		log.Error("Failed to seek file", zap.String("op", op), zap.Error(err))
+		return
+	}
+
+	if _, err := io.Copy(f, orig); err != nil {
+		log.Error("Failed to copy tail", zap.String("op", op), zap.Error(err))
+	}
+}
+
+func flush(buf *bytes.Buffer, f *os.File) error {
+	const op = "core.flush"
+
+	if buf.Len() == 0 {
+		return nil
+	}
+
+	n, err := f.Write(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("%s: write file: %w", op, err)
+	}
+
+	if n != buf.Len() {
+		return fmt.Errorf("%s: short wrtie: expected %d, but got %d",
+			op, buf.Len(), n)
+	}
+
+	buf.Reset()
 	return nil
 }

@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	Error      = -1
-	ExceptFail = -2
+	Error       = -1
+	ExpectFail  = -2
+	ExpectDone  = -3
+	ExpectCrash = -4
 )
 
 var bufPool = sync.Pool{
@@ -325,6 +327,7 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	haveComma := bytes.IndexByte(inst, ',')
 	if haveComma != -1 && !bytes.Equal(inst[start:randType], []byte("int")) {
 		args := bytes.Split(inst[start:], []byte(","))
+		args[len(args)-1] = args[len(args)-1][:len(args[len(args)-1])-1] // remove '}'
 		randIdx := rand.Intn(len(args))
 		*buf = args[randIdx]
 		return
@@ -373,7 +376,7 @@ func ParseRandom(inst []byte, buf *[]byte) {
 // Expected:200,201...;fail=crash/{id}
 func ParseExpect(expect []byte, resCode int) int {
 	if len(expect) == 0 {
-		return 0
+		return ExpectDone
 	}
 
 	end := bytes.IndexByte(expect, ';')
@@ -385,11 +388,43 @@ func ParseExpect(expect []byte, resCode int) int {
 	for _, code := range codes {
 		codeInt := atoi(code)
 		if codeInt == resCode {
-			return 1
+			return ExpectDone
 		}
 	}
 
-	return ExceptFail
+	if end == len(expect) {
+		return ExpectFail
+	}
+
+	end++ // skip ';'
+	for end < len(expect) && isSpace(expect[end]) {
+		end++
+	}
+	if end == len(expect) {
+		return ExpectFail
+	}
+
+	separator := bytes.IndexByte(expect[end:], '=')
+	if separator == -1 {
+		return ExpectFail
+	}
+	separator += end + 1 // skip '='
+
+	for separator < len(expect) && isSpace(expect[separator]) {
+		separator++
+	}
+	if separator == len(expect) {
+		return ExpectFail
+	}
+
+	action := expect[separator:]
+
+	if bytes.Equal(action, []byte("crash")) {
+		return ExpectCrash
+	}
+
+	id := atoi(action)
+	return id
 }
 
 func isSpace(r byte) bool {
