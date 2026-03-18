@@ -86,39 +86,76 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				break
 			}
 
-			cfgToFile := cfg.Clone()
-			log.Debug("cloned config",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()))
+			isJumped := false
+			for {
+				cfgToFile := cfg.Clone()
+				log.Debug("processing config",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()),
+					zap.Int("id", cfg.GetID()))
 
-			applyDeps(cfg, &resHub, log)
+				applyDeps(cfg, &resHub, log)
 
-			res := resB.Read()
+				res := resB.Read()
+				execCfg := cfg.UnwrapExec()
 
-			execCfg := cfg.UnwrapExec()
-			applyWait(cfg, execCfg, log)
+				applyWait(cfg, execCfg, log)
+				sendConfig(cfg, execCfg, trnsp, res, log)
 
-			sendConfig(cfg, execCfg, trnsp, res, log)
+				res.CfgID = cfg.GetID()
 
-			resHub = append(resHub, res)
-			res.CfgID = cfg.GetID()
+				resHub = append(resHub, res)
 
-			cfgToFile.Update(res.Raw, res.Cookie)
-			cfgFileBuf.Write(cfgToFile)
-			resPrintBuf.Write(res)
+				resPrintBuf.Write(res)
 
-			if expectCode := applyExpect(cfg, execCfg, res, log); expectCode == parser.ExpectFail {
+				id := applyExpect(cfg, execCfg, res, log)
+
+				if !isJumped {
+					cfgToFile.Update(res.Raw, res.Cookie)
+					cfgFileBuf.Write(cfgToFile)
+				}
+
+				if id == parser.ExpectDone && !isJumped {
+					break
+				} else if id == parser.ExpectDone && isJumped {
+					cfg.Release()
+					resB.Write(res)
+					return
+				}
+
+				if id == parser.ExpectCrash {
+					cfg.Release()
+					resB.Write(res)
+					return
+				}
+
+				if isJumped {
+					cfg.Release()
+					resB.Write(res)
+					return
+				}
+
+				isJumped = true
+				var nextCfg config.Config
+				origEnd := cfg.GetEnd()
+
+				if err := parser.ParseFindConfig(&sData, &nextCfg, id); err != nil {
+					log.Error("Failed to find config",
+						zap.String("op", op),
+						zap.String("name", cfg.GetName()),
+						zap.Int("id", cfg.GetID()),
+						zap.Int("target", id),
+						zap.Error(err))
+					cfg.Release()
+					resB.Write(res)
+					return
+				}
+
 				cfg.Release()
 				resB.Write(res)
-				return
+				cfg = nextCfg
+				cfg.SetEnd(origEnd)
 			}
-
-			cfg.Release()
-			resB.Write(res)
-
-			log.Debug("processing finished",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()))
 		}
 	})
 
@@ -213,7 +250,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 
 	if !disablePrint {
 		wg.Go(func() {
-			for !resPrintBuf.IsClosed() {
+			for {
 				res := resPrintBuf.Read()
 				if res == nil {
 					break
@@ -309,6 +346,14 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) 
 		} else if d.TargetID == config.RandomData {
 			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
 			copy(rawSnapshot, cfg.GetRaw(d.Key))
+			if d.End > len(rawSnapshot) || d.End > cap(rawSnapshot) {
+				log.Error("Invalid random data",
+					zap.String("op", op),
+					zap.String("key", d.Key),
+					zap.Int("start", d.Start),
+					zap.Int("end", d.End))
+				continue
+			}
 			instructionBytes := rawSnapshot[d.Start:d.End]
 
 			val := make([]byte, 32)
@@ -463,7 +508,8 @@ func applyExpect(cfg config.Config, execCfg config.Config, res *transport.Result
 			log.Debug("Expected action",
 				zap.String("op", op),
 				zap.String("action", "crash"))
-		} else {
+			return parser.ExpectCrash
+		} else if id < 0 {
 			log.Debug("Expected action",
 				zap.String("op", op),
 				zap.String("action", "ignore"))
@@ -474,12 +520,9 @@ func applyExpect(cfg config.Config, execCfg config.Config, res *transport.Result
 			zap.String("op", op),
 			zap.Int("action: goto to id", id))
 
-		return parser.ExpectFail
-
-		// TODO: do some
+		return id
 	}
-	return parser.ExpectDone //<- needed
-	// return parser.ExpectFail // <- debug
+	return parser.ExpectDone
 }
 
 func copyTail(f *os.File, cPath string, buf *bytes.Buffer, pendingOffset int64, log *zap.Logger) {

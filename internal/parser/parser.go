@@ -339,6 +339,64 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	return nil
 }
 
+func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
+	const op = "parser.ParseFindConfig"
+
+	if tID < 0 || tID >= len(*sData) {
+		return fmt.Errorf("%s: config №[%d] not found", op, tID)
+	}
+
+	d := (*sData)[tID]
+
+	tp := fastExtract(d.RawData, &d.Entries, []byte("Type"))
+	if tp == "" {
+		return fmt.Errorf("%s: no config type", op)
+	}
+
+	if tp == "repeat" {
+		targetIDStr := fastExtract(d.RawData, &d.Entries, []byte("TargetID"))
+		if targetIDStr == "" {
+			return fmt.Errorf("%s: no target id", op)
+		}
+
+		targetIDBytes := unsafe.Slice(unsafe.StringData(targetIDStr), len(targetIDStr))
+		parentID := atoi(targetIDBytes)
+
+		var parentCfg config.Config
+		if err := ParseFindConfig(sData, cfg, parentID); err != nil {
+			return fmt.Errorf("%s: failed to find parent config: %w", op, err)
+		}
+
+		*cfg = config.Alloc(parentCfg)
+
+		if err := handleType(cfg, &tp, &d); err != nil {
+			return fmt.Errorf("%s: failed to handle type: %w", op, err)
+		}
+	} else {
+		if err := handleType(cfg, &tp, &d); err != nil {
+			return fmt.Errorf("%s: failed to handle type: %w", op, err)
+		}
+	}
+
+	insts := [][]byte{
+		[]byte("RESPONSE id="),
+		[]byte("COOKIES id="),
+		[]byte("RANDOM oneof="),
+	}
+
+	if err := handleInstructions(&d, &insts, func(inst instruction) {
+		(*cfg).SetDependency(config.Dependency{
+			TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
+		})
+	}); err != nil {
+		return fmt.Errorf("%s: failed to handle instructions: %w", op, err)
+	}
+
+	(*cfg).SetID(tID)
+
+	return nil
+}
+
 func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 	entries := *ents
 	for _, ent := range entries {

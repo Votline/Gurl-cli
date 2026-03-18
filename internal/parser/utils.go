@@ -373,7 +373,6 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	*buf = (*buf)[:length]
 }
 
-// Expected:200,201...;fail=crash/{id}
 func ParseExpect(expect []byte, resCode int) int {
 	if len(expect) == 0 {
 		return ExpectDone

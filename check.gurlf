@@ -10,7 +10,7 @@ Body:`
 `
 ID:0
 Type:http
-Expect:201;fail=0
+Expect:201;fail=2
 Response:`root
 method: GET
 url: /
@@ -21,10 +21,32 @@ headers:
 cookies:
 body:
 {
-"name": "d7046d7f-ff63-4825-b4dd-adb7d57b8c18",
-"role": "student",
-"age":  "42",
-"money":"4014925654649791728"
+"name": "40610ab0-108c-46ec-a697-b2f2c8decfe7",
+"role": "teacher",
+"age":  "30",
+"money":"5942650006757484103"
 }`
 [\http_config]
 
+[http_config]
+URL:http://localhost:8081
+Body:`
+	{
+		"name": "pass",
+	}
+`
+ID:2
+Type:http
+[\http_config]
+
+[http_config]
+URL:http://localhost:8081
+Body:`
+	{
+		"name": "admin",
+		"password":"{RANDOM oneof=uuid}"
+	}
+`
+ID:1
+Type:http
+[\http_config]
