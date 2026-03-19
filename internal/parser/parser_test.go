@@ -155,32 +155,6 @@ func BenchmarkHandleType(b *testing.B) {
 	}
 }
 
-func TestFastExtract(t *testing.T) {
-	tests := []struct {
-		input    []byte
-		expected string
-	}{
-		{[]byte("Type"), "http"},
-		{[]byte("Body"), "hello"},
-		{[]byte("Response"), "hello"},
-	}
-	d, _ := gurlf.Scan(raw)
-
-	for i, tt := range tests {
-		if tp := fastExtract(d[0].RawData, &d[0].Entries, tt.input); tp != tt.expected {
-			t.Errorf("[%d]: expected %q, but got %q", i, tt.expected, tp)
-		}
-	}
-}
-
-func BenchmarkFastExtract(b *testing.B) {
-	d, _ := gurlf.Scan(raw)
-
-	for b.Loop() {
-		fastExtract(d[0].RawData, &d[0].Entries, []byte("type"))
-	}
-}
-
 func TestApplyReplace(t *testing.T) {
 	const op = "parser.TestApplyReplace"
 

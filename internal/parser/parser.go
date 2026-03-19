@@ -397,20 +397,6 @@ func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
 	return nil
 }
 
-func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
-	entries := *ents
-	for _, ent := range entries {
-		if bytes.Equal(data[ent.KeyStart:ent.KeyEnd], need) {
-			vS, vE := ent.ValStart, ent.ValEnd
-			tmp := data[vS:vE]
-			tp := unsafe.String(unsafe.SliceData(tmp), len(tmp))
-			return tp
-		}
-	}
-
-	return ""
-}
-
 func applyReplace(r *config.RepeatConfig) error {
 	const op = "parser.applyReplace"
 

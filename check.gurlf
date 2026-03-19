@@ -21,10 +21,10 @@ headers:
 cookies:
 body:
 {
-"name": "40610ab0-108c-46ec-a697-b2f2c8decfe7",
-"role": "teacher",
-"age":  "30",
-"money":"5942650006757484103"
+"name": "d2ef5a91-678f-474d-9719-3266280915d3",
+"role": "student",
+"age":  "20",
+"money":"3415686757579138995"
 }`
 [\http_config]
 

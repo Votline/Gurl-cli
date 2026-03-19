@@ -356,7 +356,7 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) 
 			}
 			instructionBytes := rawSnapshot[d.Start:d.End]
 
-			val := make([]byte, 32)
+			val := make([]byte, 36)
 			parser.ParseRandom(instructionBytes, &val)
 			if val == nil {
 				log.Error("Failed to parse random",
