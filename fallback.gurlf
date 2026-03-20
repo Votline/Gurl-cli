@@ -1,0 +1,25 @@
+[http_config]
+URL:http://localhost:8081
+Body:`
+	{
+		"name": "FALLBACK",
+		"password": "{RANDOM oneof=uuid}"
+	}
+`
+ID:0
+Type:http
+Response:`root
+method: GET
+url: /
+headers:
+  Content-Length: 74
+  Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+cookies:
+body:
+{
+"name": "FALLBACK",
+"password": "31aa5acf-0cb6-469f-afe0-1d76aee0c7ac"
+}`
+[\http_config]
+

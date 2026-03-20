@@ -329,6 +329,10 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 		obj, itab := config.GetRepeat()
 		*(*uintptr)(unsafe.Pointer(c)) = itab
 		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
+	case "import":
+		obj, itab := config.GetImport()
+		*(*uintptr)(unsafe.Pointer(c)) = itab
+		*(*uintptr)(unsafe.Add(unsafe.Pointer(c), uintptr(8))) = uintptr(unsafe.Pointer(obj))
 	default:
 		return fmt.Errorf("%s: undefined cfg type: %q", op, *tp)
 	}

@@ -24,8 +24,6 @@ func main() {
 	ignoreCert := flag.Bool("ignore-cert", false, "Ignores site certificates")
 	ignoreCert = flag.Bool("ic", false, "Ignores site certificates")
 
-	ckPath := flag.String("cookie", "", "cookie.txt path (it can be used for the following configuration. In-memory is used for the current configuration.)")
-
 	cfgType := flag.String("type", "http", "Sets the request type in the configuration file(type field in .json")
 
 	defPath, _ := os.Getwd()
@@ -44,7 +42,7 @@ func main() {
 	log, _ := cfg.Build()
 	defer log.Sync()
 
-	if err := core.Start(*cfgType, *cfgPath, *ckPath, *cfgCreate, *ignoreCert, *disPrint, log); err != nil {
+	if err := core.Start(*cfgType, *cfgPath, *cfgCreate, *ignoreCert, *disPrint, log); err != nil {
 		log.Error("failed", zap.Error(err))
 	}
 }

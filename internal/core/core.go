@@ -22,6 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const importConfigCode = -1000
+
 type DepBindigs struct {
 	From func(res *transport.Result) []byte
 	To   func(cfg config.Config, start, end int, key string, val, inst []byte)
@@ -44,17 +46,17 @@ var depBindings = map[string]DepBindigs{
 	},
 }
 
-func Start(cType, cPath, ckPath string, cCreate, ic, disablePrint bool, log *zap.Logger) error {
+func Start(cType, cPath string, cCreate, ic, disablePrint bool, log *zap.Logger) error {
 	if cCreate {
 		return config.Create(cType, cPath)
 	}
-	return handleConfig(cPath, ckPath, disablePrint, log)
+	config.Init()
+	return handleConfig(cPath, disablePrint, log)
 }
 
-func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) error {
+func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
-	config.Init()
 	sData, err := gurlf.ScanFile(cPath)
 	if err != nil {
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
@@ -100,7 +102,17 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 				execCfg := cfg.UnwrapExec()
 
 				applyWait(cfg, execCfg, log)
-				sendConfig(cfg, execCfg, trnsp, res, log)
+
+				if impCfg, ok := cfg.(*config.ImportConfig); ok {
+					log.Debug("import config",
+						zap.String("op", op),
+						zap.String("name", cfg.GetName()),
+						zap.Int("id", cfg.GetID()))
+					handleConfig(impCfg.TargetPath, disablePrint, log)
+					res.Info.Code = importConfigCode
+				} else {
+					sendConfig(cfg, execCfg, trnsp, res, log)
+				}
 
 				res.CfgID = cfg.GetID()
 
@@ -148,7 +160,7 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 						zap.Error(err))
 					cfg.Release()
 					resB.Write(res)
-					return
+					break
 				}
 
 				cfg.Release()
@@ -271,55 +283,6 @@ func handleConfig(cPath, ckPath string, disablePrint bool, log *zap.Logger) erro
 	rb.Close()
 
 	wg.Wait()
-	return nil
-}
-
-func prettyPrint(res *transport.Result) error {
-	const op = "core.prettyPrint"
-
-	fmt.Println(strings.Repeat("-", 20))
-
-	fmt.Printf("\n\033[90m[ID %d]\033[0m", res.CfgID)
-	switch {
-	case res.Info.Code >= 200 && res.Info.Code < 300:
-		fmt.Printf("\n\033[32m[HTTP %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	case res.Info.Code >= 300 && res.Info.Code < 400:
-		fmt.Printf("\n\033[33m[HTTP %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	case res.Info.Code >= 400 && res.Info.Code < 600:
-		fmt.Printf("\n\033[31m[HTTP %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	case res.Info.Code == 0 && res.Info.ConfigType == "grpc":
-		fmt.Printf("\n\033[32m[GRPC %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	case res.Info.Code != 0 && res.Info.ConfigType == "grpc":
-		fmt.Printf("\n\033[31m[GRPC %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	default:
-		fmt.Printf("\n\033[31m[NOP %d: %s]\033[0m",
-			res.Info.Code, res.Info.Message)
-	}
-
-	if len(res.Raw) == 0 {
-		fmt.Printf("\n\033[90m[Empty body]\033[0m")
-		return nil
-	}
-
-	if res.IsJSON {
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, res.Raw, "", "  "); err != nil {
-			return fmt.Errorf("%s: indent: %w", op, err)
-		}
-		fmt.Printf("\n[JSON Response]\n%s\n", prettyJSON.String())
-	} else {
-		if len(res.Raw) > 1024 {
-			res.Raw = res.Raw[:1024]
-			res.Raw = append(res.Raw, []byte("(truncated)")...)
-		}
-		fmt.Printf("\n[Raw Response]\n%s\n", res.Raw)
-	}
-
 	return nil
 }
 
@@ -567,5 +530,58 @@ func flush(buf *bytes.Buffer, f *os.File) error {
 	}
 
 	buf.Reset()
+	return nil
+}
+
+func prettyPrint(res *transport.Result) error {
+	const op = "core.prettyPrint"
+
+	if res.Info.Code == importConfigCode {
+		return nil
+	}
+
+	fmt.Println(strings.Repeat("-", 20))
+
+	fmt.Printf("\n\033[90m[ID %d]\033[0m", res.CfgID)
+	switch {
+	case res.Info.Code >= 200 && res.Info.Code < 300:
+		fmt.Printf("\n\033[32m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code >= 300 && res.Info.Code < 400:
+		fmt.Printf("\n\033[33m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code >= 400 && res.Info.Code < 600:
+		fmt.Printf("\n\033[31m[HTTP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code == 0 && res.Info.ConfigType == "grpc":
+		fmt.Printf("\n\033[32m[GRPC %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	case res.Info.Code != 0 && res.Info.ConfigType == "grpc":
+		fmt.Printf("\n\033[31m[GRPC %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	default:
+		fmt.Printf("\n\033[31m[NOP %d: %s]\033[0m",
+			res.Info.Code, res.Info.Message)
+	}
+
+	if len(res.Raw) == 0 {
+		fmt.Printf("\n\033[90m[Empty body]\033[0m")
+		return nil
+	}
+
+	if res.IsJSON {
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, res.Raw, "", "  "); err != nil {
+			return fmt.Errorf("%s: indent: %w", op, err)
+		}
+		fmt.Printf("\n[JSON Response]\n%s\n", prettyJSON.String())
+	} else {
+		if len(res.Raw) > 1024 {
+			res.Raw = res.Raw[:1024]
+			res.Raw = append(res.Raw, []byte("(truncated)")...)
+		}
+		fmt.Printf("\n[Raw Response]\n%s\n", res.Raw)
+	}
+
 	return nil
 }

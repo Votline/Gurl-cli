@@ -62,24 +62,30 @@ var (
 	hBuf    = buffer.NewRb[*HTTPConfig]()
 	gBuf    = buffer.NewRb[*GRPCConfig]()
 	rBuf    = buffer.NewRb[*RepeatConfig]()
+	iBuf    = buffer.NewRb[*ImportConfig]()
 	hItab   uintptr
 	gItab   uintptr
 	rItab   uintptr
+	iItab   uintptr
 	hClBuf  = buffer.NewRb[*HTTPConfig]()
 	gClBuf  = buffer.NewRb[*GRPCConfig]()
 	rClBuf  = buffer.NewRb[*RepeatConfig]()
+	iClBuf  = buffer.NewRb[*ImportConfig]()
 	hItabCl uintptr
 	gItabCl uintptr
 	rItabCl uintptr
+	iItabCl uintptr
 )
 
 func Init() {
 	hBuf = buffer.NewRb[*HTTPConfig]()
 	gBuf = buffer.NewRb[*GRPCConfig]()
 	rBuf = buffer.NewRb[*RepeatConfig]()
+	iBuf = buffer.NewRb[*ImportConfig]()
 	hClBuf = buffer.NewRb[*HTTPConfig]()
 	gClBuf = buffer.NewRb[*GRPCConfig]()
 	rClBuf = buffer.NewRb[*RepeatConfig]()
+	iClBuf = buffer.NewRb[*ImportConfig]()
 
 	var hIface Config = &HTTPConfig{}
 	hItab = *(*uintptr)(unsafe.Pointer(&hIface))
@@ -90,6 +96,9 @@ func Init() {
 	var rIface Config = &RepeatConfig{}
 	rItab = *(*uintptr)(unsafe.Pointer(&rIface))
 
+	var iIface Config = &ImportConfig{}
+	iItab = *(*uintptr)(unsafe.Pointer(&iIface))
+
 	var hIfaceCl Config = &HTTPConfig{}
 	hItabCl = *(*uintptr)(unsafe.Pointer(&hIfaceCl))
 
@@ -99,13 +108,18 @@ func Init() {
 	var rIfaceCl Config = &RepeatConfig{}
 	rItabCl = *(*uintptr)(unsafe.Pointer(&rIfaceCl))
 
+	var iIfaceCl Config = &ImportConfig{}
+	iItabCl = *(*uintptr)(unsafe.Pointer(&iIfaceCl))
+
 	for i := 0; i < 10; i++ {
 		hBuf.Write(&HTTPConfig{})
 		gBuf.Write(&GRPCConfig{})
 		rBuf.Write(&RepeatConfig{})
+		iBuf.Write(&ImportConfig{})
 		hClBuf.Write(&HTTPConfig{})
 		gClBuf.Write(&GRPCConfig{})
 		rClBuf.Write(&RepeatConfig{})
+		iClBuf.Write(&ImportConfig{})
 	}
 }
 
@@ -140,6 +154,13 @@ func Alloc(cfg Config) Config {
 		*cp = *v
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
+		return cp
+	case *ImportConfig:
+		cp := new(ImportConfig)
+		*cp = *v
+		cp.Wait = cloneBytes(v.Wait)
+		cp.Expect = cloneBytes(v.Expect)
+		cp.TargetPath = v.TargetPath
 		return cp
 	}
 	return nil
@@ -477,6 +498,49 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		if c.Orig != nil {
 			c.Orig.Apply(start, end, key, val)
 		}
+	}
+}
+
+type ImportConfig struct {
+	TargetPath string `gurlf:"TargetPath"`
+	BaseConfig
+}
+
+func GetImport() (*ImportConfig, uintptr)  { return iBuf.Read(), iItab }
+func (c *ImportConfig) Release()           { *c = ImportConfig{}; iBuf.Write(c) }
+func (c *ImportConfig) UnwrapExec() Config { return c }
+func (c *ImportConfig) Clone() Config {
+	newCfg := iClBuf.Read()
+	*newCfg = *c
+	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Expect = cloneBytes(c.Expect)
+	newCfg.TargetPath = c.TargetPath
+	return newCfg
+}
+func (c *ImportConfig) ReleaseClone() { *c = ImportConfig{}; iClBuf.Write(c) }
+
+func (c *ImportConfig) Update(res, cks []byte) {
+	tmp := make([]byte, len(res))
+	copy(tmp, res)
+	c.Resp = tmp
+}
+
+func (c *ImportConfig) GetRaw(key string) []byte {
+	switch key {
+	case "Wait":
+		return c.Wait
+	case "Expect":
+		return c.Expect
+	}
+	return nil
+}
+
+func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
+	switch key {
+	case "Wait":
+		c.Wait = splice(c.Wait, val, start, end)
+	case "Expect":
+		c.Expect = splice(c.Expect, val, start, end)
 	}
 }
 
