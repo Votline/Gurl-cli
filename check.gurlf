@@ -21,25 +21,10 @@ headers:
 cookies:
 body:
 {
-"name": "2cca9886-9208-4318-bc58-57da4649ad3f",
-"role": "teacher",
-"age":  "44",
-"money":"4770116996830398195"
+"name": "99564566-d8a0-4260-aea5-a991098105ba",
+"role": "student",
+"age":  "35",
+"money":"2346771345883602918"
 }`
 [\http_config]
 
-[http_config]
-URL:http://localhost:8081
-Body:`
-	{
-		"name": "pass",
-	}
-`
-ID:2
-Type:http
-[\http_config]
-
-[import_config]
-TargetPath:fallback.gurlf
-Type:import
-[\import_config]

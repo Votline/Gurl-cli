@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,9 +61,6 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	resHub := make([]*transport.Result, 0, len(sData))
 	cfgFileBuf := buffer.NewRb[config.Config]()
 	rb := buffer.NewRb[config.Config]()
@@ -80,7 +76,6 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 	wg.Go(func() {
 		defer cfgFileBuf.Close()
 		defer resPrintBuf.Close()
-		defer cancel()
 
 		for {
 			cfg := rb.Read()
@@ -185,14 +180,15 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 				zap.String("path", cPath),
 				zap.Error(err))
 		}
-		defer cancel()
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("Recovered from panic",
 					zap.String("op", op),
 					zap.Any("recovered", r))
+				copyTail(f, cPath, &buf, pendingOffset, log)
 			}
-			copyTail(f, cPath, &buf, pendingOffset, log)
+
+			flush(&buf, f)
 
 			if err := f.Sync(); err != nil {
 				log.Error("Failed to sync file",
@@ -212,50 +208,48 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 		}()
 
 		for {
-			select {
-			case <-ctx.Done():
+			cfg = cfgFileBuf.Read()
+			if cfg == nil {
 				return
-			default:
-				cfg = cfgFileBuf.Read()
-				if cfg == nil {
-					return
-				}
+			}
 
-				data, err := gurlf.Marshal(cfg)
-				if err != nil {
-					cfg.ReleaseClone()
-					log.Error("Failed to Marshal config",
+			data, err := gurlf.Marshal(cfg)
+			if err != nil {
+				cfg.ReleaseClone()
+				log.Error("Failed to Marshal config",
+					zap.String("op", op),
+					zap.Error(err))
+				continue
+			}
+
+			log.Debug("marshaled config",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()))
+
+			buf.Write(data)
+			cnt++
+			pendingOffset = int64(cfg.GetEnd())
+
+			log.Debug("wrote config",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.Int("size", cnt),
+				zap.Int64("pendingOffset", pendingOffset))
+
+			cfg.ReleaseClone()
+
+			if cnt == bufSize {
+				cnt = 0
+				if err := flush(&buf, f); err != nil {
+					log.Error("failed to flush buffer",
 						zap.String("op", op),
 						zap.Error(err))
-					continue
 				}
 
-				log.Debug("marshaled config",
+				log.Debug("flushed buffer",
 					zap.String("op", op),
 					zap.String("name", cfg.GetName()))
 
-				buf.Write(data)
-				cnt++
-				pendingOffset = int64(cfg.GetEnd())
-				cfg.ReleaseClone()
-
-				log.Debug("wrote config",
-					zap.String("op", op),
-					zap.String("name", cfg.GetName()),
-					zap.Int("size", cnt))
-
-				if cnt == bufSize {
-					cnt = 0
-					if err := flush(&buf, f); err != nil {
-						log.Error("failed to flush buffer",
-							zap.String("op", op),
-							zap.Error(err))
-					}
-
-					log.Debug("flushed buffer",
-						zap.String("op", op),
-						zap.String("name", cfg.GetName()))
-				}
 			}
 		}
 	})
