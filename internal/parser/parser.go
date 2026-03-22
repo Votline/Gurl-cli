@@ -21,14 +21,22 @@ type instruction struct {
 	insTp string
 }
 
+var insts = [][]byte{
+	[]byte("RESPONSE"),
+	[]byte("COOKIES"),
+	[]byte("RANDOM"),
+	[]byte("VARIABLE"),
+}
+
+var markers = [][]byte{
+	[]byte("id="),
+	[]byte("oneof="),
+	[]byte("key="),
+}
+
 func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
-	insts := [][]byte{
-		[]byte("RESPONSE id="),
-		[]byte("COOKIES id="),
-		[]byte("RANDOM oneof="),
-	}
 	instsPos := make([]instruction, 0, 6)
 
 	log.Debug("preparing configs",
@@ -129,13 +137,13 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			execCfg = cfg
 		}
 
-		if err := handleInstructions(&d, &insts, func(inst instruction) {
+		if err := handleInstructions(&d, insts, func(inst instruction) {
 			instsPos = append(instsPos, inst)
 		}); err != nil {
-			log.Debug("check instr. execCfg failed",
+			log.Error("check instruction execCfg failed",
 				zap.String("op", op),
 				zap.String("name", string(d.Name)),
-				zap.String("raw", string(d.RawData)))
+				zap.Int("id", i))
 			return fmt.Errorf("%s: check instruction execCfg №[%d]: %w",
 				op, i, err)
 		}
@@ -216,7 +224,7 @@ func handleRepeat(d *gscan.Data) (int, error) {
 	return -1, nil
 }
 
-func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruction)) error {
+func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instruction)) error {
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
@@ -228,7 +236,7 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 		return nil
 	}
 
-	for _, inst := range *insts {
+	for _, inst := range insts {
 		curOffset := start + 1
 
 		for {
@@ -238,19 +246,31 @@ func handleInstructions(d *gscan.Data, insts *[][]byte, yield func(inst instruct
 			}
 			pIdx += curOffset
 
-			depType := bytes.Index(d.RawData[pIdx:], []byte("id="))
-			if depType == -1 {
-				depType = bytes.Index(d.RawData[pIdx:], []byte("oneof="))
-				if depType == -1 {
-					return fmt.Errorf("%s: instruction %q: no id",
-						op, string(inst))
+			depType := 0
+			minIdx := -1
+			markerLen := 0
+			for _, m := range markers {
+				idx := bytes.Index(d.RawData[pIdx:], m)
+				if idx != -1 {
+					if minIdx == -1 || idx < minIdx {
+						minIdx = idx
+						markerLen = len(m)
+					}
 				}
 			}
-			depType += pIdx
+			if minIdx == -1 {
+				return fmt.Errorf("%s: instruction %q: no id",
+					op, string(inst))
+			}
+			depType += pIdx + minIdx
 
-			instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx:depType-1]), len(d.RawData[pIdx:depType-1]))
+			typeEnd := depType
+			for typeEnd > pIdx && isSpace(d.RawData[typeEnd-1]) {
+				typeEnd--
+			}
+			instTp := unsafe.String(unsafe.SliceData(d.RawData[pIdx:typeEnd]), typeEnd-pIdx)
 
-			valStart := depType + 3
+			valStart := depType + markerLen
 			for valStart < len(d.RawData) && isSpace(d.RawData[valStart]) {
 				valStart++
 			}
@@ -382,13 +402,7 @@ func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
 		}
 	}
 
-	insts := [][]byte{
-		[]byte("RESPONSE id="),
-		[]byte("COOKIES id="),
-		[]byte("RANDOM oneof="),
-	}
-
-	if err := handleInstructions(&d, &insts, func(inst instruction) {
+	if err := handleInstructions(&d, insts, func(inst instruction) {
 		(*cfg).SetDependency(config.Dependency{
 			TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
 		})

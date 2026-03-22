@@ -72,6 +72,8 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 		resPrintBuf = buffer.NewNop[*transport.Result]()
 	}
 
+	isCrashed := false
+	var globalErr error
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		defer cfgFileBuf.Close()
@@ -83,7 +85,6 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 				break
 			}
 
-			isJumped := false
 			for {
 				cfgToFile := cfg.Clone()
 				log.Debug("processing config",
@@ -117,14 +118,14 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 
 				id := applyExpect(cfg, execCfg, res, log)
 
-				if !isJumped {
+				if !isCrashed {
 					cfgToFile.Update(res.Raw, res.Cookie)
 					cfgFileBuf.Write(cfgToFile)
 				}
 
-				if id == parser.ExpectDone && !isJumped {
+				if id == parser.ExpectDone && !isCrashed {
 					break
-				} else if id == parser.ExpectDone && isJumped {
+				} else if id == parser.ExpectDone && isCrashed {
 					cfg.Release()
 					resB.Write(res)
 					return
@@ -136,13 +137,13 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 					return
 				}
 
-				if isJumped {
+				if isCrashed {
 					cfg.Release()
 					resB.Write(res)
 					return
 				}
 
-				isJumped = true
+				isCrashed = true
 				var nextCfg config.Config
 				origEnd := cfg.GetEnd()
 
@@ -185,6 +186,11 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 				log.Error("Recovered from panic",
 					zap.String("op", op),
 					zap.Any("recovered", r))
+				copyTail(f, cPath, &buf, pendingOffset, log)
+			} else if isCrashed {
+				log.Debug("Copy tail after jump",
+					zap.String("op", op),
+					zap.String("path", cPath))
 				copyTail(f, cPath, &buf, pendingOffset, log)
 			}
 
@@ -277,6 +283,10 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 	rb.Close()
 
 	wg.Wait()
+
+	if globalErr != nil {
+		return fmt.Errorf("%s: %w", op, globalErr)
+	}
 	return nil
 }
 
