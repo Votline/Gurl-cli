@@ -50,10 +50,11 @@ func Start(cType, cPath string, cCreate, ic, disablePrint bool, log *zap.Logger)
 		return config.Create(cType, cPath)
 	}
 	config.Init()
-	return handleConfig(cPath, disablePrint, log)
+	vars := make(map[string][]byte)
+	return handleConfig(cPath, disablePrint, vars, log)
 }
 
-func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
+func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
 	sData, err := gurlf.ScanFile(cPath)
@@ -92,7 +93,7 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 					zap.String("name", cfg.GetName()),
 					zap.Int("id", cfg.GetID()))
 
-				applyDeps(cfg, &resHub, log)
+				applyDeps(cfg, &resHub, vars, log)
 
 				res := resB.Read()
 				execCfg := cfg.UnwrapExec()
@@ -104,7 +105,28 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 						zap.String("op", op),
 						zap.String("name", cfg.GetName()),
 						zap.Int("id", cfg.GetID()))
-					handleConfig(impCfg.TargetPath, disablePrint, log)
+
+					gscanVars, err := gurlf.Scan(impCfg.Vars)
+					if err != nil {
+						log.Error("Failed to scan vars",
+							zap.String("op", op),
+							zap.String("name", cfg.GetName()),
+							zap.Int("id", cfg.GetID()),
+							zap.Error(err))
+						break
+					}
+					parser.ParseVars(gscanVars, vars)
+
+					if err := handleConfig(impCfg.TargetPath, disablePrint, vars, log); err != nil {
+						log.Error("Failed to handle config",
+							zap.String("op", op),
+							zap.String("name", cfg.GetName()),
+							zap.Int("id", cfg.GetID()),
+							zap.Error(err))
+						globalErr = err
+						isCrashed = true // for 'copyTail'
+						return
+					}
 					res.Info.Code = importConfigCode
 				} else {
 					sendConfig(cfg, execCfg, trnsp, res, log)
@@ -290,7 +312,7 @@ func handleConfig(cPath string, disablePrint bool, log *zap.Logger) error {
 	return nil
 }
 
-func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) {
+func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][]byte, log *zap.Logger) {
 	const op = "core.applyDeps"
 
 	allDeps := make([]config.Dependency, 0, cfg.GetDepsLen())
@@ -306,11 +328,12 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) 
 			continue
 		}
 
-		if d.TargetID == config.DataFromFile {
+		switch d.TargetID {
+		case config.DataFromFile:
 			cfg.SetFlag(config.FlagUseFileCookies)
 			cfg.Apply(d.Start, d.End, d.Key, nil)
 			continue
-		} else if d.TargetID == config.RandomData {
+		case config.RandomData:
 			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
 			copy(rawSnapshot, cfg.GetRaw(d.Key))
 			if d.End > len(rawSnapshot) || d.End > cap(rawSnapshot) {
@@ -333,7 +356,47 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, log *zap.Logger) 
 				continue
 			}
 
+			log.Debug("apply random",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.String("key", d.Key),
+				zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
+
 			cfg.Apply(d.Start, d.End, d.Key, val)
+
+			continue
+		case config.DataFromVariable:
+			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+			copy(rawSnapshot, cfg.GetRaw(d.Key))
+			instructionBytes := rawSnapshot[d.Start:d.End]
+
+			var key []byte
+			parser.GetVarKey(instructionBytes, &key)
+			if key == nil {
+				log.Error("Failed to get variable key",
+					zap.String("op", op),
+					zap.String("key", d.Key),
+					zap.String("inst", string(instructionBytes)))
+				continue
+			}
+
+			keyStr := unsafe.String(unsafe.SliceData(key), len(key))
+			val := vars[keyStr]
+			if val == nil {
+				log.Error("Failed to get variable",
+					zap.String("op", op),
+					zap.String("key", keyStr))
+				continue
+			}
+
+			cfg.Apply(d.Start, d.End, d.Key, val)
+
+			log.Debug("apply variable",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.Int("id", cfg.GetID()),
+				zap.String("key", d.Key),
+				zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
 
 			continue
 		}

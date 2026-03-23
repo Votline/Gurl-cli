@@ -2,7 +2,7 @@
 URL:http://localhost:8081
 Body:`
 	{
-		"name": "{RANDOM oneof=uuid}",
+		"name": "{RANDOM   oneof=uuid}",
 		"role": "{RANDOM oneof=teacher,student}",
 		"age":  "{RANDOM oneof=int(10,45)}",
 		"money":"{RANDOM oneof=int}"
@@ -21,10 +21,45 @@ headers:
 cookies:
 body:
 {
-"name": "99564566-d8a0-4260-aea5-a991098105ba",
+"name": "e535a841-1207-4543-8dd3-e5845514c90e",
 "role": "student",
-"age":  "35",
-"money":"2346771345883602918"
+"age":  "18",
+"money":"5810527573075386896"
 }`
 [\http_config]
+
+[http_config]
+URL:http://localhost:8081
+Body:`
+	{
+		"name": "pass",
+	}
+`
+ID:1
+Type:http
+Response:`root
+method: GET
+url: /
+headers:
+  User-Agent: Go-http-client/1.1
+  Content-Length: 19
+  Accept-Encoding: gzip
+cookies:
+body:
+{
+"name": "pass",
+}`
+[\http_config]
+
+[import_config]
+TargetPath:fallback.gurlf
+Variables:`
+[vars]
+UserID: FALLBACK {RANDOM oneof=uuid}
+[\vars]
+`
+ID:2
+Type:import
+Response:
+[\import_config]
 

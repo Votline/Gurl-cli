@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+
+	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
 const (
@@ -440,6 +442,62 @@ func ParseExpect(expect []byte, resCode int) int {
 
 	id := atoi(action)
 	return id
+}
+
+func ParseVars(vars []gscan.Data, varsMap map[string][]byte) {
+	for _, v := range vars {
+		for _, ent := range v.Entries {
+			if ent.ValEnd == 0 {
+				continue
+			}
+			kS := ent.KeyStart
+			for kS < len(v.RawData) && isSpace(v.RawData[kS]) {
+				kS++
+			}
+			kE := ent.KeyEnd
+			for kE > kS && (isSpace(v.RawData[kE-1]) || v.RawData[kE-1] == '}') {
+				kE--
+			}
+
+			vS := ent.ValStart
+			for vS < len(v.RawData) && isSpace(v.RawData[vS]) {
+				vS++
+			}
+			vE := ent.ValEnd
+			for vE > vS && (isSpace(v.RawData[vE-1]) || v.RawData[vE-1] == '}') {
+				vE--
+			}
+
+			key := unsafe.String(unsafe.SliceData(v.RawData[kS:kE]), kE-kS)
+			val := v.RawData[vS:vE]
+			varsMap[key] = val
+		}
+	}
+}
+
+func GetVarKey(inst []byte, key *[]byte) {
+	if len(inst) == 0 {
+		*key = nil
+		return
+	}
+
+	start := bytes.IndexByte(inst, '=')
+	if start == -1 {
+		*key = nil
+		return
+	}
+	start++
+
+	for start < len(inst) && isSpace(inst[start]) {
+		start++
+	}
+
+	end := len(inst)
+	for end > start && (isSpace(inst[end-1]) || inst[end-1] == '}') {
+		end--
+	}
+
+	*key = inst[start:end]
 }
 
 func (c *chunker) next() ([]byte, bool) {

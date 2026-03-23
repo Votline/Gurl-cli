@@ -11,6 +11,7 @@ const (
 	DataFromFile       int    = -2
 	MaxLen             int    = -3
 	RandomData         int    = -4
+	DataFromVariable   int    = -5
 	FlagUseFileCookies uint32 = 1
 )
 
@@ -161,6 +162,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.TargetPath = v.TargetPath
+		cp.Vars = cloneBytes(v.Vars)
 		return cp
 	}
 	return nil
@@ -210,6 +212,7 @@ func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
 func (c *BaseConfig) Clone() Config {
 	cp := *c
 	cp.Wait = cloneBytes(c.Wait)
+	cp.Expect = cloneBytes(c.Expect)
 	return &cp
 }
 
@@ -503,6 +506,7 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 
 type ImportConfig struct {
 	TargetPath string `gurlf:"TargetPath"`
+	Vars       []byte `gurlf:"Variables,omitempty"`
 	BaseConfig
 }
 
@@ -515,6 +519,7 @@ func (c *ImportConfig) Clone() Config {
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.TargetPath = c.TargetPath
+	newCfg.Vars = cloneBytes(c.Vars)
 	return newCfg
 }
 func (c *ImportConfig) ReleaseClone() { *c = ImportConfig{}; iClBuf.Write(c) }
@@ -531,6 +536,8 @@ func (c *ImportConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "Variables":
+		return c.Vars
 	}
 	return nil
 }
@@ -541,6 +548,8 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
+	case "Variables":
+		c.Vars = splice(c.Vars, val, start, end)
 	}
 }
 

@@ -2,7 +2,7 @@
 URL:http://localhost:8081
 Body:`
 	{
-		"name": "FALLBACK",
+		"name": "{VARIABLE key=UserID}",
 		"password": "{RANDOM oneof=uuid}"
 	}
 `
@@ -12,14 +12,14 @@ Response:`root
 method: GET
 url: /
 headers:
-  Content-Length: 74
+  Content-Length: 111
   Accept-Encoding: gzip
   User-Agent: Go-http-client/1.1
 cookies:
 body:
 {
-"name": "FALLBACK",
-"password": "51bf5aa6-2ef6-4143-93f4-51682364a1bf"
+"name": "FALLBACK ac80b4be-e37c-49d0-a22d-08657dcccd07",
+"password": "005cc3cd-7dea-47b7-891c-7cfc31f466a8"
 }`
 [\http_config]
 

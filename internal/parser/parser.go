@@ -297,14 +297,18 @@ func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instructi
 
 			tID := -1
 			args := d.RawData[valStart:valEnd]
-			if instTp == "RANDOM" {
+
+			switch {
+			case instTp == "RANDOM":
 				tID = config.RandomData
-			} else if bytes.Equal(args, []byte("file")) {
+			case bytes.Equal(args, []byte("file")):
 				tID = config.DataFromFile
-			} else {
+			case instTp == "VARIABLE":
+				tID = config.DataFromVariable
+			default:
 				tID = atoi(d.RawData[valStart:valEnd])
 				if tID == -1 {
-					return fmt.Errorf("%s: invalid id %q", op, d.RawData[valStart:valEnd])
+					return fmt.Errorf("%s: invalid id %q in instruction type %q", op, d.RawData[valStart:valEnd], instTp)
 				}
 			}
 
