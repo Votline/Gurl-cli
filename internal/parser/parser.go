@@ -279,6 +279,7 @@ func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instructi
 			for valEnd < len(d.RawData) && !isSpace(d.RawData[valEnd]) && d.RawData[valEnd] != '}' {
 				valEnd++
 			}
+			// valEnd++ // catch '}'
 
 			if valStart == valEnd {
 				return fmt.Errorf("%s: empty id value", op)

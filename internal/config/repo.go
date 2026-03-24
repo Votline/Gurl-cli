@@ -41,6 +41,8 @@ type Config interface {
 	GetExpect() []byte
 	SetExpect([]byte)
 
+	GetVars() []byte
+
 	GetEnd() int
 	SetEnd(int)
 
@@ -137,6 +139,7 @@ func Alloc(cfg Config) Config {
 		cp.CookieOut = cloneBytes(v.CookieOut)
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
+		cp.Vars = cloneBytes(v.Vars)
 		return cp
 	case *GRPCConfig:
 		cp := new(GRPCConfig)
@@ -149,12 +152,14 @@ func Alloc(cfg Config) Config {
 		cp.DialOpts = cloneBytes(v.DialOpts)
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
+		cp.Vars = cloneBytes(v.Vars)
 		return cp
 	case *RepeatConfig:
 		cp := new(RepeatConfig)
 		*cp = *v
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
+		cp.Vars = cloneBytes(v.Vars)
 		return cp
 	case *ImportConfig:
 		cp := new(ImportConfig)
@@ -176,6 +181,7 @@ type BaseConfig struct {
 	Type      string `gurlf:"Type"`
 	Wait      []byte `gurlf:"Wait,omitempty"`
 	Expect    []byte `gurlf:"Expect,omitempty"`
+	Vars      []byte `gurlf:"SetVariables,omitempty"`
 	Resp      []byte `gurlf:"Response,omitempty"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
@@ -201,6 +207,7 @@ func (c *BaseConfig) GetWait() []byte                { return c.Wait }
 func (c *BaseConfig) SetWait(nWait []byte)           { c.Wait = nWait }
 func (c *BaseConfig) GetExpect() []byte              { return c.Expect }
 func (c *BaseConfig) SetExpect(nExpect []byte)       { c.Expect = nExpect }
+func (c *BaseConfig) GetVars() []byte                { return c.Vars }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
 func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) GetType() string                { return c.Type }
@@ -213,6 +220,7 @@ func (c *BaseConfig) Clone() Config {
 	cp := *c
 	cp.Wait = cloneBytes(c.Wait)
 	cp.Expect = cloneBytes(c.Expect)
+	cp.Vars = cloneBytes(c.Vars)
 	return &cp
 }
 
@@ -277,6 +285,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.CookieOut = cloneBytes(c.CookieOut)
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
+	newCfg.Vars = cloneBytes(c.Vars)
 	return newCfg
 }
 
@@ -303,6 +312,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "SetVariables":
+		return c.Vars
 	}
 	return nil
 }
@@ -323,6 +334,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
+	case "SetVariables":
+		c.Vars = splice(c.Vars, val, start, end)
 	}
 }
 
@@ -352,6 +365,7 @@ func (c *GRPCConfig) Clone() Config {
 	newCfg.DialOpts = cloneBytes(c.DialOpts)
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
+	newCfg.Vars = cloneBytes(c.Vars)
 	return newCfg
 }
 
@@ -381,6 +395,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "SetVariables":
+		return c.Vars
 	}
 	return nil
 }
@@ -405,6 +421,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
+	case "SetVariables":
+		c.Vars = splice(c.Vars, val, start, end)
 	}
 }
 
@@ -458,6 +476,7 @@ func (c *RepeatConfig) Clone() Config {
 	*newCfg = *c
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
+	newCfg.Vars = cloneBytes(c.Vars)
 
 	if c.Orig != nil {
 		newCfg.Orig = c.Orig.Clone()
@@ -481,6 +500,8 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "SetVariables":
+		return c.Vars
 	default:
 		if c.Orig != nil {
 			return c.Orig.GetRaw(key)
@@ -497,6 +518,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
+	case "SetVariables":
+		c.Vars = splice(c.Vars, val, start, end)
 	default:
 		if c.Orig != nil {
 			c.Orig.Apply(start, end, key, val)
@@ -506,7 +529,6 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 
 type ImportConfig struct {
 	TargetPath string `gurlf:"TargetPath"`
-	Vars       []byte `gurlf:"Variables,omitempty"`
 	BaseConfig
 }
 
@@ -536,7 +558,7 @@ func (c *ImportConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
-	case "Variables":
+	case "SetVariables":
 		return c.Vars
 	}
 	return nil
@@ -548,7 +570,7 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
-	case "Variables":
+	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
 	}
 }

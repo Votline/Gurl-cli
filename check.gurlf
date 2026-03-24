@@ -2,7 +2,7 @@
 URL:http://localhost:8081
 Body:`
 	{
-		"name": "{RANDOM   oneof=uuid}",
+		"name": "{RANDOM oneof=uuid}",
 		"role": "{RANDOM oneof=teacher,student}",
 		"age":  "{RANDOM oneof=int(10,45)}",
 		"money":"{RANDOM oneof=int}"
@@ -10,7 +10,12 @@ Body:`
 `
 ID:0
 Type:http
-Expect:201;fail=2
+Expect:200;fail=2
+SetVariables:`
+[vars]
+StandartName:no fail
+[\vars]
+`
 Response:`root
 method: GET
 url: /
@@ -21,10 +26,10 @@ headers:
 cookies:
 body:
 {
-"name": "e535a841-1207-4543-8dd3-e5845514c90e",
+"name": "4eb412e2-8b06-4834-8844-c5a0199bc7ed",
 "role": "student",
-"age":  "18",
-"money":"5810527573075386896"
+"age":  "21",
+"money":"2723313081411143221"
 }`
 [\http_config]
 
@@ -32,7 +37,7 @@ body:
 URL:http://localhost:8081
 Body:`
 	{
-		"name": "pass",
+		"name": "{VARIABLE key=StandartName}"
 	}
 `
 ID:1
@@ -42,24 +47,24 @@ method: GET
 url: /
 headers:
   User-Agent: Go-http-client/1.1
-  Content-Length: 19
+  Content-Length: 21
   Accept-Encoding: gzip
 cookies:
 body:
 {
-"name": "pass",
+"name": "no fail"
 }`
 [\http_config]
 
 [import_config]
 TargetPath:fallback.gurlf
-Variables:`
+ID:2
+Type:import
+SetVariables:`
 [vars]
 UserID: FALLBACK {RANDOM oneof=uuid}
 [\vars]
 `
-ID:2
-Type:import
 Response:
 [\import_config]
 

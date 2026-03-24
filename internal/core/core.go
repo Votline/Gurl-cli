@@ -100,22 +100,15 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 
 				applyWait(cfg, execCfg, log)
 
+				if ok := applyVars(cfg, vars, log); !ok {
+					break
+				}
+
 				if impCfg, ok := cfg.(*config.ImportConfig); ok {
 					log.Debug("import config",
 						zap.String("op", op),
 						zap.String("name", cfg.GetName()),
 						zap.Int("id", cfg.GetID()))
-
-					gscanVars, err := gurlf.Scan(impCfg.Vars)
-					if err != nil {
-						log.Error("Failed to scan vars",
-							zap.String("op", op),
-							zap.String("name", cfg.GetName()),
-							zap.Int("id", cfg.GetID()),
-							zap.Error(err))
-						break
-					}
-					parser.ParseVars(gscanVars, vars)
 
 					if err := handleConfig(impCfg.TargetPath, disablePrint, vars, log); err != nil {
 						log.Error("Failed to handle config",
@@ -470,6 +463,29 @@ func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
 			zap.String("wait", string(cfg.GetWait())))
 		time.Sleep(dur)
 	}
+}
+
+func applyVars(cfg config.Config, vars map[string][]byte, log *zap.Logger) bool {
+	const op = "core.applyVars"
+
+	gscanVars, err := gurlf.Scan(cfg.GetVars())
+	if err != nil {
+		log.Error("Failed to apply vars",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.Int("id", cfg.GetID()),
+			zap.Error(err))
+		return false
+	}
+	parser.ParseVars(gscanVars, vars)
+
+	log.Debug("set variables",
+		zap.String("op", op),
+		zap.String("name", cfg.GetName()),
+		zap.Int("id", cfg.GetID()),
+		zap.String("vars", unsafe.String(unsafe.SliceData(cfg.GetVars()), len(cfg.GetVars()))))
+
+	return true
 }
 
 func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, log *zap.Logger) {
