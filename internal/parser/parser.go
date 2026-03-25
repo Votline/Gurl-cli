@@ -26,12 +26,14 @@ var insts = [][]byte{
 	[]byte("COOKIES"),
 	[]byte("RANDOM"),
 	[]byte("VARIABLE"),
+	[]byte("ENVIRONMENT"),
 }
 
 var markers = [][]byte{
 	[]byte("id="),
 	[]byte("oneof="),
 	[]byte("key="),
+	[]byte("from="),
 }
 
 func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger) error {
@@ -306,6 +308,8 @@ func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instructi
 				tID = config.DataFromFile
 			case instTp == "VARIABLE":
 				tID = config.DataFromVariable
+			case instTp == "ENVIRONMENT":
+				tID = config.DataFromEnvironment
 			default:
 				tID = atoi(d.RawData[valStart:valEnd])
 				if tID == -1 {

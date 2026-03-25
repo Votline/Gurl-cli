@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	NoRepeatConfig     int    = -1
-	DataFromFile       int    = -2
-	MaxLen             int    = -3
-	RandomData         int    = -4
-	DataFromVariable   int    = -5
-	FlagUseFileCookies uint32 = 1
+	NoRepeatConfig      int    = -1
+	DataFromFile        int    = -2
+	MaxLen              int    = -3
+	RandomData          int    = -4
+	DataFromVariable    int    = -5
+	DataFromEnvironment int    = -6
+	FlagUseFileCookies  uint32 = 1
 )
 
 type Dependency struct {

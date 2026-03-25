@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -390,6 +391,75 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				zap.Int("id", cfg.GetID()),
 				zap.String("key", d.Key),
 				zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
+
+			continue
+		case config.DataFromEnvironment:
+			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+			copy(rawSnapshot, cfg.GetRaw(d.Key))
+			from := rawSnapshot[d.Start:d.End]
+
+			var key []byte
+			parser.ParseEnv(&from, &key)
+
+			if key == nil || from == nil {
+				log.Error("Failed to get environment key",
+					zap.String("op", op),
+					zap.String("key", unsafe.String(unsafe.SliceData(key), len(key))),
+					zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
+				continue
+			}
+
+			val := from
+			keyStr := unsafe.String(unsafe.SliceData(key), len(key))
+			fromStr := unsafe.String(unsafe.SliceData(from), len(from))
+			if bytes.Equal(from, []byte("os")) {
+				valStr := os.Getenv(keyStr)
+				if valStr == "" {
+					log.Error("Failed to get environment",
+						zap.String("op", op),
+						zap.String("key", keyStr),
+						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
+					continue
+				}
+				val = unsafe.Slice(unsafe.StringData(valStr), len(valStr))
+			} else {
+				path := fromStr
+				file, err := os.Open(path)
+				if err != nil {
+					log.Error("Failed to open file",
+						zap.String("op", op),
+						zap.String("key", keyStr),
+						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
+						zap.Error(err))
+					continue
+				}
+				defer file.Close()
+
+				scanner := bufio.NewScanner(file)
+
+				for scanner.Scan() {
+					line := scanner.Bytes()
+					parser.ParseEnvLine(line, key, &val)
+					if val != nil {
+						break
+					}
+				}
+				if val == nil {
+					log.Error("Failed to get environment",
+						zap.String("op", op),
+						zap.String("key", keyStr),
+						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
+					continue
+				}
+			}
+
+			cfg.Apply(d.Start, d.End, d.Key, val)
+			log.Debug("apply environment",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.Int("id", cfg.GetID()),
+				zap.String("key", keyStr),
+				zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
 
 			continue
 		}
