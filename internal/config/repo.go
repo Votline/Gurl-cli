@@ -43,6 +43,7 @@ type Config interface {
 	SetExpect([]byte)
 
 	GetVars() []byte
+	GetEnvs() []byte
 
 	GetEnd() int
 	SetEnd(int)
@@ -141,6 +142,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.Vars = cloneBytes(v.Vars)
+		cp.Envs = cloneBytes(v.Envs)
 		return cp
 	case *GRPCConfig:
 		cp := new(GRPCConfig)
@@ -154,6 +156,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.Vars = cloneBytes(v.Vars)
+		cp.Envs = cloneBytes(v.Envs)
 		return cp
 	case *RepeatConfig:
 		cp := new(RepeatConfig)
@@ -161,6 +164,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.Vars = cloneBytes(v.Vars)
+		cp.Envs = cloneBytes(v.Envs)
 		return cp
 	case *ImportConfig:
 		cp := new(ImportConfig)
@@ -169,6 +173,7 @@ func Alloc(cfg Config) Config {
 		cp.Expect = cloneBytes(v.Expect)
 		cp.TargetPath = v.TargetPath
 		cp.Vars = cloneBytes(v.Vars)
+		cp.Envs = cloneBytes(v.Envs)
 		return cp
 	}
 	return nil
@@ -183,6 +188,7 @@ type BaseConfig struct {
 	Wait      []byte `gurlf:"Wait,omitempty"`
 	Expect    []byte `gurlf:"Expect,omitempty"`
 	Vars      []byte `gurlf:"SetVariables,omitempty"`
+	Envs      []byte `gurlf:"SetEnvironments,omitempty"`
 	Resp      []byte `gurlf:"Response,omitempty"`
 	Deps      [6]Dependency
 	ExtraDeps []Dependency
@@ -209,6 +215,7 @@ func (c *BaseConfig) SetWait(nWait []byte)           { c.Wait = nWait }
 func (c *BaseConfig) GetExpect() []byte              { return c.Expect }
 func (c *BaseConfig) SetExpect(nExpect []byte)       { c.Expect = nExpect }
 func (c *BaseConfig) GetVars() []byte                { return c.Vars }
+func (c *BaseConfig) GetEnvs() []byte                { return c.Envs }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
 func (c *BaseConfig) GetID() int                     { return c.ID }
 func (c *BaseConfig) GetType() string                { return c.Type }
@@ -222,6 +229,7 @@ func (c *BaseConfig) Clone() Config {
 	cp.Wait = cloneBytes(c.Wait)
 	cp.Expect = cloneBytes(c.Expect)
 	cp.Vars = cloneBytes(c.Vars)
+	cp.Envs = cloneBytes(c.Envs)
 	return &cp
 }
 
@@ -287,6 +295,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.Vars = cloneBytes(c.Vars)
+	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
 }
 
@@ -307,7 +316,7 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Body
 	case "Headers":
 		return c.Headers
-	case "Cookie":
+	case "Cookie", "CookieIn":
 		return c.CookieIn
 	case "Wait":
 		return c.Wait
@@ -315,6 +324,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Expect
 	case "SetVariables":
 		return c.Vars
+	case "SetEnvironments":
+		return c.Envs
 	}
 	return nil
 }
@@ -329,7 +340,7 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Body = splice(c.Body, val, start, end)
 	case "Headers":
 		c.Headers = splice(c.Headers, val, start, end)
-	case "Cookie":
+	case "Cookie", "CookieIn":
 		c.CookieIn = splice(c.CookieIn, val, start, end)
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
@@ -337,6 +348,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Expect = splice(c.Expect, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
+	case "SetEnvironments":
+		c.Envs = splice(c.Envs, val, start, end)
 	}
 }
 
@@ -367,6 +380,7 @@ func (c *GRPCConfig) Clone() Config {
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.Vars = cloneBytes(c.Vars)
+	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
 }
 
@@ -398,6 +412,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.Expect
 	case "SetVariables":
 		return c.Vars
+	case "SetEnvironments":
+		return c.Envs
 	}
 	return nil
 }
@@ -424,6 +440,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.Expect = splice(c.Expect, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
+	case "SetEnvironments":
+		c.Envs = splice(c.Envs, val, start, end)
 	}
 }
 
@@ -478,6 +496,7 @@ func (c *RepeatConfig) Clone() Config {
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.Vars = cloneBytes(c.Vars)
+	newCfg.Envs = cloneBytes(c.Envs)
 
 	if c.Orig != nil {
 		newCfg.Orig = c.Orig.Clone()
@@ -503,6 +522,8 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 		return c.Expect
 	case "SetVariables":
 		return c.Vars
+	case "SetEnvironments":
+		return c.Envs
 	default:
 		if c.Orig != nil {
 			return c.Orig.GetRaw(key)
@@ -521,6 +542,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		c.Expect = splice(c.Expect, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
+	case "SetEnvironments":
+		c.Envs = splice(c.Envs, val, start, end)
 	default:
 		if c.Orig != nil {
 			c.Orig.Apply(start, end, key, val)
@@ -543,6 +566,7 @@ func (c *ImportConfig) Clone() Config {
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.TargetPath = c.TargetPath
 	newCfg.Vars = cloneBytes(c.Vars)
+	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
 }
 func (c *ImportConfig) ReleaseClone() { *c = ImportConfig{}; iClBuf.Write(c) }
@@ -561,6 +585,8 @@ func (c *ImportConfig) GetRaw(key string) []byte {
 		return c.Expect
 	case "SetVariables":
 		return c.Vars
+	case "SetEnvironments":
+		return c.Envs
 	}
 	return nil
 }
@@ -573,6 +599,8 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 		c.Expect = splice(c.Expect, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
+	case "SetEnvironments":
+		c.Envs = splice(c.Envs, val, start, end)
 	}
 }
 

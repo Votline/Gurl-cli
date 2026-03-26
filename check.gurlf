@@ -13,23 +13,31 @@ Type:http
 Expect:200;fail=2
 SetVariables:`
 [vars]
-StandartName:no fail
+StandartName:variables
 [\vars]
+`
+SetEnvironments:`
+[envs]
+OsEnvName:os env {RANDOM oneof=uuid}
+[\envs]
+[.env]
+FileEnvName:file env {RANDOM oneof=uuid}
+[\.env]
 `
 Response:`root
 method: GET
 url: /
 headers:
   User-Agent: Go-http-client/1.1
-  Content-Length: 114
+  Content-Length: 113
   Accept-Encoding: gzip
 cookies:
 body:
 {
-"name": "4eb412e2-8b06-4834-8844-c5a0199bc7ed",
-"role": "student",
-"age":  "21",
-"money":"2723313081411143221"
+"name": "d1d829e0-8c7c-4b29-834d-16deb3b9f3ab",
+"role": "teacher",
+"age":  "26",
+"money":"111728838453468837"
 }`
 [\http_config]
 
@@ -37,8 +45,13 @@ body:
 URL:http://localhost:8081
 Body:`
 	{
-		"name": "{VARIABLE key=StandartName}"
+		"varName": "{VARIABLE key=StandartName}"
+		"envName": "{ENVIRONMENT key=OsEnvName from=os}"
 	}
+`
+Headers:`
+	Content-Type: application/json
+	Authorization: Bearer {ENVIRONMENT key=FileEnvName from=.env}
 `
 ID:1
 Type:http
@@ -46,13 +59,16 @@ Response:`root
 method: GET
 url: /
 headers:
-  User-Agent: Go-http-client/1.1
-  Content-Length: 21
   Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+  Content-Length: 83
+  Authorization: Bearer file env 388aec93-4e25-42c4-b087-fdb63c2d1777
+  Content-Type: application/json
 cookies:
 body:
 {
-"name": "no fail"
+"varName": "variables"
+"envName": "os env 4ae3cc8c-ee66-44bb-a4bc-266c499ae22b"
 }`
 [\http_config]
 

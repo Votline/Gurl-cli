@@ -9,6 +9,11 @@ import (
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
+type chunker struct {
+	data []byte
+	done bool
+}
+
 var bufPool = sync.Pool{
 	New: func() any {
 		return new(bytes.Buffer)
@@ -135,4 +140,18 @@ func fastUUID(buf *[]byte) {
 	for i := 0; i < 12; i++ {
 		b[24+i] = hexChars[(u2>>(14+i*4))&0xf]
 	}
+}
+
+func (c *chunker) next() ([]byte, bool) {
+	if c.done {
+		return nil, false
+	}
+	idx := bytes.IndexByte(c.data, ',')
+	if idx == -1 {
+		c.done = true
+		return c.data, true
+	}
+	chunk := c.data[:idx]
+	c.data = c.data[idx+1:]
+	return chunk, true
 }

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -99,11 +98,15 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 				res := resB.Read()
 				execCfg := cfg.UnwrapExec()
 
-				applyWait(cfg, execCfg, log)
-
 				if ok := applyVars(cfg, vars, log); !ok {
 					break
 				}
+
+				if ok := applyEnvs(cfg, log); !ok {
+					break
+				}
+
+				applyWait(cfg, execCfg, log)
 
 				if impCfg, ok := cfg.(*config.ImportConfig); ok {
 					log.Debug("import config",
@@ -150,6 +153,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 				if id == parser.ExpectCrash {
 					cfg.Release()
 					resB.Write(res)
+					isCrashed = true
 					return
 				}
 
@@ -330,15 +334,11 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 		case config.RandomData:
 			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
 			copy(rawSnapshot, cfg.GetRaw(d.Key))
-			if d.End > len(rawSnapshot) || d.End > cap(rawSnapshot) {
-				log.Error("Invalid random data",
-					zap.String("op", op),
-					zap.String("key", d.Key),
-					zap.Int("start", d.Start),
-					zap.Int("end", d.End))
+
+			var instructionBytes []byte
+			if !getInstructionBytes(cfg, d, &instructionBytes, log) {
 				continue
 			}
-			instructionBytes := rawSnapshot[d.Start:d.End]
 
 			val := make([]byte, 36)
 			parser.ParseRandom(instructionBytes, &val)
@@ -362,7 +362,11 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 		case config.DataFromVariable:
 			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
 			copy(rawSnapshot, cfg.GetRaw(d.Key))
-			instructionBytes := rawSnapshot[d.Start:d.End]
+
+			var instructionBytes []byte
+			if !getInstructionBytes(cfg, d, &instructionBytes, log) {
+				continue
+			}
 
 			var key []byte
 			parser.GetVarKey(instructionBytes, &key)
@@ -396,7 +400,11 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 		case config.DataFromEnvironment:
 			rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
 			copy(rawSnapshot, cfg.GetRaw(d.Key))
-			from := rawSnapshot[d.Start:d.End]
+
+			var from []byte
+			if ok := getInstructionBytes(cfg, d, &from, log); !ok {
+				continue
+			}
 
 			var key []byte
 			parser.ParseEnv(&from, &key)
@@ -435,15 +443,18 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				}
 				defer file.Close()
 
-				scanner := bufio.NewScanner(file)
-
-				for scanner.Scan() {
-					line := scanner.Bytes()
-					parser.ParseEnvLine(line, key, &val)
-					if val != nil {
-						break
-					}
+				data, err := os.ReadFile(path)
+				if err != nil {
+					log.Error("Failed to read file",
+						zap.String("op", op),
+						zap.String("key", keyStr),
+						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
+						zap.Error(err))
+					continue
 				}
+
+				parser.SearchKey(data, key, &val)
+
 				if val == nil {
 					log.Error("Failed to get environment",
 						zap.String("op", op),
@@ -459,7 +470,8 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				zap.String("name", cfg.GetName()),
 				zap.Int("id", cfg.GetID()),
 				zap.String("key", keyStr),
-				zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
+				zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
+				zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
 
 			continue
 		}
@@ -495,10 +507,10 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 
 		val := bind.From(resp)
 
-		rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
-		copy(rawSnapshot, cfg.GetRaw(d.Key))
-
-		instructionBytes := rawSnapshot[d.Start:d.End]
+		var instructionBytes []byte
+		if !getInstructionBytes(cfg, d, &instructionBytes, log) {
+			continue
+		}
 
 		bind.To(cfg, d.Start, d.End, d.Key, val, instructionBytes)
 
@@ -506,8 +518,8 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 			zap.String("op", op),
 			zap.String("name", cfg.GetName()),
 			zap.String("key", d.Key),
-			zap.String("inst", string(instructionBytes)),
-			zap.String("val", string(val)))
+			zap.String("inst", unsafe.String(unsafe.SliceData(instructionBytes), len(instructionBytes))),
+			zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
 	}
 }
 
@@ -540,20 +552,43 @@ func applyVars(cfg config.Config, vars map[string][]byte, log *zap.Logger) bool 
 
 	gscanVars, err := gurlf.Scan(cfg.GetVars())
 	if err != nil {
-		log.Error("Failed to apply vars",
+		log.Error("Failed to scan vars",
 			zap.String("op", op),
 			zap.String("name", cfg.GetName()),
 			zap.Int("id", cfg.GetID()),
 			zap.Error(err))
 		return false
 	}
-	parser.ParseVars(gscanVars, vars)
+	parser.ApplyVars(gscanVars, vars)
 
 	log.Debug("set variables",
 		zap.String("op", op),
 		zap.String("name", cfg.GetName()),
 		zap.Int("id", cfg.GetID()),
 		zap.String("vars", unsafe.String(unsafe.SliceData(cfg.GetVars()), len(cfg.GetVars()))))
+
+	return true
+}
+
+func applyEnvs(cfg config.Config, log *zap.Logger) bool {
+	const op = "core.applyEnvs"
+
+	gscanEnvs, err := gurlf.Scan(cfg.GetEnvs())
+	if err != nil {
+		log.Error("Failed to scan envs",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.Int("id", cfg.GetID()),
+			zap.Error(err))
+		return false
+	}
+	parser.ApplyEnvs(gscanEnvs)
+
+	log.Debug("set environments",
+		zap.String("op", op),
+		zap.String("name", cfg.GetName()),
+		zap.Int("id", cfg.GetID()),
+		zap.String("envs", unsafe.String(unsafe.SliceData(cfg.GetEnvs()), len(cfg.GetEnvs()))))
 
 	return true
 }
@@ -567,21 +602,21 @@ func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Trans
 		err = trnsp.DoHTTP(v, res)
 		log.Debug("send http",
 			zap.String("op", op),
-			zap.String("url", string(v.URL)),
-			zap.String("method", string(v.Method)),
-			zap.String("body", string(v.Body)),
-			zap.String("headers", string(v.Headers)),
-			zap.String("cookie", string(v.CookieIn)))
+			zap.String("url", unsafe.String(unsafe.SliceData(v.URL), len(v.URL))),
+			zap.String("method", unsafe.String(unsafe.SliceData(v.Method), len(v.Method))),
+			zap.String("body", unsafe.String(unsafe.SliceData(v.Body), len(v.Body))),
+			zap.String("headers", unsafe.String(unsafe.SliceData(v.Headers), len(v.Headers))),
+			zap.String("cookie", unsafe.String(unsafe.SliceData(v.CookieIn), len(v.CookieIn))))
 
 	case *config.GRPCConfig:
 		log.Debug("send grpc",
 			zap.String("op", op),
-			zap.String("target", string(v.Target)),
-			zap.String("endpoint", string(v.Endpoint)),
-			zap.String("body", string(v.Data)),
-			zap.String("protoPath", string(v.ProtoPath)),
-			zap.String("importPaths", string(v.ImportPaths)),
-			zap.String("dialOpts", string(v.DialOpts)))
+			zap.String("target", unsafe.String(unsafe.SliceData(v.Target), len(v.Target))),
+			zap.String("endpoint", unsafe.String(unsafe.SliceData(v.Endpoint), len(v.Endpoint))),
+			zap.String("body", unsafe.String(unsafe.SliceData(v.Data), len(v.Data))),
+			zap.String("protoPath", unsafe.String(unsafe.SliceData(v.ProtoPath), len(v.ProtoPath))),
+			zap.String("importPaths", unsafe.String(unsafe.SliceData(v.ImportPaths), len(v.ImportPaths))),
+			zap.String("dialOpts", unsafe.String(unsafe.SliceData(v.DialOpts), len(v.DialOpts))))
 
 		err = transport.DoGRPC(v, res)
 	}
@@ -737,4 +772,27 @@ func prettyPrint(res *transport.Result) error {
 	}
 
 	return nil
+}
+
+func getInstructionBytes(cfg config.Config, d config.Dependency, buf *[]byte, log *zap.Logger) bool {
+	const op = "core.getInstructionBytes"
+
+	rawSnapshot := make([]byte, len(cfg.GetRaw(d.Key)))
+	copy(rawSnapshot, cfg.GetRaw(d.Key))
+
+	if d.Start > len(rawSnapshot) || d.End > len(rawSnapshot) {
+		log.Error("Invalid instruction",
+			zap.String("op", op),
+			zap.Int("id", cfg.GetID()),
+			zap.String("name", cfg.GetName()),
+			zap.String("key", d.Key),
+			zap.Int("start", d.Start),
+			zap.Int("end", d.End),
+			zap.Int("len", len(rawSnapshot)))
+		return false
+	}
+
+	*buf = rawSnapshot[d.Start:d.End]
+
+	return true
 }

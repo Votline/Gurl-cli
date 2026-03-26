@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 	"unsafe"
+
+	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
 const (
@@ -15,11 +18,6 @@ const (
 	ExpectDone  = -3
 	ExpectCrash = -4
 )
-
-type chunker struct {
-	data []byte
-	done bool
-}
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	for len(hdrs) != 0 {
@@ -362,16 +360,109 @@ func ParseExpect(expect []byte, resCode int) int {
 	return id
 }
 
-func (c *chunker) next() ([]byte, bool) {
-	if c.done {
-		return nil, false
+func ApplyVars(vars []gscan.Data, varsMap map[string][]byte) {
+	parseWithMap(vars, func(key string, val []byte, n string) {
+		if len(key) == 0 {
+			return
+		}
+		varsMap[key] = val
+	})
+}
+
+func ApplyEnvs(envs []gscan.Data) {
+	type entry struct {
+		key string
+		val []byte
 	}
-	idx := bytes.IndexByte(c.data, ',')
-	if idx == -1 {
-		c.done = true
-		return c.data, true
+
+	fileGroup := make(map[string][]entry)
+	parseWithMap(envs, func(key string, val []byte, name string) {
+		if len(key) == 0 {
+			return
+		}
+
+		if _, err := os.Stat(name); os.IsNotExist(err) {
+			os.Setenv(key, unsafe.String(unsafe.SliceData(val), len(val)))
+			return
+		}
+
+		fileGroup[name] = append(fileGroup[name], entry{key, val})
+	})
+
+	for name, entries := range fileGroup {
+		existingContent, _ := os.ReadFile(name)
+
+		for {
+			endIdx := bytes.IndexByte(existingContent, '\n')
+			if endIdx == -1 {
+				break
+			}
+			divIdx := bytes.IndexByte(existingContent, '=')
+			if divIdx == -1 {
+				break
+			}
+
+			key := unsafe.String(unsafe.SliceData(existingContent[:divIdx]), len(existingContent[:divIdx]))
+			val := existingContent[divIdx+1:]
+
+			found := false
+			for _, ent := range entries {
+				if ent.key == key {
+					found = true
+					break
+				}
+			}
+			// if key is not found in entries, it means that it's a new key
+			if !found {
+				entries = append(entries, entry{key, val})
+			}
+
+			existingContent = existingContent[endIdx+1:]
+		}
+
+		f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		if err != nil {
+			continue
+		}
+		defer f.Close()
+
+		for _, ent := range entries {
+			f.WriteString(ent.key)
+			f.WriteString("=")
+			f.Write(ent.val)
+			f.WriteString("\n")
+		}
 	}
-	chunk := c.data[:idx]
-	c.data = c.data[idx+1:]
-	return chunk, true
+}
+
+func parseWithMap(data []gscan.Data, yield func(string, []byte, string)) {
+	for _, v := range data {
+		for _, ent := range v.Entries {
+			if ent.ValEnd == 0 {
+				continue
+			}
+			kS := ent.KeyStart
+			for kS < len(v.RawData) && isSpace(v.RawData[kS]) {
+				kS++
+			}
+			kE := ent.KeyEnd
+			for kE > kS && (isSpace(v.RawData[kE-1]) || v.RawData[kE-1] == '}') {
+				kE--
+			}
+
+			vS := ent.ValStart
+			for vS < len(v.RawData) && isSpace(v.RawData[vS]) {
+				vS++
+			}
+			vE := ent.ValEnd
+			for vE > vS && (isSpace(v.RawData[vE-1]) || v.RawData[vE-1] == '}') {
+				vE--
+			}
+
+			key := unsafe.String(unsafe.SliceData(v.RawData[kS:kE]), kE-kS)
+			val := v.RawData[vS:vE]
+			name := unsafe.String(unsafe.SliceData(v.Name), len(v.Name))
+			yield(key, val, name)
+		}
+	}
 }

@@ -3,9 +3,6 @@ package parser
 import (
 	"bytes"
 	"math/rand"
-	"unsafe"
-
-	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
 func ParseRandom(inst []byte, buf *[]byte) {
@@ -87,37 +84,6 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	*buf = (*buf)[:length]
 }
 
-func ParseVars(vars []gscan.Data, varsMap map[string][]byte) {
-	for _, v := range vars {
-		for _, ent := range v.Entries {
-			if ent.ValEnd == 0 {
-				continue
-			}
-			kS := ent.KeyStart
-			for kS < len(v.RawData) && isSpace(v.RawData[kS]) {
-				kS++
-			}
-			kE := ent.KeyEnd
-			for kE > kS && (isSpace(v.RawData[kE-1]) || v.RawData[kE-1] == '}') {
-				kE--
-			}
-
-			vS := ent.ValStart
-			for vS < len(v.RawData) && isSpace(v.RawData[vS]) {
-				vS++
-			}
-			vE := ent.ValEnd
-			for vE > vS && (isSpace(v.RawData[vE-1]) || v.RawData[vE-1] == '}') {
-				vE--
-			}
-
-			key := unsafe.String(unsafe.SliceData(v.RawData[kS:kE]), kE-kS)
-			val := v.RawData[vS:vE]
-			varsMap[key] = val
-		}
-	}
-}
-
 func GetVarKey(inst []byte, key *[]byte) {
 	if len(inst) == 0 {
 		*key = nil
@@ -191,38 +157,69 @@ func ParseEnv(val *[]byte, key *[]byte) {
 	*val = inst[start:end]
 }
 
-func ParseEnvLine(line []byte, key []byte, val *[]byte) {
-	if len(line) == 0 {
+func SearchKey(data, key []byte, val *[]byte) {
+	if len(data) == 0 {
+		*val = nil
 		return
 	}
 
-	idx := bytes.Index(line, key)
+	idx := bytes.Index(data, key)
 	if idx == -1 {
+		*val = nil
 		return
 	}
 	idx += len(key)
 
-	for idx < len(line) && isSpace(line[idx]) {
+	for idx < len(data) && isSpace(data[idx]) {
 		idx++
 	}
-	if idx == len(line) {
+	if idx == len(data) {
+		*val = nil
 		return
 	}
 
-	start := bytes.IndexByte(line[idx:], '=')
+	start := bytes.IndexByte(data[idx:], '=')
 	if start == -1 {
+		*val = nil
 		return
 	}
 	start += idx + 1 // skip '='
 
-	for start < len(line) && (isSpace(line[start]) || line[start] == '"') {
-		start++
+	var end int
+
+	if data[start] == '"' {
+		start++ // skip '"'
+
+		seacrhFrom := start
+		for {
+			relIdx := bytes.IndexByte(data[seacrhFrom:], '"')
+			if relIdx == -1 {
+				end = len(data)
+				break
+			}
+
+			absIdx := seacrhFrom + relIdx
+
+			if absIdx > start && data[absIdx-1] == '\\' {
+				seacrhFrom = absIdx + 1
+				continue
+			}
+
+			end = absIdx
+			break
+		}
+	} else {
+		relEnd := bytes.IndexByte(data[start:], '\n')
+		if relEnd == -1 {
+			end = len(data)
+		} else {
+			end = start + relEnd
+		}
 	}
 
-	end := len(line)
-	for end > start && (isSpace(line[end-1]) || line[end-1] == '"') {
+	for end > start && isSpace(data[end-1]) {
 		end--
 	}
 
-	*val = line[start:end]
+	*val = data[start:end]
 }
