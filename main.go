@@ -1,14 +1,71 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"os"
+	"slices"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"gcli/internal/core"
 )
+
+const helpMsg = `
+Usage: gcli <command> <args>
+
+Commands:
+	run <path>               Run config file
+	create <path> <type>     Create config file
+	help                     Show help
+	args:
+		-ic, --ignore-cert   Ignores site certificates
+		-dp, --disable-print Disable printing response
+		-d   --debug         Set debug log level
+`
+
+func parseArgs() (string, string, bool, bool, bool, bool, error) {
+	const op = "main.parseArgs"
+
+	var cfgType, cfgPath string
+	var cfgCreate, ignoreCert, disPrint, debug bool
+
+	args := os.Args[1:]
+	command := args[0]
+
+	switch command {
+	case "run", "r", "--run", "-r":
+		if len(args) < 2 {
+			return "", "",
+				false, false, false, false,
+				fmt.Errorf("%s: Usage: gcli run <path> <args>", op)
+		}
+		cfgPath = args[1]
+
+		ignoreCert = slices.Contains(args, "-ic") || slices.Contains(args, "--ignore-cert")
+		disPrint = slices.Contains(args, "-dp") || slices.Contains(args, "--disable-print")
+	case "create", "c", "--create", "-c":
+		if len(args) <= 2 {
+			return "", "",
+				false, false, false, false,
+				fmt.Errorf("%s: Usage: gcli create <path> <type>", op)
+		}
+		cfgPath = args[1]
+		cfgType = args[2]
+		cfgCreate = true
+	case "help", "h", "--help", "-h":
+		fmt.Print(helpMsg)
+		return "", "", false, false, false, false, nil
+	default:
+		return "", "",
+			false, false, false, false,
+			fmt.Errorf("%s: Unknown command: %s", op, command)
+	}
+
+	debug = slices.Contains(args, "-d") || slices.Contains(args, "-dbg") || slices.Contains(args, "--debug")
+
+	return cfgType, cfgPath, cfgCreate, ignoreCert, disPrint, debug, nil
+}
 
 func main() {
 	cfg := zap.NewDevelopmentConfig()
@@ -19,22 +76,16 @@ func main() {
 	cfg.EncoderConfig.ConsoleSeparator = " | "
 	lvl := zapcore.ErrorLevel
 
-	cfgCreate := flag.Bool("config-create", false, "Creates config by type. Defaul HTTP")
+	cfgType, cfgPath, cfgCreate, ignoreCert, disPrint, debug, err := parseArgs()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if cfgPath == "" { // means "help" command
+		return
+	}
 
-	ignoreCert := flag.Bool("ignore-cert", false, "Ignores site certificates")
-	ignoreCert = flag.Bool("ic", false, "Ignores site certificates")
-
-	cfgType := flag.String("type", "http", "Sets the request type in the configuration file(type field in .json")
-
-	defPath, _ := os.Getwd()
-	cfgPath := flag.String("config", defPath, "Specifies the name and path for creating the config")
-
-	dbg := flag.Bool("debug", false, "Set debug log level")
-	disPrint := flag.Bool("disablePrint", false, "Disable printing response")
-
-	flag.Parse()
-
-	if *dbg {
+	if debug {
 		lvl = zapcore.DebugLevel
 	}
 	cfg.Level = zap.NewAtomicLevelAt(lvl)
@@ -42,7 +93,7 @@ func main() {
 	log, _ := cfg.Build()
 	defer log.Sync()
 
-	if err := core.Start(*cfgType, *cfgPath, *cfgCreate, *ignoreCert, *disPrint, log); err != nil {
+	if err := core.Start(cfgType, cfgPath, cfgCreate, ignoreCert, disPrint, log); err != nil {
 		log.Error("failed", zap.Error(err))
 	}
 }
