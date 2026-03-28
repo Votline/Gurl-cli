@@ -14,9 +14,9 @@ func Create(cType, cPath string) error {
 	var err error
 	switch cType {
 	case "http":
-		d, err = cHttp()
+		d, err = cHTTP()
 	case "grpc":
-		d, err = cGrpc()
+		d, err = cGRPC()
 	case "repeat":
 		d, err = cRepeat()
 	case "mixed":

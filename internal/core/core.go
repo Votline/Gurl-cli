@@ -63,11 +63,11 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 	}
 
 	resHub := make([]*transport.Result, 0, len(sData))
-	cfgFileBuf := buffer.NewRb[config.Config]()
-	rb := buffer.NewRb[config.Config]()
-	resB := buffer.NewRb[*transport.Result]()
+	cfgFileRBuf := buffer.NewRb[config.Config]()
+	parserRBuf := buffer.NewRb[config.Config]()
+	transportRBuf := buffer.NewRb[*transport.Result]()
 	resPrintBuf := buffer.NewRb[*transport.Result]()
-	trnsp := transport.NewTransport(resB.Write)
+	trnsp := transport.NewTransport(transportRBuf.Write)
 
 	if disablePrint {
 		resPrintBuf = buffer.NewNop[*transport.Result]()
@@ -77,11 +77,11 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 	var globalErr error
 	var wg sync.WaitGroup
 	wg.Go(func() {
-		defer cfgFileBuf.Close()
+		defer cfgFileRBuf.Close()
 		defer resPrintBuf.Close()
 
 		for {
-			cfg := rb.Read()
+			cfg := parserRBuf.Read()
 			if cfg == nil {
 				break
 			}
@@ -95,7 +95,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 
 				applyDeps(cfg, &resHub, vars, log)
 
-				res := resB.Read()
+				res := transportRBuf.Read()
 				execCfg := cfg.UnwrapExec()
 
 				if ok := applyVars(cfg, vars, log); !ok {
@@ -139,27 +139,27 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 
 				if !isCrashed {
 					cfgToFile.Update(res.Raw, res.Cookie)
-					cfgFileBuf.Write(cfgToFile)
+					cfgFileRBuf.Write(cfgToFile)
 				}
 
 				if id == parser.ExpectDone && !isCrashed {
 					break
 				} else if id == parser.ExpectDone && isCrashed {
 					cfg.Release()
-					resB.Write(res)
+					transportRBuf.Write(res)
 					return
 				}
 
 				if id == parser.ExpectCrash {
 					cfg.Release()
-					resB.Write(res)
+					transportRBuf.Write(res)
 					isCrashed = true
 					return
 				}
 
 				if isCrashed {
 					cfg.Release()
-					resB.Write(res)
+					transportRBuf.Write(res)
 					return
 				}
 
@@ -175,110 +175,112 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 						zap.Int("target", id),
 						zap.Error(err))
 					cfg.Release()
-					resB.Write(res)
+					transportRBuf.Write(res)
 					break
 				}
 
 				cfg.Release()
-				resB.Write(res)
+				transportRBuf.Write(res)
 				cfg = nextCfg
 				cfg.SetEnd(origEnd)
 			}
 		}
 	})
 
-	wg.Go(func() {
-		cnt, bufSize := 0, 5
-		var buf bytes.Buffer
-		var pendingOffset int64
-		var cfg config.Config
+	if !soloCfg {
+		wg.Go(func() {
+			cnt, bufSize := 0, 5
+			var buf bytes.Buffer
+			var pendingOffset int64
+			var cfg config.Config
 
-		tmpPath := cPath + ".out.tmp"
-		f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-		if err != nil {
-			log.Fatal("Failed to open file",
-				zap.String("op", op),
-				zap.String("path", cPath),
-				zap.Error(err))
-		}
-		defer func() {
-			if r := recover(); r != nil {
-				log.Error("Recovered from panic",
-					zap.String("op", op),
-					zap.Any("recovered", r))
-				copyTail(f, cPath, &buf, pendingOffset, log)
-			} else if isCrashed {
-				log.Debug("Copy tail after jump",
-					zap.String("op", op),
-					zap.String("path", cPath))
-				copyTail(f, cPath, &buf, pendingOffset, log)
-			}
-
-			flush(&buf, f)
-
-			if err := f.Sync(); err != nil {
-				log.Error("Failed to sync file",
+			tmpPath := cPath + ".out.tmp"
+			f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+			if err != nil {
+				log.Fatal("Failed to open file",
 					zap.String("op", op),
 					zap.String("path", cPath),
 					zap.Error(err))
 			}
-
-			f.Close()
-			if err := os.Rename(tmpPath, cPath); err != nil {
-				log.Error("Failed to rename file",
-					zap.String("op", op),
-					zap.String("path to", cPath),
-					zap.String("path from", tmpPath),
-					zap.Error(err))
-			}
-		}()
-
-		for {
-			cfg = cfgFileBuf.Read()
-			if cfg == nil {
-				return
-			}
-
-			data, err := gurlf.Marshal(cfg)
-			if err != nil {
-				cfg.ReleaseClone()
-				log.Error("Failed to Marshal config",
-					zap.String("op", op),
-					zap.Error(err))
-				continue
-			}
-
-			log.Debug("marshaled config",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()))
-
-			buf.Write(data)
-			cnt++
-			pendingOffset = int64(cfg.GetEnd())
-
-			log.Debug("wrote config",
-				zap.String("op", op),
-				zap.String("name", cfg.GetName()),
-				zap.Int("size", cnt),
-				zap.Int64("pendingOffset", pendingOffset))
-
-			cfg.ReleaseClone()
-
-			if cnt == bufSize {
-				cnt = 0
-				if err := flush(&buf, f); err != nil {
-					log.Error("failed to flush buffer",
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error("Recovered from panic",
 						zap.String("op", op),
+						zap.Any("recovered", r))
+					copyTail(f, cPath, &buf, pendingOffset, log)
+				} else if isCrashed {
+					log.Debug("Copy tail after jump",
+						zap.String("op", op),
+						zap.String("path", cPath))
+					copyTail(f, cPath, &buf, pendingOffset, log)
+				}
+
+				flush(&buf, f)
+
+				if err := f.Sync(); err != nil {
+					log.Error("Failed to sync file",
+						zap.String("op", op),
+						zap.String("path", cPath),
 						zap.Error(err))
 				}
 
-				log.Debug("flushed buffer",
+				f.Close()
+				if err := os.Rename(tmpPath, cPath); err != nil {
+					log.Error("Failed to rename file",
+						zap.String("op", op),
+						zap.String("path to", cPath),
+						zap.String("path from", tmpPath),
+						zap.Error(err))
+				}
+			}()
+
+			for {
+				cfg = cfgFileRBuf.Read()
+				if cfg == nil {
+					return
+				}
+
+				data, err := gurlf.Marshal(cfg)
+				if err != nil {
+					cfg.ReleaseClone()
+					log.Error("Failed to Marshal config",
+						zap.String("op", op),
+						zap.Error(err))
+					continue
+				}
+
+				log.Debug("marshaled config",
 					zap.String("op", op),
 					zap.String("name", cfg.GetName()))
 
+				buf.Write(data)
+				cnt++
+				pendingOffset = int64(cfg.GetEnd())
+
+				log.Debug("wrote config",
+					zap.String("op", op),
+					zap.String("name", cfg.GetName()),
+					zap.Int("size", cnt),
+					zap.Int64("pendingOffset", pendingOffset))
+
+				cfg.ReleaseClone()
+
+				if cnt == bufSize {
+					cnt = 0
+					if err := flush(&buf, f); err != nil {
+						log.Error("failed to flush buffer",
+							zap.String("op", op),
+							zap.Error(err))
+					}
+
+					log.Debug("flushed buffer",
+						zap.String("op", op),
+						zap.String("name", cfg.GetName()))
+
+				}
 			}
-		}
-	})
+		})
+	}
 
 	if !disablePrint {
 		wg.Go(func() {
@@ -297,10 +299,10 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 		})
 	}
 
-	if err := parser.ParseStream(&sData, rb.Write, log); err != nil {
+	if err := parser.ParseStream(&sData, parserRBuf.Write, log); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	rb.Close()
+	parserRBuf.Close()
 
 	wg.Wait()
 
