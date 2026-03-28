@@ -287,6 +287,10 @@ func ParseWait(wait []byte) time.Duration {
 		return Error
 	}
 
+	if wait[len(wait)-2] == 'm' && wait[len(wait)-1] == 's' {
+		return time.Duration(d) * time.Millisecond
+	}
+
 	switch wait[len(wait)-1] {
 	case 's':
 		return time.Duration(d) * time.Second

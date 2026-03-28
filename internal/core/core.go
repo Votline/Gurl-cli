@@ -18,6 +18,7 @@ import (
 	"gcli/internal/transport"
 
 	"github.com/Votline/Gurlf"
+	gscan "github.com/Votline/Gurlf/pkg/scanner"
 	"go.uber.org/zap"
 )
 
@@ -57,9 +58,21 @@ func Start(cType, cPath string, cCreate, ic, disablePrint bool, log *zap.Logger)
 func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
-	sData, err := gurlf.ScanFile(cPath)
-	if err != nil {
-		return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
+	var sData []gscan.Data
+	soloCfg := false
+
+	if _, err := os.Stat(cPath); err == nil {
+		sData, err = gurlf.ScanFile(cPath)
+		if err != nil {
+			return fmt.Errorf("%s: scan file %q: %w", op, cPath, err)
+		}
+	} else {
+		oneCfg := unsafe.Slice(unsafe.StringData(cPath), len(cPath))
+		sData, err = gurlf.Scan(oneCfg)
+		if err != nil {
+			return fmt.Errorf("%s: scan %q: %w", op, cPath, err)
+		}
+		soloCfg = true
 	}
 
 	resHub := make([]*transport.Result, 0, len(sData))
@@ -68,6 +81,10 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 	transportRBuf := buffer.NewRb[*transport.Result]()
 	resPrintBuf := buffer.NewRb[*transport.Result]()
 	trnsp := transport.NewTransport(transportRBuf.Write)
+
+	if soloCfg {
+		cfgFileRBuf = buffer.NewNop[config.Config]()
+	}
 
 	if disablePrint {
 		resPrintBuf = buffer.NewNop[*transport.Result]()
