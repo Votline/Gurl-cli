@@ -122,3 +122,20 @@ func BenchmarkEqualFold(b *testing.B) {
 		equalFold([]byte("path"), "path")
 	}
 }
+
+func TestFastUUID(t *testing.T) {
+	buf := make([]byte, 36)
+
+	fastUUID(&buf)
+	if len(buf) != 36 {
+		t.Errorf("expected 36 bytes, but got %d", len(buf))
+	}
+}
+
+func BenchmarkFastUUID(b *testing.B) {
+	buf := make([]byte, 36)
+	b.ResetTimer()
+	for b.Loop() {
+		fastUUID(&buf)
+	}
+}

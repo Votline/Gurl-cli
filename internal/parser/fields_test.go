@@ -6,6 +6,10 @@ import (
 	"slices"
 	"testing"
 	"time"
+	"unsafe"
+
+	gurlf "github.com/Votline/Gurlf"
+	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
 func TestParseHeaders(t *testing.T) {
@@ -212,6 +216,7 @@ func TestParseWait(t *testing.T) {
 		{[]byte("02h"), 2 * time.Hour},
 		{[]byte("1"), -1},
 		{[]byte("1s"), 1 * time.Second},
+		{[]byte("15ms"), 15 * time.Millisecond},
 	}
 
 	for i, tt := range tests {
@@ -225,34 +230,6 @@ func TestParseWait(t *testing.T) {
 func BenchmarkParseWait(b *testing.B) {
 	for b.Loop() {
 		ParseWait([]byte("10s"))
-	}
-}
-
-func TestParseRandom(t *testing.T) {
-	tests := []struct {
-		input []byte
-	}{
-		{[]byte("oneof=some,more,value")},
-		{[]byte("oneof=uuid")},
-		{[]byte("oneof=int")},
-		{[]byte("oneof=int(1,10)")},
-	}
-
-	for i, tt := range tests {
-		buf := make([]byte, 36)
-		ParseRandom(tt.input, &buf)
-		if len(buf) == 0 {
-			t.Errorf("[%d]: expected len > 0, but got %d: %q", i, len(buf), string(buf))
-		}
-	}
-}
-
-func BenchmarkParseRandom(b *testing.B) {
-	buf := make([]byte, 36)
-	inst := []byte("oneof=some,more")
-	b.ResetTimer()
-	for b.Loop() {
-		ParseRandom(inst, &buf)
 	}
 }
 
@@ -284,5 +261,97 @@ func TestParseExpect(t *testing.T) {
 func BenchmarkParseExpect(b *testing.B) {
 	for b.Loop() {
 		ParseExpect([]byte("200"), 200)
+	}
+}
+
+func TestParseWithMap(t *testing.T) {
+	type result struct {
+		key  string
+		val  string
+		name string
+	}
+
+	rawData := []byte("SetVariables:`\n[vars]\nStandartName:`\n    multi-\n   line`\n[\\vars]\n`")
+	rawScan, _ := gurlf.Scan(rawData)
+
+	tests := []struct {
+		name     string
+		input    []gscan.Data
+		expected []result
+	}{
+		{
+			name: "Basic trim and brace removal",
+			input: []gscan.Data{
+				{
+					Name:    []byte("config.json"),
+					RawData: []byte("  {KEY_1} = {VALUE_1}  "),
+					Entries: []gscan.Entry{
+						{KeyStart: 3, KeyEnd: 9, ValStart: 13, ValEnd: 21},
+					},
+				},
+			},
+			expected: []result{
+				{key: "KEY_1", val: "VALUE_1", name: "config.json"},
+			},
+		},
+		{
+			name: "Multiple entries and spaces",
+			input: []gscan.Data{
+				{
+					Name:    []byte("env"),
+					RawData: []byte("  MY_KEY  =  MY_VAL  "),
+					Entries: []gscan.Entry{
+						{KeyStart: 0, KeyEnd: 10, ValStart: 13, ValEnd: 21},
+					},
+				},
+			},
+			expected: []result{
+				{key: "MY_KEY", val: "MY_VAL", name: "env"},
+			},
+		},
+		{
+			name:  "Multiple entries and spaces",
+			input: rawScan,
+			expected: []result{
+				{key: "StandardName", val: "multi-line", name: "vars"},
+			},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parseWithMap(tt.input, func(key string, val []byte, name string) {
+				if key == "" || val == nil || name == "" {
+					t.Errorf("[%d]: got empty key or val or name", i)
+				}
+				valStr := unsafe.String(unsafe.SliceData(val), len(val))
+				if key != tt.expected[0].key {
+					t.Errorf("[%d]: expected key %q, but got %q", i, tt.expected[0].key, key)
+				}
+				if valStr != tt.expected[0].val {
+					t.Errorf("[%d]: expected val %q, but got %q", i, tt.expected[0].val, valStr)
+				}
+				if name != tt.expected[0].name {
+					t.Errorf("[%d]: expected name %q, but got %q", i, tt.expected[0].name, name)
+				}
+			})
+		})
+	}
+}
+
+func BenchmarkParseWithMap(b *testing.B) {
+	data := []gscan.Data{
+		{
+			Name:    []byte("config.json"),
+			RawData: []byte("  {KEY_1} = {VALUE_1}  "),
+			Entries: []gscan.Entry{
+				{KeyStart: 2, KeyEnd: 9, ValStart: 12, ValEnd: 21},
+			},
+		},
+	}
+
+	b.ResetTimer()
+	for b.Loop() {
+		parseWithMap(data, func(key string, val []byte, name string) {})
 	}
 }

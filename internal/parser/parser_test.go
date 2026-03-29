@@ -215,3 +215,25 @@ func BenchmarkApplyReplace(b *testing.B) {
 		}
 	}
 }
+
+func TestParseFindConfig(t *testing.T) {
+	config.Init()
+	d, _ := gurlf.Scan(raw)
+
+	var cfg config.Config = &config.HTTPConfig{}
+	if err := ParseFindConfig(&d, &cfg, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	cfg.Release()
+}
+
+func BenchmarkParseFindConfig(b *testing.B) {
+	config.Init()
+	d, _ := gurlf.Scan(raw)
+
+	var cfg config.Config = &config.HTTPConfig{}
+	for b.Loop() {
+		ParseFindConfig(&d, &cfg, 0)
+		cfg.Release()
+	}
+}

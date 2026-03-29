@@ -106,55 +106,68 @@ func GetVarKey(inst []byte, key *[]byte) {
 		end--
 	}
 
-	*key = inst[start:end]
-}
-
-func ParseEnv(val *[]byte, key *[]byte) {
-	inst := *val
-
-	if len(inst) == 0 {
+	if start == end {
 		*key = nil
 		return
 	}
 
-	start := bytes.IndexByte(inst, '=')
+	*key = inst[start:end]
+}
+
+func ParseEnv(val *[]byte, key *[]byte) {
+	if len((*val)) == 0 {
+		*key = nil
+		return
+	}
+
+	start := bytes.IndexByte((*val), '=')
 	if start == -1 {
 		*key = nil
 		return
 	}
 	start++ // skip '='
 
-	for start < len(inst) && isSpace(inst[start]) {
+	for start < len((*val)) && isSpace((*val)[start]) {
 		start++
 	}
 
-	end := bytes.IndexByte(inst[start:], ' ')
+	end := bytes.IndexByte((*val)[start:], ' ')
 
-	for end > start && isSpace(inst[end-1]) {
+	for end > start && isSpace((*val)[end-1]) {
 		end--
 	}
 	end += start
 
-	*key = inst[start:end]
+	if start == end || end < start || end > len((*val)) {
+		*key = nil
+		return
+	}
 
-	inst = inst[end:]
-	start = bytes.IndexByte(inst, '=')
+	*key = (*val)[start:end]
+
+	(*val) = (*val)[end:]
+	start = bytes.IndexByte((*val), '=')
 	if start == -1 {
 		*val = nil
 		return
 	}
 	start++ // skip '='
 
-	for start < len(inst) && isSpace(inst[start]) {
+	for start < len((*val)) && isSpace((*val)[start]) {
 		start++
 	}
 
-	end = len(inst)
-	for end > start && (isSpace(inst[end-1]) || inst[end-1] == '}') {
+	end = len((*val))
+	for end > start && (isSpace((*val)[end-1]) || (*val)[end-1] == '}') {
 		end--
 	}
 
-	*val = inst[start:end]
+	if start == end || end < start || end > len((*val)) {
+		*key = nil
+		return
+	}
+
+	*val = (*val)[start:end]
 }
 
 func SearchKey(data, key []byte, val *[]byte) {
@@ -200,9 +213,13 @@ func SearchKey(data, key []byte, val *[]byte) {
 
 			absIdx := seacrhFrom + relIdx
 
-			if absIdx > start && data[absIdx-1] == '\\' {
-				seacrhFrom = absIdx + 1
-				continue
+			if absIdx > start {
+				if absIdx-1 >= 0 && data[absIdx-1] == '\\' {
+					if absIdx-2 >= 0 && data[absIdx-2] != '\\' {
+						seacrhFrom = absIdx + 1
+						continue
+					}
+				}
 			}
 
 			end = absIdx
