@@ -9,7 +9,7 @@ import (
 	"time"
 	"unsafe"
 
-	"gcli/internal/config"
+	"github.com/Votline/Gurl-cli/internal/config"
 
 	"github.com/Votline/Gurlf"
 	"github.com/jhump/protoreflect/desc"

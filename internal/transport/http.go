@@ -12,8 +12,8 @@ import (
 	"time"
 	"unsafe"
 
-	"gcli/internal/config"
-	"gcli/internal/parser"
+	"github.com/Votline/Gurl-cli/internal/config"
+	"github.com/Votline/Gurl-cli/internal/parser"
 )
 
 var builderPool = sync.Pool{

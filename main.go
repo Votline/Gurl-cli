@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"gcli/internal/core"
+	"github.com/Votline/Gurl-cli/internal/core"
 )
 
 const helpMsg = `

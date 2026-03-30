@@ -3,7 +3,7 @@ package config
 import (
 	"unsafe"
 
-	"gcli/internal/buffer"
+	"github.com/Votline/Gurl-cli/internal/buffer"
 )
 
 const (

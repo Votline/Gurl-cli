@@ -1,4 +1,4 @@
-module gcli
+module github.com/Votline/Gurl-cli
 
 go 1.25.5
 

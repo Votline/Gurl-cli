@@ -12,10 +12,10 @@ import (
 	"time"
 	"unsafe"
 
-	"gcli/internal/buffer"
-	"gcli/internal/config"
-	"gcli/internal/parser"
-	"gcli/internal/transport"
+	"github.com/Votline/Gurl-cli/internal/buffer"
+	"github.com/Votline/Gurl-cli/internal/config"
+	"github.com/Votline/Gurl-cli/internal/parser"
+	"github.com/Votline/Gurl-cli/internal/transport"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"gcli/internal/config"
+	"github.com/Votline/Gurl-cli/internal/config"
 
 	"github.com/Votline/Gurlf"
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
