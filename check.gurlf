@@ -34,10 +34,10 @@ headers:
 cookies:
 body:
 {
-"name": "116f458c-84c1-4cf6-8b38-7d2f57fe5886",
+"name": "33a0a3d0-eaf8-4ed3-a240-a3456cc49445",
 "role": "teacher",
-"age":  "26",
-"money":"8378667254371133681"
+"age":  "21",
+"money":"4115663665921063509"
 }`
 [\http_config]
 
@@ -68,7 +68,7 @@ cookies:
 body:
 {
 "varName": "variables"
-"envName": "os env 0c3edb99-6172-4634-97a7-f47348407f2a"
+"envName": "os env bf7889c1-c9ff-4fb4-80cf-245b5e22c4fd"
 }`
 [\http_config]
 

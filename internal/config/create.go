@@ -19,6 +19,8 @@ func Create(cType, cPath string) error {
 		d, err = cGRPC()
 	case "repeat":
 		d, err = cRepeat()
+	case "import":
+		d, err = cImport()
 	case "mixed":
 		d, err = cMix()
 	default:
@@ -38,25 +40,36 @@ func Create(cType, cPath string) error {
 	return gurlf.Encode(f, d)
 }
 
-func cHttp() ([]byte, error) {
+func cHTTP() ([]byte, error) {
 	base := defBase()
 	c := HTTPConfig{BaseConfig: *base}
 	return gurlf.Marshal(c)
 }
-func cGrpc() ([]byte, error) {
+
+func cGRPC() ([]byte, error) {
 	base := defBase()
 	base.Type = "grpc"
 	base.Name = "grpc_config"
 	c := GRPCConfig{BaseConfig: *base}
 	return gurlf.Marshal(&c)
 }
+
 func cRepeat() ([]byte, error) {
 	base := defBase()
 	base.Type = "repeat"
 	base.Name = "repeat_config"
 	c := &RepeatConfig{BaseConfig: *base}
-	return gurlf.Marshal(&c)
+	return gurlf.Marshal(c)
 }
+
+func cImport() ([]byte, error) {
+	base := defBase()
+	base.Type = "import"
+	base.Name = "import_config"
+	c := &ImportConfig{BaseConfig: *base}
+	return gurlf.Marshal(c)
+}
+
 func cMix() ([]byte, error) {
 	base := defBase()
 	httpCfg := HTTPConfig{BaseConfig: *base}
