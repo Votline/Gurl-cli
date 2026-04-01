@@ -72,8 +72,10 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 	}
 
 	msg := dynamic.NewMessage(mthd.GetInputType())
-	if err := msg.UnmarshalJSON(c.Data); err != nil {
-		return Result{}, fmt.Errorf("%s: unmarshal body: %w", op, err)
+	if len(c.Data) > 0 {
+		if err := msg.UnmarshalJSON(c.Data); err != nil {
+			return Result{}, fmt.Errorf("%s: unmarshal body: %w", op, err)
+		}
 	}
 
 	stub := grpcdynamic.NewStub(conn)
@@ -146,8 +148,10 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 	}
 
 	msg := dynamic.NewMessage(mthd.GetInputType())
-	if err := msg.UnmarshalJSON(c.Data); err != nil {
-		return Result{}, fmt.Errorf("%s: unmarshal body: %w", op, err)
+	if len(c.Data) > 0 {
+		if err := msg.UnmarshalJSON(c.Data); err != nil {
+			return Result{}, fmt.Errorf("%s: unmarshal body: %w", op, err)
+		}
 	}
 
 	stub := grpcdynamic.NewStub(conn)
