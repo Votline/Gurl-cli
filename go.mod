@@ -3,7 +3,7 @@ module github.com/Votline/Gurl-cli
 go 1.25.5
 
 require (
-	github.com/Votline/Gurlf v1.2.1-0.20260218184901-bfa19cd86806
+	github.com/Votline/Gurlf v1.2.1-0.20260331065503-d049f1ef841e
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.18.0
 	go.uber.org/zap v1.27.1
