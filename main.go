@@ -22,6 +22,13 @@ Commands:
 		-ic, --ignore-cert   Ignores site certificates
 		-dp, --disable-print Disable printing response
 		-d   --debug         Set debug log level
+Aliases:
+	run: r -r run --run
+	create: c -c create --create
+	help: h -h help --help
+	ic: -ic --ignore-cert
+	dp: -dp --disable-print
+	d: -d -dbg --debug
 `
 
 func parseArgs() (string, string, bool, bool, bool, bool, error) {
@@ -29,6 +36,11 @@ func parseArgs() (string, string, bool, bool, bool, bool, error) {
 
 	var cfgType, cfgPath string
 	var cfgCreate, ignoreCert, disPrint, debug bool
+
+	if len(os.Args) < 2 {
+		fmt.Print(helpMsg)
+		return "", "", false, false, false, false, nil
+	}
 
 	args := os.Args[1:]
 	command := args[0]
