@@ -14,6 +14,7 @@ import (
 
 	"github.com/Votline/Gurl-cli/internal/config"
 	"github.com/Votline/Gurl-cli/internal/parser"
+	"go.uber.org/zap"
 )
 
 var builderPool = sync.Pool{
@@ -38,20 +39,21 @@ type Result struct {
 type Transport struct {
 	jar map[string]string
 	cl  *http.Client
+	log *zap.Logger
 }
 
-func NewTransport(putRes func(*Result)) *Transport {
+func NewTransport(putRes func(*Result), log *zap.Logger) *Transport {
 	for i := 0; i < 10; i++ {
 		putRes(&Result{})
 	}
 	client := &http.Client{
 		Jar: nil,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
 		},
 	}
 
-	return &Transport{jar: map[string]string{}, cl: client}
+	return &Transport{jar: map[string]string{}, cl: client, log: log}
 }
 
 func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
@@ -65,7 +67,12 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := t.clientDo(req, c, false)
+	ic := c.GetIgnrCrt() != nil
+	if bytes.Equal(c.GetIgnrCrt(), []byte("false")) {
+		ic = false
+	}
+
+	res, err := t.clientDo(req, c, ic)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -126,6 +133,13 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (
 	if ic {
 		t.cl.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		t.log.Warn("InsecureSkipVerify is true",
+			zap.String("op", op),
+			zap.String("url", req.URL.String()))
+	} else {
+		t.cl.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
 		}
 	}
 

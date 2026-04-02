@@ -46,7 +46,7 @@ var depBindings = map[string]DepBindigs{
 	},
 }
 
-func Start(cType, cPath string, cCreate, ic, disablePrint bool, log *zap.Logger) error {
+func Start(cType, cPath string, cCreate, disablePrint bool, log *zap.Logger) error {
 	if cCreate {
 		return config.Create(cType, cPath)
 	}
@@ -80,7 +80,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 	parserRBuf := buffer.NewRb[config.Config]()
 	transportRBuf := buffer.NewRb[*transport.Result]()
 	resPrintBuf := buffer.NewRb[*transport.Result]()
-	trnsp := transport.NewTransport(transportRBuf.Write)
+	trnsp := transport.NewTransport(transportRBuf.Write, log)
 
 	if soloCfg {
 		cfgFileRBuf = buffer.NewNop[config.Config]()
@@ -122,6 +122,8 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 				if ok := applyEnvs(cfg, log); !ok {
 					break
 				}
+
+				applyIgnrCrt(cfg, execCfg, log)
 
 				applyWait(cfg, execCfg, log)
 
@@ -542,30 +544,6 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 	}
 }
 
-func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
-	const op = "core.applyWait"
-
-	if cfg.GetWait() == nil && execCfg.GetWait() != nil {
-		cfg.SetWait(execCfg.GetWait())
-	}
-
-	dur := parser.ParseWait(cfg.GetWait())
-	if dur == parser.Error {
-		waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
-		log.Error("Failed to parse wait",
-			zap.String("op", op),
-			zap.String("name", cfg.GetName()),
-			zap.String("wait", waitStr))
-	} else if dur != 0 {
-		log.Debug("sleep",
-			zap.String("op", op),
-			zap.String("name", cfg.GetName()),
-			zap.Duration("dur", dur),
-			zap.String("wait", string(cfg.GetWait())))
-		time.Sleep(dur)
-	}
-}
-
 func applyVars(cfg config.Config, vars map[string][]byte, log *zap.Logger) bool {
 	const op = "core.applyVars"
 
@@ -612,6 +590,45 @@ func applyEnvs(cfg config.Config, log *zap.Logger) bool {
 	return true
 }
 
+func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
+	const op = "core.applyIgnrCrt"
+
+	orig := cfg.GetIgnrCrt()
+
+	if orig != nil {
+		execCfg.SetIgnrCrt(orig)
+	}
+
+	log.Debug("IgnoreCert",
+		zap.String("op", op),
+		zap.String("name", execCfg.GetName()),
+		zap.String("ignrCrt", unsafe.String(unsafe.SliceData(orig), len(orig))))
+}
+
+func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
+	const op = "core.applyWait"
+
+	if cfg.GetWait() == nil && execCfg.GetWait() != nil {
+		cfg.SetWait(execCfg.GetWait())
+	}
+
+	dur := parser.ParseWait(cfg.GetWait())
+	if dur == parser.Error {
+		waitStr := unsafe.String(unsafe.SliceData(cfg.GetWait()), len(cfg.GetWait()))
+		log.Error("Failed to parse wait",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.String("wait", waitStr))
+	} else if dur != 0 {
+		log.Debug("sleep",
+			zap.String("op", op),
+			zap.String("name", cfg.GetName()),
+			zap.Duration("dur", dur),
+			zap.String("wait", string(cfg.GetWait())))
+		time.Sleep(dur)
+	}
+}
+
 func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, log *zap.Logger) {
 	const op = "core.sendConfig"
 
@@ -637,7 +654,7 @@ func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Trans
 			zap.String("importPaths", unsafe.String(unsafe.SliceData(v.ImportPaths), len(v.ImportPaths))),
 			zap.String("dialOpts", unsafe.String(unsafe.SliceData(v.DialOpts), len(v.DialOpts))))
 
-		err = transport.DoGRPC(v, res)
+		err = trnsp.DoGRPC(v, res)
 	}
 
 	if err != nil {

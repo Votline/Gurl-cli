@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/Votline/Gurl-cli/internal/config"
+	"go.uber.org/zap"
 
 	"github.com/Votline/Gurlf"
 	"github.com/jhump/protoreflect/desc"
@@ -24,15 +26,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func DoGRPC(c *config.GRPCConfig, resObj *Result) error {
+func (t *Transport) DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 	const op = "transport.DoGRPC"
 
 	var res Result
 	var err error
+	ic := c.GetIgnrCrt() != nil
+	if bytes.Equal(c.GetIgnrCrt(), []byte("false")) {
+		ic = false
+	}
+
 	if len(c.ProtoPath) == 0 {
-		res, err = doReflect(c)
+		res, err = t.doReflect(c, ic)
 	} else {
-		res, err = doProto(c)
+		res, err = t.doProto(c, ic)
 	}
 
 	if err != nil {
@@ -44,18 +51,24 @@ func DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 	return nil
 }
 
-func doReflect(c *config.GRPCConfig) (Result, error) {
+func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
 	const op = "transport.doReflect"
 
 	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
 	endpoint := unsafe.String(unsafe.SliceData(c.Endpoint), len(c.Endpoint))
 	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
 
-	conn, err := getConn(target, dialOpts)
+	conn, err := t.getConn(target, ic, dialOpts)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
 	defer conn.Close()
+
+	if ic {
+		t.log.Warn("Applied InsecureSkipVerify",
+			zap.String("op", op),
+			zap.String("target", target))
+	}
 
 	ctx := getContext(c.Metadata)
 
@@ -104,7 +117,7 @@ func doReflect(c *config.GRPCConfig) (Result, error) {
 	}}, nil
 }
 
-func doProto(c *config.GRPCConfig) (Result, error) {
+func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 	const op = "transport.doProto"
 
 	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
@@ -113,11 +126,17 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 	importPaths := unsafe.String(unsafe.SliceData(c.ImportPaths), len(c.ImportPaths))
 	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
 
-	conn, err := getConn(target, dialOpts)
+	conn, err := t.getConn(target, ic, dialOpts)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
 	defer conn.Close()
+
+	if ic {
+		t.log.Warn("Applied InsecureSkipVerify",
+			zap.String("op", op),
+			zap.String("target", target))
+	}
 
 	ctx := getContext(c.Metadata)
 
@@ -180,11 +199,15 @@ func doProto(c *config.GRPCConfig) (Result, error) {
 	}}, nil
 }
 
-func getDialOpts(rawOpts string, yield func(grpc.DialOption)) error {
+func (t *Transport) getDialOpts(rawOpts string, ic bool, yield func(grpc.DialOption)) error {
 	const op = "transport.getDialOpts"
 
 	if len(rawOpts) == 0 {
-		yield(grpc.WithInsecure())
+		if ic {
+			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
+		} else {
+			yield(grpc.WithInsecure())
+		}
 		return nil
 	}
 
@@ -194,7 +217,13 @@ func getDialOpts(rawOpts string, yield func(grpc.DialOption)) error {
 		case "insecure":
 			yield(grpc.WithInsecure())
 		case "tls":
-			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+			if ic {
+				t.log.Warn("InsecureSkipVerify is true",
+					zap.String("op", op))
+				yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+					InsecureSkipVerify: ic,
+				})))
+			}
 		case "tls_insecure":
 			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 		case "block":
@@ -209,11 +238,11 @@ func getDialOpts(rawOpts string, yield func(grpc.DialOption)) error {
 	return nil
 }
 
-func getConn(target string, dialOpts string) (*grpc.ClientConn, error) {
+func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.ClientConn, error) {
 	const op = "transport.getConn"
 
 	opts := make([]grpc.DialOption, 0, strings.Count(dialOpts, ";"))
-	if err := getDialOpts(dialOpts, func(opt grpc.DialOption) {
+	if err := t.getDialOpts(dialOpts, ic, func(opt grpc.DialOption) {
 		opts = append(opts, opt)
 	}); err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
