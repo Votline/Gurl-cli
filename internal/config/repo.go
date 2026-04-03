@@ -140,6 +140,7 @@ func Alloc(cfg Config) Config {
 		cp.Method = cloneBytes(v.Method)
 		cp.Body = cloneBytes(v.Body)
 		cp.Headers = cloneBytes(v.Headers)
+		cp.ReadWSWait = cloneBytes(v.ReadWSWait)
 		cp.CookieIn = cloneBytes(v.CookieIn)
 		cp.CookieOut = cloneBytes(v.CookieOut)
 		cp.Wait = cloneBytes(v.Wait)
@@ -279,10 +280,11 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 }
 
 type HTTPConfig struct {
-	URL     []byte `gurlf:"URL"`
-	Method  []byte `gurlf:"Method,omitempty"`
-	Body    []byte `gurlf:"Body,omitempty"`
-	Headers []byte `gurlf:"Headers,omitempty"`
+	URL        []byte `gurlf:"URL"`
+	Method     []byte `gurlf:"Method,omitempty"`
+	Body       []byte `gurlf:"Body,omitempty"`
+	Headers    []byte `gurlf:"Headers,omitempty"`
+	ReadWSWait []byte `grlf:"ReadWSWait,omitempty"`
 	BaseConfig
 	CookieIn  []byte `gurlf:"CookieIn,omitempty"`
 	CookieOut []byte `gurlf:"CookieOut,omitempty"`
@@ -301,6 +303,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.Method = cloneBytes(c.Method)
 	newCfg.Body = cloneBytes(c.Body)
 	newCfg.Headers = cloneBytes(c.Headers)
+	newCfg.ReadWSWait = cloneBytes(c.ReadWSWait)
 	newCfg.CookieIn = cloneBytes(c.CookieIn)
 	newCfg.CookieOut = cloneBytes(c.CookieOut)
 	newCfg.Wait = cloneBytes(c.Wait)
@@ -328,6 +331,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Body
 	case "Headers":
 		return c.Headers
+	case "ReadWSWait":
+		return c.ReadWSWait
 	case "Cookie", "CookieIn":
 		return c.CookieIn
 	case "Wait":
@@ -352,6 +357,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Body = splice(c.Body, val, start, end)
 	case "Headers":
 		c.Headers = splice(c.Headers, val, start, end)
+	case "ReadWSWait":
+		c.ReadWSWait = splice(c.ReadWSWait, val, start, end)
 	case "Cookie", "CookieIn":
 		c.CookieIn = splice(c.CookieIn, val, start, end)
 	case "Wait":

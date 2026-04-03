@@ -59,6 +59,14 @@ func NewTransport(putRes func(*Result), log *zap.Logger) *Transport {
 func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	const op = "transport.DoHTTP"
 
+	if len(c.URL) == 0 {
+		return fmt.Errorf("%s: empty url", op)
+	}
+
+	if wsID := parser.DetectWS(&c.URL); wsID != parser.Error {
+		return t.doWS(c, resObj, wsID)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

@@ -155,3 +155,18 @@ func (c *chunker) next() ([]byte, bool) {
 	c.data = c.data[idx+1:]
 	return chunk, true
 }
+
+func trimSpaceBytes(b *[]byte) {
+	tempB := *b
+
+	start := 0
+	end := len(tempB) - 1
+	for start < end && isSpace(tempB[start]) {
+		start++
+	}
+	for end > start && isSpace(tempB[end]) {
+		end--
+	}
+
+	*b = tempB[start : end+1]
+}

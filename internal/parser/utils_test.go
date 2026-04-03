@@ -139,3 +139,38 @@ func BenchmarkFastUUID(b *testing.B) {
 		fastUUID(&buf)
 	}
 }
+
+func TestTrimSpaceBytes(t *testing.T) {
+	tests := []struct {
+		input    []byte
+		expected []byte
+	}{
+		{[]byte("  hello  "), []byte("hello")},
+		{[]byte("hello"), []byte("hello")},
+		{[]byte("  hello"), []byte("hello")},
+		{[]byte("\n\t\thello\n\t\t"), []byte("hello")},
+	}
+
+	for i, tt := range tests {
+		buf := make([]byte, len(tt.input))
+		copy(buf, tt.input)
+		trimSpaceBytes(&buf)
+		if string(buf) != string(tt.expected) {
+			t.Errorf("[%d]: expected %q, but got %q",
+				i, tt.expected, buf)
+		}
+	}
+}
+
+func BenchmarkTrimSpaceBytes(b *testing.B) {
+	input := []byte("  hello  ")
+	workBuf := make([]byte, len(input))
+
+	b.ResetTimer()
+	for b.Loop() {
+		copy(workBuf, input)
+		tmp := workBuf
+
+		trimSpaceBytes(&tmp)
+	}
+}

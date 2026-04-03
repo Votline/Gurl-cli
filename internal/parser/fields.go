@@ -17,6 +17,8 @@ const (
 	ExpectFail  = -2
 	ExpectDone  = -3
 	ExpectCrash = -4
+	WS          = -5
+	WSwhile     = -6
 )
 
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
@@ -213,16 +215,6 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 	buf.WriteByte('\n')
 
 	return buf.Bytes()
-}
-
-var skip = map[string]struct{}{
-	"path":     {},
-	"domain":   {},
-	"expires":  {},
-	"max-age":  {},
-	"httponly": {},
-	"secure":   {},
-	"samesite": {},
 }
 
 func UnparseCookies(data []byte, yield func(string)) {
@@ -469,4 +461,34 @@ func parseWithMap(data []gscan.Data, yield func(string, []byte, string)) {
 			yield(key, val, name)
 		}
 	}
+}
+
+func DetectWS(u *[]byte) int {
+	url := *u
+	end := bytes.Index(url, []byte("://"))
+	if end == -1 {
+		return Error
+	}
+
+	scheme := url[:end]
+	trimSpaceBytes(&scheme)
+
+	if bytes.Equal(scheme, []byte("ws")) {
+		return WS
+	}
+
+	sep := bytes.Index(scheme, []byte(":"))
+	if sep == -1 {
+		return Error
+	}
+
+	wsType := scheme[:sep]
+	trimSpaceBytes(&wsType)
+
+	if bytes.Equal(wsType, []byte("while")) && bytes.Equal(scheme[sep+1:], []byte("ws")) {
+		*u = url[sep+1:]
+		return WSwhile
+	}
+
+	return Error
 }

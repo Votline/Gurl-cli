@@ -355,3 +355,33 @@ func BenchmarkParseWithMap(b *testing.B) {
 		parseWithMap(data, func(key string, val []byte, name string) {})
 	}
 }
+
+func TestDetectWS(t *testing.T) {
+	tests := []struct {
+		input       []byte
+		expected    int
+		expectedURL []byte
+	}{
+		{[]byte("ws://localhost:8080/ws"), WS, []byte("ws://localhost:8080/ws")},
+		{[]byte("ws://localhost:8080/ws/test"), WS, []byte("ws://localhost:8080/ws/test")},
+		{[]byte("while:ws://localhost:8080/ws"), WSwhile, []byte("ws://localhost:8080/ws")},
+		{[]byte("http://localhost:8080/ws"), Error, []byte("http://localhost:8080/ws")},
+	}
+
+	for i, tt := range tests {
+		res := DetectWS(&tt.input)
+		if res != tt.expected {
+			t.Errorf("[%d]: expected %d, but got %d", i, tt.expected, res)
+		}
+		if !slices.Equal(tt.expectedURL, tt.input) {
+			t.Errorf("[%d]: expected %q, but got %q", i, tt.expectedURL, tt.input)
+		}
+	}
+}
+
+func BenchmarkDetectWS(b *testing.B) {
+	url := []byte("ws://localhost:8080/ws")
+	for b.Loop() {
+		DetectWS(&url)
+	}
+}
