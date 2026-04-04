@@ -1,5 +1,5 @@
 [http_config]
-URL:http://localhost:8081
+URL:https://localhost:8081
 Body:`
 	{
 		"name": "{VARIABLE key=UserID}",
@@ -14,22 +14,23 @@ Headers:`
 `
 ID:0
 Type:http
+IgnoreCert:true
 Response:`root
 method: GET
 url: /
 headers:
-  User-Agent: Go-http-client/1.1
-  Content-Length: 229
-  Authorization: Bearer {ENVIRONMENT key=FileEnvName from=.env}
-  Content-Type: application/json
   Accept-Encoding: gzip
+  User-Agent: Go-http-client/1.1
+  Content-Length: 235
+  Authorization: Bearer file env bc6d6282-ea6b-4aa9-9c26-84926cf03050
+  Content-Type: application/json
 cookies:
 body:
 {
-"name": "FALLBACK 41fcc1d8-59f4-4143-a055-3d2feb259705",
-"envOsName": "os env bf7889c1-c9ff-4fb4-80cf-245b5e22c4fd",
-"envFileName": "{ENVIRONMENT key=FileEnvName from=.env}",
-"password": "308dc551-3114-47ac-9a93-cf44c515c0bd"
+"name": "FALLBACK b94e7c09-e87f-4c68-952a-bd43f20b756b",
+"envOsName": "os env f5fb6a4e-6464-4775-a42f-51212c402aca",
+"envFileName": "file env bc6d6282-ea6b-4aa9-9c26-84926cf03050",
+"password": "a2d6e936-5411-4a41-b7d1-7fe00dba89a6"
 }`
 [\http_config]
 

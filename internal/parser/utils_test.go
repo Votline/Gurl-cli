@@ -140,7 +140,7 @@ func BenchmarkFastUUID(b *testing.B) {
 	}
 }
 
-func TestTrimSpaceBytes(t *testing.T) {
+func TestTrimBytes(t *testing.T) {
 	tests := []struct {
 		input    []byte
 		expected []byte
@@ -154,7 +154,7 @@ func TestTrimSpaceBytes(t *testing.T) {
 	for i, tt := range tests {
 		buf := make([]byte, len(tt.input))
 		copy(buf, tt.input)
-		trimSpaceBytes(&buf)
+		trimBytes(&buf, isSpace)
 		if string(buf) != string(tt.expected) {
 			t.Errorf("[%d]: expected %q, but got %q",
 				i, tt.expected, buf)
@@ -162,7 +162,7 @@ func TestTrimSpaceBytes(t *testing.T) {
 	}
 }
 
-func BenchmarkTrimSpaceBytes(b *testing.B) {
+func BenchmarkTrimBytes(b *testing.B) {
 	input := []byte("  hello  ")
 	workBuf := make([]byte, len(input))
 
@@ -171,6 +171,6 @@ func BenchmarkTrimSpaceBytes(b *testing.B) {
 		copy(workBuf, input)
 		tmp := workBuf
 
-		trimSpaceBytes(&tmp)
+		trimBytes(&tmp, isSpace)
 	}
 }

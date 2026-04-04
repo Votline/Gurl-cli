@@ -437,28 +437,19 @@ func parseWithMap(data []gscan.Data, yield func(string, []byte, string)) {
 			if ent.ValEnd == 0 {
 				continue
 			}
-			kS := ent.KeyStart
-			for kS < len(v.RawData) && isSpace(v.RawData[kS]) {
-				kS++
-			}
-			kE := ent.KeyEnd
-			for kE > kS && (isSpace(v.RawData[kE-1]) || v.RawData[kE-1] == '}') {
-				kE--
-			}
+			key := v.RawData[ent.KeyStart:ent.KeyEnd]
+			trimBytes(&key, func(b byte) bool {
+				return isSpace(b) || b == '}'
+			})
 
-			vS := ent.ValStart
-			for vS < len(v.RawData) && isSpace(v.RawData[vS]) {
-				vS++
-			}
-			vE := ent.ValEnd
-			for vE > vS && (isSpace(v.RawData[vE-1]) || v.RawData[vE-1] == '}') {
-				vE--
-			}
+			val := v.RawData[ent.ValStart:ent.ValEnd]
+			trimBytes(&val, func(b byte) bool {
+				return isSpace(b) || b == '}'
+			})
 
-			key := unsafe.String(unsafe.SliceData(v.RawData[kS:kE]), kE-kS)
-			val := v.RawData[vS:vE]
+			keyStr := unsafe.String(unsafe.SliceData(key), len(key))
 			name := unsafe.String(unsafe.SliceData(v.Name), len(v.Name))
-			yield(key, val, name)
+			yield(keyStr, val, name)
 		}
 	}
 }
@@ -471,7 +462,7 @@ func DetectWS(u *[]byte) int {
 	}
 
 	scheme := url[:end]
-	trimSpaceBytes(&scheme)
+	trimBytes(&scheme, isSpace)
 
 	if bytes.Equal(scheme, []byte("ws")) {
 		return WS
@@ -483,7 +474,7 @@ func DetectWS(u *[]byte) int {
 	}
 
 	wsType := scheme[:sep]
-	trimSpaceBytes(&wsType)
+	trimBytes(&wsType, isSpace)
 
 	if bytes.Equal(wsType, []byte("while")) && bytes.Equal(scheme[sep+1:], []byte("ws")) {
 		*u = url[sep+1:]
