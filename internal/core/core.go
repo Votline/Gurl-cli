@@ -162,6 +162,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 				}
 
 				if id == parser.ExpectDone && !isCrashed {
+					cfg.Release()
 					break
 				} else if id == parser.ExpectDone && isCrashed {
 					cfg.Release()

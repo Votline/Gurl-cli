@@ -19,18 +19,18 @@ Response:`root
 method: GET
 url: /
 headers:
-  Accept-Encoding: gzip
   User-Agent: Go-http-client/1.1
   Content-Length: 235
-  Authorization: Bearer file env bc6d6282-ea6b-4aa9-9c26-84926cf03050
+  Authorization: Bearer file env b807ddfa-80d0-4472-93a5-bb0b45d76742
   Content-Type: application/json
+  Accept-Encoding: gzip
 cookies:
 body:
 {
-"name": "FALLBACK b94e7c09-e87f-4c68-952a-bd43f20b756b",
-"envOsName": "os env f5fb6a4e-6464-4775-a42f-51212c402aca",
-"envFileName": "file env bc6d6282-ea6b-4aa9-9c26-84926cf03050",
-"password": "a2d6e936-5411-4a41-b7d1-7fe00dba89a6"
+"name": "FALLBACK 475c699e-3183-4e9a-ba60-553ddcef3e1c",
+"envOsName": "os env 16bc99b1-9e32-47aa-8722-3c80be2babf4",
+"envFileName": "file env b807ddfa-80d0-4472-93a5-bb0b45d76742",
+"password": "d9b7b2ff-1fea-4ba3-8079-f545de2e812c"
 }`
 [\http_config]
 
