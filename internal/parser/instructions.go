@@ -163,14 +163,24 @@ func ParseEnv(from, key, def *[]byte) {
 		}
 		start++ // skip '='
 
-		end := bytes.IndexByte(current[start:], ';')
-		if end == -1 {
-			*buf = current[start:]
-			*source = nil
-		} else {
-			end += start
-			*buf = current[start:end]
-			*source = current[end+1:]
+		var end int
+
+		for {
+			end = bytes.IndexByte(current[start:], ';')
+			if end != -1 && end-1 > 0 && current[end-1] == '\\' {
+				start = end + 1
+				continue
+			}
+			if end == -1 {
+				*buf = current[start:]
+				*source = nil
+				break
+			} else {
+				end += start
+				*buf = current[start:end]
+				*source = current[end+1:]
+				break
+			}
 		}
 
 		trimBytes(buf, func(b byte) bool {
@@ -181,63 +191,6 @@ func ParseEnv(from, key, def *[]byte) {
 	nextVal(key, &inst)
 	nextVal(from, &inst)
 	nextVal(def, &inst)
-
-	/*
-	   start := bytes.IndexByte((*val), '=')
-
-	   	if start == -1 {
-	   		*key = nil
-	   		return
-	   	}
-
-	   start++ // skip '='
-
-	   	for start < len((*val)) && isSpace((*val)[start]) {
-	   		start++
-	   	}
-
-	   end := bytes.IndexByte((*val)[start:], ' ')
-
-	   	for end > start && isSpace((*val)[end-1]) {
-	   		end--
-	   	}
-
-	   end += start
-
-	   	if start == end || end < start || end > len((*val)) {
-	   		*key = nil
-	   		return
-	   	}
-
-	   *key = (*val)[start:end]
-
-	   (*val) = (*val)[end:]
-	   start = bytes.IndexByte((*val), '=')
-
-	   	if start == -1 {
-	   		*val = nil
-	   		return
-	   	}
-
-	   start++ // skip '='
-
-	   	for start < len((*val)) && isSpace((*val)[start]) {
-	   		start++
-	   	}
-
-	   end = len((*val))
-
-	   	for end > start && (isSpace((*val)[end-1]) || (*val)[end-1] == '}') {
-	   		end--
-	   	}
-
-	   	if start == end || end < start || end > len((*val)) {
-	   		*key = nil
-	   		return
-	   	}
-
-	   *val = (*val)[start:end]
-	*/
 }
 
 func SearchKey(data, key []byte, val *[]byte) {
