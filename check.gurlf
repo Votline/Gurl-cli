@@ -35,10 +35,10 @@ headers:
 cookies:
 body:
 {
-"name": "2e540648-4347-4370-b52d-48a2122eadfe",
-"role": "teacher",
-"age":  "38",
-"money":"8392257574530603072"
+"name": "5210c84d-4496-494b-841d-66c1294cb58f",
+"role": "student",
+"age":  "34",
+"money":"5489066531560686236"
 }`
 [\http_config]
 
@@ -47,12 +47,15 @@ URL:https://localhost:8081
 Body:`
 	{
 		"varName": "{VARIABLE key=StandartName}",
-		"envName": "{ENVIRONMENT key=OsEnvName from=os}"
+		"envName": "{ENVIRONMENT key=OsEnvName ; from=os}"
+		"defaultName": "{VARIABLE key=nop ; default=DefaultVarName}"
 	}
 `
 Headers:`
 	Content-Type: application/json
-	Authorization: Bearer {ENVIRONMENT key=FileEnvName from=.env}
+	Authorization: Bearer {ENVIRONMENT key=FileEnvName ; from=.env}
+	User-Agent: {ENVIRONMENT key=Nop ; from=.env ; default=FIIIIILLLLLEEEEE}
+	Accept-Encoding: {ENVIRONMENT key=Nop ; from=os ; default=OOOOOOOOSSSSSSS}
 `
 ID:1
 Type:http
@@ -61,16 +64,17 @@ Response:`root
 method: GET
 url: /
 headers:
-  Content-Length: 84
-  Authorization: Bearer file env b807ddfa-80d0-4472-93a5-bb0b45d76742
+  Authorization: Bearer file env 6dc1cbba-0f42-4ce0-bb2f-f324b3ee8265
   Content-Type: application/json
-  Accept-Encoding: gzip
-  User-Agent: Go-http-client/1.1
+  User-Agent: FIIIIILLLLLEEEEE
+  Content-Length: 116
+  Accept-Encoding: OOOOOOOOSSSSSSS
 cookies:
 body:
 {
 "varName": "variables",
-"envName": "os env 16bc99b1-9e32-47aa-8722-3c80be2babf4"
+"envName": "os env 72767a14-6c85-4572-a21f-0df365aa3f2c"
+"defaultName": "DefaultVarName"
 }`
 [\http_config]
 

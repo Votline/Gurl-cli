@@ -390,8 +390,8 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				continue
 			}
 
-			var key []byte
-			parser.GetVarKey(instructionBytes, &key)
+			var key, val []byte
+			parser.GetVarKey(instructionBytes, &key, &val)
 			if key == nil {
 				log.Error("Failed to get variable key",
 					zap.String("op", op),
@@ -401,7 +401,15 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 			}
 
 			keyStr := unsafe.String(unsafe.SliceData(key), len(key))
-			val := vars[keyStr]
+			if valMap, ok := vars[keyStr]; !ok {
+				log.Warn("No variable in vars. Default variable will be used",
+					zap.String("op", op),
+					zap.String("default value", unsafe.String(unsafe.SliceData(val), len(val))),
+					zap.String("key", keyStr))
+			} else {
+				val = valMap
+			}
+
 			if val == nil {
 				log.Error("Failed to get variable",
 					zap.String("op", op),
@@ -428,8 +436,9 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				continue
 			}
 
-			var key []byte
-			parser.ParseEnv(&from, &key)
+			var key, val, def []byte
+			parser.ParseEnv(&from, &key, &def)
+			val = def
 
 			if key == nil || from == nil {
 				log.Error("Failed to get environment key",
@@ -439,51 +448,70 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 				continue
 			}
 
-			val := from
+			log.Debug("Parse environment",
+				zap.String("op", op),
+				zap.String("name", cfg.GetName()),
+				zap.Int("id", cfg.GetID()),
+				zap.String("key", unsafe.String(unsafe.SliceData(key), len(key))),
+				zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
+				zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
+
 			keyStr := unsafe.String(unsafe.SliceData(key), len(key))
 			fromStr := unsafe.String(unsafe.SliceData(from), len(from))
+
 			if bytes.Equal(from, []byte("os")) {
 				valStr := os.Getenv(keyStr)
-				if valStr == "" {
-					log.Error("Failed to get environment",
+				if valStr != "" {
+					val = unsafe.Slice(unsafe.StringData(valStr), len(valStr))
+				} else if def != nil {
+					val = def
+					log.Warn("No environment in os. Default environment will be used",
+						zap.String("op", op),
+						zap.String("default value", unsafe.String(unsafe.SliceData(val), len(val))),
+						zap.String("key", keyStr))
+				} else {
+					log.Error("Failed to get environment. No default value",
 						zap.String("op", op),
 						zap.String("key", keyStr),
 						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
 					continue
 				}
-				val = unsafe.Slice(unsafe.StringData(valStr), len(valStr))
 			} else {
 				path := fromStr
-				file, err := os.Open(path)
-				if err != nil {
-					log.Error("Failed to open file",
-						zap.String("op", op),
-						zap.String("key", keyStr),
-						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
-						zap.Error(err))
-					continue
-				}
-				defer file.Close()
 
 				data, err := os.ReadFile(path)
 				if err != nil {
-					log.Error("Failed to read file",
+					log.Warn("Failed to read file. Default environment will be used",
 						zap.String("op", op),
-						zap.String("key", keyStr),
 						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))),
 						zap.Error(err))
-					continue
-				}
+				} else {
+					parser.SearchKey(data, key, &val)
+					log.Debug("Search environment",
+						zap.String("op", op),
+						zap.String("name", cfg.GetName()),
+						zap.Int("id", cfg.GetID()),
+						zap.String("val", unsafe.String(unsafe.SliceData(val), len(val))))
 
-				parser.SearchKey(data, key, &val)
+				}
 
 				if val == nil {
-					log.Error("Failed to get environment",
-						zap.String("op", op),
-						zap.String("key", keyStr),
-						zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
-					continue
+					if def != nil {
+						val = def
+						log.Warn("No environment in os. Default environment will be used",
+							zap.String("op", op),
+							zap.String("default value", unsafe.String(unsafe.SliceData(val), len(val))),
+							zap.String("key", keyStr))
+					} else {
+						log.Error("Failed to get environment",
+							zap.String("op", op),
+							zap.String("key", keyStr),
+							zap.String("from", unsafe.String(unsafe.SliceData(from), len(from))))
+						continue
+
+					}
 				}
+
 			}
 
 			cfg.Apply(d.Start, d.End, d.Key, val)

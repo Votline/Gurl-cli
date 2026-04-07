@@ -34,79 +34,106 @@ func BenchmarkParseRandom(b *testing.B) {
 }
 
 func TestGetVarKey(t *testing.T) {
+	type res struct {
+		key []byte
+		def []byte
+	}
 	tests := []struct {
 		input    []byte
-		expected []byte
+		expected res
 	}{
-		{[]byte("key=value"), []byte("value")},
-		{[]byte("key=value,key2=value2"), []byte("value,key2=value2")},
-		{[]byte("key=     value"), []byte("value")},
-		{[]byte("    key     =     value"), []byte("value")},
-		{[]byte("\n\t\tkey=\n\t\tvalue"), []byte("value")},
-		{[]byte("no_equal"), nil},
-		{[]byte("no_var_equal="), nil},
-		{[]byte("="), nil},
-		{[]byte("=}}}"), nil},
-		{[]byte("key=}"), nil},
+		{[]byte("key=value"), res{[]byte("value"), nil}},
+		{[]byte("key=value;def=value"), res{[]byte("value"), []byte("value")}},
+		{[]byte("key=     value"), res{[]byte("value"), nil}},
+		{[]byte("    key     =     value"), res{[]byte("value"), nil}},
+		{[]byte("\n\t\tkey=\n\t\tvalue"), res{[]byte("value"), nil}},
+		{[]byte("no_equal"), res{nil, nil}},
+		{[]byte("no_var_equal="), res{nil, nil}},
+		{[]byte("="), res{nil, nil}},
+		{[]byte("=}}}"), res{nil, nil}},
+		{[]byte("key=}"), res{nil, nil}},
 	}
 
+	var key []byte
+	var def []byte
 	for i, tt := range tests {
-		var key []byte
-		GetVarKey(tt.input, &key)
+		GetVarKey(tt.input, &key, &def)
 
-		if !bytes.Equal(key, tt.expected) {
-			t.Errorf("[%d]: expected %q, but got %q", i, tt.expected, key)
+		if !bytes.Equal(key, tt.expected.key) {
+			t.Errorf("[%d]: expected key %q, but got %q", i, tt.expected.key, key)
+		}
+		if !bytes.Equal(def, tt.expected.def) {
+			t.Errorf("[%d]: expected def %q, but got %q", i, tt.expected.def, def)
 		}
 	}
 }
 
 func BenchmarkGetVarKey(b *testing.B) {
-	inst := []byte("key=value")
+	inst := []byte("key=value ; def=value")
+	var key []byte
+	var def []byte
+
 	b.ResetTimer()
 	for b.Loop() {
-		var key []byte
-		GetVarKey(inst, &key)
+		GetVarKey(inst, &key, &def)
 	}
 }
 
 func TestParseEnv(t *testing.T) {
+	type res struct {
+		from []byte
+		val  []byte
+		def  []byte
+	}
+
 	tests := []struct {
-		name   string
-		input  []byte
-		expKey []byte
-		expVal []byte
+		input []byte
+		exp   res
 	}{
-		{"Empty", []byte(""), nil, nil},
-		{"NoEqual", []byte("no_equal"), nil, []byte("no_equal")},
-		{"Standard", []byte("VAR=NAME VAL=VALUE"), []byte("NAME"), []byte("VALUE")},
-		{"SpacesAndBraces", []byte("K=  KEY  V=  VAL  }}"), []byte("KEY"), []byte("VAL")},
-		{"OnlyOneEqual", []byte("KEY="), []byte(""), []byte("KEY=")},
-		{"MessyInput", []byte("=KEY=VAL=RES"), nil, []byte("=KEY=VAL=RES")},
-		{"TrailingGarbage", []byte("K=K V=V extra"), []byte("K"), []byte("V extra")},
+		{[]byte(" key=value"), res{[]byte("value"), nil, nil}},
+		{[]byte(" key=value ; from=os"), res{[]byte("value"), []byte("os"), nil}},
+		{[]byte(" key=value ; from=os ; def=default"), res{[]byte("value"), []byte("os"), []byte("default")}},
+		{[]byte(" key=     value"), res{[]byte("value"), nil, nil}},
+		{[]byte(" key    =   value  "), res{[]byte("value"), nil, nil}},
+		{[]byte(" key    =   value  ; from=os"), res{[]byte("value"), []byte("os"), nil}},
+		{[]byte(""), res{nil, nil, nil}},
+		{[]byte(" no_equal"), res{nil, nil, nil}},
+		{[]byte(" key="), res{nil, nil, nil}},
+		{[]byte(" =key=val;from==os"), res{[]byte("key=val"), []byte("=os"), nil}},
+		{
+			[]byte(" =more than one space ; = and here ; = here too"),
+			res{[]byte("more than one space"), []byte("and here"), []byte("here too")},
+		},
+		{[]byte("  ==a lot == of == equal == "), res{[]byte("=a lot == of == equal =="), nil, nil}},
 	}
 
 	for i, tt := range tests {
-		k, v := []byte{}, tt.input
+		k, v, d := []byte{}, tt.input, []byte{}
 
-		ParseEnv(&v, &k)
-		if !bytes.Equal(k, tt.expKey) {
-			t.Errorf("[%d]: expected key %q, but got %q", i, tt.expKey, k)
-			continue
+		ParseEnv(&v, &k, &d)
+		if !bytes.Equal(k, tt.exp.from) {
+			t.Errorf("[%d]: expected key %q, but got %q", i, tt.exp.from, k)
+			t.Errorf("[%d]: info: \nkey:%s\nval:%s\ndef:%s", i, k, v, d)
 		}
-		if !bytes.Equal(v, tt.expVal) {
-			t.Errorf("[%d]: expected val %q, but got %q", i, tt.expVal, v)
+		if !bytes.Equal(v, tt.exp.val) {
+			t.Errorf("[%d]: expected val %q, but got %q", i, tt.exp.val, v)
+			t.Errorf("[%d]: info: \nkey:%s\nval:%s\ndef:%s", i, k, v, d)
+		}
+		if !bytes.Equal(d, tt.exp.def) {
+			t.Errorf("[%d]: expected def %q, but got %q", i, tt.exp.def, d)
+			t.Errorf("[%d]: info: \nkey:%s\nval:%s\ndef:%s", i, k, v, d)
 		}
 	}
 }
 
 func BenchmarkParseEnv(b *testing.B) {
-	key, val := []byte{}, []byte("KEY=VALUE")
+	key, val, def := []byte{}, []byte("KEY=VALUE"), []byte{}
 	for b.Loop() {
-		ParseEnv(&val, &key)
+		ParseEnv(&val, &key, &def)
 	}
 }
 
-func TestSearchKey_MultiLineAndChaos(t *testing.T) {
+func TestSearchKey(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte

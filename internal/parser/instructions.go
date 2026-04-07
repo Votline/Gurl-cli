@@ -84,90 +84,160 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	*buf = (*buf)[:length]
 }
 
-func GetVarKey(inst []byte, key *[]byte) {
+func GetVarKey(inst []byte, key, def *[]byte) {
 	if len(inst) == 0 {
 		*key = nil
+		*def = nil
 		return
 	}
 
-	start := bytes.IndexByte(inst, '=')
-	if start == -1 {
+	eqIdx := bytes.IndexByte(inst, '=')
+	if eqIdx == -1 {
 		*key = nil
+		*def = nil
 		return
 	}
-	start++
+	eqIdx++ // skip '='
 
-	for start < len(inst) && isSpace(inst[start]) {
-		start++
+	content := inst[eqIdx:]
+
+	for {
+		sepIdx := bytes.IndexByte(content, ';')
+		if sepIdx != -1 && sepIdx-1 > 0 && content[sepIdx-1] != '\\' {
+			*key = content[:sepIdx]
+
+			sepIdx++ // skip ';'
+			eqIdx = bytes.IndexByte(content[sepIdx:], '=')
+			if eqIdx == -1 {
+				*def = nil
+				break
+			}
+			eqIdx++ // skip '='
+
+			*def = content[sepIdx+eqIdx:]
+
+			trimBytes(def, func(b byte) bool {
+				return isSpace(b) || b == '}'
+			})
+			break
+		} else if sepIdx == -1 {
+			*key = content
+			*def = nil
+			break
+		}
 	}
 
-	end := len(inst)
-	for end > start && (isSpace(inst[end-1]) || inst[end-1] == '}') {
-		end--
-	}
-
-	if start == end {
-		*key = nil
-		return
-	}
-
-	*key = inst[start:end]
+	trimBytes(key, func(b byte) bool {
+		return isSpace(b) || b == '}'
+	})
 }
 
-func ParseEnv(val *[]byte, key *[]byte) {
-	if len((*val)) == 0 {
+func ParseEnv(from, key, def *[]byte) {
+	if len((*from)) == 0 {
 		*key = nil
 		return
 	}
 
-	start := bytes.IndexByte((*val), '=')
-	if start == -1 {
+	inst := *from
+	if inst[0] == '{' {
+		inst = inst[1:]
+	}
+	if inst[len(inst)-1] == '}' {
+		inst = inst[:len(inst)-1]
+	}
+	// Trim only one brace, so they can be used in value
+
+	skipPrefix := bytes.IndexByte(inst, ' ')
+	if skipPrefix == -1 {
 		*key = nil
 		return
 	}
-	start++ // skip '='
+	inst = inst[skipPrefix:]
 
-	for start < len((*val)) && isSpace((*val)[start]) {
-		start++
+	nextVal := func(buf *[]byte, source *[]byte) {
+		current := *source
+		start := bytes.IndexByte(current, '=')
+		if start == -1 {
+			*buf = nil
+			return
+		}
+		start++ // skip '='
+
+		end := bytes.IndexByte(current[start:], ';')
+		if end == -1 {
+			*buf = current[start:]
+			*source = nil
+		} else {
+			end += start
+			*buf = current[start:end]
+			*source = current[end+1:]
+		}
+
+		trimBytes(buf, func(b byte) bool {
+			return isSpace(b)
+		})
 	}
 
-	end := bytes.IndexByte((*val)[start:], ' ')
+	nextVal(key, &inst)
+	nextVal(from, &inst)
+	nextVal(def, &inst)
 
-	for end > start && isSpace((*val)[end-1]) {
-		end--
-	}
-	end += start
+	/*
+	   start := bytes.IndexByte((*val), '=')
 
-	if start == end || end < start || end > len((*val)) {
-		*key = nil
-		return
-	}
+	   	if start == -1 {
+	   		*key = nil
+	   		return
+	   	}
 
-	*key = (*val)[start:end]
+	   start++ // skip '='
 
-	(*val) = (*val)[end:]
-	start = bytes.IndexByte((*val), '=')
-	if start == -1 {
-		*val = nil
-		return
-	}
-	start++ // skip '='
+	   	for start < len((*val)) && isSpace((*val)[start]) {
+	   		start++
+	   	}
 
-	for start < len((*val)) && isSpace((*val)[start]) {
-		start++
-	}
+	   end := bytes.IndexByte((*val)[start:], ' ')
 
-	end = len((*val))
-	for end > start && (isSpace((*val)[end-1]) || (*val)[end-1] == '}') {
-		end--
-	}
+	   	for end > start && isSpace((*val)[end-1]) {
+	   		end--
+	   	}
 
-	if start == end || end < start || end > len((*val)) {
-		*key = nil
-		return
-	}
+	   end += start
 
-	*val = (*val)[start:end]
+	   	if start == end || end < start || end > len((*val)) {
+	   		*key = nil
+	   		return
+	   	}
+
+	   *key = (*val)[start:end]
+
+	   (*val) = (*val)[end:]
+	   start = bytes.IndexByte((*val), '=')
+
+	   	if start == -1 {
+	   		*val = nil
+	   		return
+	   	}
+
+	   start++ // skip '='
+
+	   	for start < len((*val)) && isSpace((*val)[start]) {
+	   		start++
+	   	}
+
+	   end = len((*val))
+
+	   	for end > start && (isSpace((*val)[end-1]) || (*val)[end-1] == '}') {
+	   		end--
+	   	}
+
+	   	if start == end || end < start || end > len((*val)) {
+	   		*key = nil
+	   		return
+	   	}
+
+	   *val = (*val)[start:end]
+	*/
 }
 
 func SearchKey(data, key []byte, val *[]byte) {

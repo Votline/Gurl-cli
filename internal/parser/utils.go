@@ -157,20 +157,17 @@ func (c *chunker) next() ([]byte, bool) {
 }
 
 func trimBytes(buf *[]byte, check func(byte) bool) {
-	tempB := *buf
-
+	temp := *buf
 	if check == nil {
 		check = isSpace
 	}
 
-	start := 0
-	end := len(tempB) - 1
-	for start < end && check(tempB[start]) {
-		start++
+	for len(temp) > 0 && check(temp[0]) {
+		temp = temp[1:]
 	}
-	for end > start && check(tempB[end]) {
-		end--
+	for len(temp) > 0 && check(temp[len(temp)-1]) {
+		temp = temp[:len(temp)-1]
 	}
 
-	*buf = tempB[start : end+1]
+	*buf = temp
 }

@@ -3,14 +3,14 @@ URL:https://localhost:8081
 Body:`
 	{
 		"name": "{VARIABLE key=UserID}",
-		"envOsName": "{ENVIRONMENT key=OsEnvName from=os}",
-		"envFileName": "{ENVIRONMENT key=FileEnvName from=.env}",
+		"envOsName": "{ENVIRONMENT key=OsEnvName ; from=os}",
+		"envFileName": "{ENVIRONMENT key=FileEnvName ; from=.env}",
 		"password": "{RANDOM oneof=uuid}"
 	}
 `
 Headers:`
 	Content-Type: application/json
-	Authorization: Bearer {ENVIRONMENT key=FileEnvName from=.env}
+	Authorization: Bearer {ENVIRONMENT key=FileEnvName ; from=.env}
 `
 ID:0
 Type:http
@@ -21,16 +21,16 @@ url: /
 headers:
   User-Agent: Go-http-client/1.1
   Content-Length: 235
-  Authorization: Bearer file env b807ddfa-80d0-4472-93a5-bb0b45d76742
+  Authorization: Bearer file env 6dc1cbba-0f42-4ce0-bb2f-f324b3ee8265
   Content-Type: application/json
   Accept-Encoding: gzip
 cookies:
 body:
 {
-"name": "FALLBACK 475c699e-3183-4e9a-ba60-553ddcef3e1c",
-"envOsName": "os env 16bc99b1-9e32-47aa-8722-3c80be2babf4",
-"envFileName": "file env b807ddfa-80d0-4472-93a5-bb0b45d76742",
-"password": "d9b7b2ff-1fea-4ba3-8079-f545de2e812c"
+"name": "FALLBACK 65bcdcd5-c295-4217-b7fa-850e99c6c7ce",
+"envOsName": "os env 72767a14-6c85-4572-a21f-0df365aa3f2c",
+"envFileName": "file env 6dc1cbba-0f42-4ce0-bb2f-f324b3ee8265",
+"password": "cdf45803-24cb-4406-b71d-bce63c49b08f"
 }`
 [\http_config]
 
