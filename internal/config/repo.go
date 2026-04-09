@@ -39,6 +39,9 @@ type Config interface {
 	GetWait() []byte
 	SetWait([]byte)
 
+	GetTimeout() []byte
+	SetTimeout([]byte)
+
 	GetExpect() []byte
 	SetExpect([]byte)
 
@@ -140,7 +143,7 @@ func Alloc(cfg Config) Config {
 		cp.Method = cloneBytes(v.Method)
 		cp.Body = cloneBytes(v.Body)
 		cp.Headers = cloneBytes(v.Headers)
-		cp.ReadWSWait = cloneBytes(v.ReadWSWait)
+		cp.Timeout = cloneBytes(v.Timeout)
 		cp.CookieIn = cloneBytes(v.CookieIn)
 		cp.CookieOut = cloneBytes(v.CookieOut)
 		cp.Wait = cloneBytes(v.Wait)
@@ -155,6 +158,7 @@ func Alloc(cfg Config) Config {
 		cp.Target = cloneBytes(v.Target)
 		cp.Endpoint = cloneBytes(v.Endpoint)
 		cp.Data = cloneBytes(v.Data)
+		cp.Timeout = cloneBytes(v.Timeout)
 		cp.ProtoPath = cloneBytes(v.ProtoPath)
 		cp.ImportPaths = cloneBytes(v.ImportPaths)
 		cp.DialOpts = cloneBytes(v.DialOpts)
@@ -168,6 +172,7 @@ func Alloc(cfg Config) Config {
 		cp := new(RepeatConfig)
 		*cp = *v
 		cp.Wait = cloneBytes(v.Wait)
+		cp.Timeout = cloneBytes(v.Timeout)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
 		cp.Vars = cloneBytes(v.Vars)
@@ -177,6 +182,7 @@ func Alloc(cfg Config) Config {
 		cp := new(ImportConfig)
 		*cp = *v
 		cp.Wait = cloneBytes(v.Wait)
+		cp.Timeout = cloneBytes(v.Timeout)
 		cp.Expect = cloneBytes(v.Expect)
 		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
 		cp.TargetPath = v.TargetPath
@@ -194,6 +200,7 @@ type BaseConfig struct {
 	Name      string `gurlf:"config_name"`
 	Type      string `gurlf:"Type"`
 	Wait      []byte `gurlf:"Wait,omitempty"`
+	Timeout   []byte `gurlf:"Timeout,omitempty"`
 	Expect    []byte `gurlf:"Expect,omitempty"`
 	IgnrCrt   []byte `gurlf:"IgnoreCert,omitempty"`
 	Vars      []byte `gurlf:"SetVariables,omitempty"`
@@ -221,6 +228,8 @@ func (c *BaseConfig) GetRaw(key string) []byte       { return nil }
 func (c *BaseConfig) GetName() string                { return c.Name }
 func (c *BaseConfig) GetWait() []byte                { return c.Wait }
 func (c *BaseConfig) SetWait(nWait []byte)           { c.Wait = nWait }
+func (c *BaseConfig) GetTimeout() []byte             { return c.Timeout }
+func (c *BaseConfig) SetTimeout(nTimeout []byte)     { c.Timeout = nTimeout }
 func (c *BaseConfig) GetExpect() []byte              { return c.Expect }
 func (c *BaseConfig) SetExpect(nExpect []byte)       { c.Expect = nExpect }
 func (c *BaseConfig) GetIgnrCrt() []byte             { return c.IgnrCrt }
@@ -238,6 +247,7 @@ func (c *BaseConfig) SetFlag(f uint32)               { c.flag |= f }
 func (c *BaseConfig) Clone() Config {
 	cp := *c
 	cp.Wait = cloneBytes(c.Wait)
+	cp.Timeout = cloneBytes(c.Timeout)
 	cp.Expect = cloneBytes(c.Expect)
 	cp.IgnrCrt = cloneBytes(c.IgnrCrt)
 	cp.Vars = cloneBytes(c.Vars)
@@ -280,11 +290,10 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 }
 
 type HTTPConfig struct {
-	URL        []byte `gurlf:"URL"`
-	Method     []byte `gurlf:"Method,omitempty"`
-	Body       []byte `gurlf:"Body,omitempty"`
-	Headers    []byte `gurlf:"Headers,omitempty"`
-	ReadWSWait []byte `grlf:"ReadWSWait,omitempty"`
+	URL     []byte `gurlf:"URL"`
+	Method  []byte `gurlf:"Method,omitempty"`
+	Body    []byte `gurlf:"Body,omitempty"`
+	Headers []byte `gurlf:"Headers,omitempty"`
 	BaseConfig
 	CookieIn  []byte `gurlf:"CookieIn,omitempty"`
 	CookieOut []byte `gurlf:"CookieOut,omitempty"`
@@ -303,7 +312,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.Method = cloneBytes(c.Method)
 	newCfg.Body = cloneBytes(c.Body)
 	newCfg.Headers = cloneBytes(c.Headers)
-	newCfg.ReadWSWait = cloneBytes(c.ReadWSWait)
+	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.CookieIn = cloneBytes(c.CookieIn)
 	newCfg.CookieOut = cloneBytes(c.CookieOut)
 	newCfg.Wait = cloneBytes(c.Wait)
@@ -331,8 +340,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Body
 	case "Headers":
 		return c.Headers
-	case "ReadWSWait":
-		return c.ReadWSWait
+	case "Timeout":
+		return c.Timeout
 	case "Cookie", "CookieIn":
 		return c.CookieIn
 	case "Wait":
@@ -357,8 +366,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Body = splice(c.Body, val, start, end)
 	case "Headers":
 		c.Headers = splice(c.Headers, val, start, end)
-	case "ReadWSWait":
-		c.ReadWSWait = splice(c.ReadWSWait, val, start, end)
+	case "Timeout":
+		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Cookie", "CookieIn":
 		c.CookieIn = splice(c.CookieIn, val, start, end)
 	case "Wait":
@@ -395,6 +404,7 @@ func (c *GRPCConfig) Clone() Config {
 	newCfg.Target = cloneBytes(c.Target)
 	newCfg.Endpoint = cloneBytes(c.Endpoint)
 	newCfg.Data = cloneBytes(c.Data)
+	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.ProtoPath = cloneBytes(c.ProtoPath)
 	newCfg.ImportPaths = cloneBytes(c.ImportPaths)
 	newCfg.DialOpts = cloneBytes(c.DialOpts)
@@ -420,6 +430,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.Endpoint
 	case "Data":
 		return c.Data
+	case "Timeout":
+		return c.Timeout
 	case "Metadata":
 		return c.Metadata
 	case "ProtoPath":
@@ -448,6 +460,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.Endpoint = splice(c.Endpoint, val, start, end)
 	case "Data":
 		c.Data = splice(c.Data, val, start, end)
+	case "Timeout":
+		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Metadata":
 		c.Metadata = splice(c.Metadata, val, start, end)
 	case "ProtoPath":
@@ -518,6 +532,7 @@ func (c *RepeatConfig) Clone() Config {
 	newCfg := rClBuf.Read()
 	*newCfg = *c
 	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
 	newCfg.Vars = cloneBytes(c.Vars)
@@ -543,6 +558,8 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 		return c.Replace
 	case "Wait":
 		return c.Wait
+	case "Timeout":
+		return c.Timeout
 	case "Expect":
 		return c.Expect
 	case "SetVariables":
@@ -563,6 +580,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		c.Replace = splice(c.Replace, val, start, end)
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
+	case "Timeout":
+		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
 	case "IgnoreCert":
@@ -590,6 +609,7 @@ func (c *ImportConfig) Clone() Config {
 	newCfg := iClBuf.Read()
 	*newCfg = *c
 	newCfg.Wait = cloneBytes(c.Wait)
+	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.TargetPath = c.TargetPath
 	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
@@ -609,6 +629,8 @@ func (c *ImportConfig) GetRaw(key string) []byte {
 	switch key {
 	case "Wait":
 		return c.Wait
+	case "Timeout":
+		return c.Timeout
 	case "Expect":
 		return c.Expect
 	case "SetVariables":
@@ -623,6 +645,8 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 	switch key {
 	case "Wait":
 		c.Wait = splice(c.Wait, val, start, end)
+	case "Timeout":
+		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
 	case "IgnoreCert":

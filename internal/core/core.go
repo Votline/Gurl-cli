@@ -127,6 +127,10 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 
 				applyWait(cfg, execCfg, log)
 
+				if t := cfg.GetTimeout(); t != nil {
+					execCfg.SetTimeout(t)
+				}
+
 				if impCfg, ok := cfg.(*config.ImportConfig); ok {
 					log.Debug("import config",
 						zap.String("op", op),

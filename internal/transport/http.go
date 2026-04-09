@@ -67,7 +67,16 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 		return t.doWS(c, resObj, wsID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	timeout := parser.ParseWait(c.Timeout)
+	if timeout == 0 {
+		timeout = 2 * time.Second
+		t.log.Warn("timeout is empty. Using default timeout of 2 seconds",
+			zap.String("op", op),
+			zap.String("name", c.GetName()),
+			zap.Int("id", c.GetID()))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
 	req, err := t.prepareRequest(c, ctx)
@@ -80,7 +89,7 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 		ic = false
 	}
 
-	res, err := t.clientDo(req, c, ic)
+	res, err := t.clientDo(req, c, ic, timeout)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -136,7 +145,7 @@ func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*
 	return req, nil
 }
 
-func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (*http.Response, error) {
+func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool, timeout time.Duration) (*http.Response, error) {
 	const op = "transport.clientDo"
 	if ic {
 		t.cl.Transport = &http.Transport{
@@ -150,6 +159,8 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool) (
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
 		}
 	}
+
+	t.cl.Timeout = timeout
 
 	if len(t.jar) > 0 {
 		sb := builderPool.Get().(*strings.Builder)

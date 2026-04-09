@@ -11,6 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/Votline/Gurl-cli/internal/config"
+	"github.com/Votline/Gurl-cli/internal/parser"
 	"go.uber.org/zap"
 
 	"github.com/Votline/Gurlf"
@@ -70,7 +71,10 @@ func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
 			zap.String("target", target))
 	}
 
-	ctx := getContext(c.Metadata)
+	ctx, err := getContext(c.Metadata, c.Timeout)
+	if err != nil {
+		return Result{}, fmt.Errorf("%s: %w", op, err)
+	}
 
 	rc := refl.NewClient(ctx, reflectpb.NewServerReflectionClient(conn))
 	svcName, mtName := parseEndpoint(endpoint)
@@ -138,7 +142,10 @@ func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 			zap.String("target", target))
 	}
 
-	ctx := getContext(c.Metadata)
+	ctx, err := getContext(c.Metadata, c.Timeout)
+	if err != nil {
+		return Result{}, fmt.Errorf("%s: %w", op, err)
+	}
 
 	protoDir := filepath.Dir(protoPath)
 	protoFile := filepath.Base(protoPath)
@@ -256,15 +263,21 @@ func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.Clie
 	return conn, nil
 }
 
-func getContext(cfgMd []byte) context.Context {
+func getContext(cfgMd []byte, cfgTm []byte) (context.Context, error) {
 	const op = "transport.getContext"
 
-	ctx := context.Background()
+	timeout := parser.ParseWait(cfgTm)
+	if cfgTm == nil {
+		timeout = 10 * time.Second
+	}
+
+	ctx, _ := context.WithTimeout(context.Background(), timeout*time.Second)
+
 	if len(cfgMd) > 0 {
 		md := make(map[string]string)
 		sData, err := gurlf.Scan(cfgMd)
 		if err != nil {
-			// TODO: log warn
+			return nil, fmt.Errorf("%s: scan metadata: %w", op, err)
 		}
 
 		for _, d := range sData {
@@ -286,7 +299,7 @@ func getContext(cfgMd []byte) context.Context {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(md))
 	}
 
-	return ctx
+	return ctx, nil
 }
 
 func getDependencyPaths(protoPath string) []string {

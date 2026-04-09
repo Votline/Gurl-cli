@@ -35,10 +35,10 @@ headers:
 cookies:
 body:
 {
-"name": "5210c84d-4496-494b-841d-66c1294cb58f",
-"role": "student",
-"age":  "34",
-"money":"5489066531560686236"
+"name": "5ae25aae-5eb2-4994-b2f7-cad00c7dee60",
+"role": "teacher",
+"age":  "32",
+"money":"8129174016879445834"
 }`
 [\http_config]
 
@@ -64,16 +64,16 @@ Response:`root
 method: GET
 url: /
 headers:
-  Authorization: Bearer file env 6dc1cbba-0f42-4ce0-bb2f-f324b3ee8265
   Content-Type: application/json
   User-Agent: FIIIIILLLLLEEEEE
   Content-Length: 116
   Accept-Encoding: OOOOOOOOSSSSSSS
+  Authorization: Bearer file env 757c78e9-40b4-4f4a-8c5f-3e0c6e36160a
 cookies:
 body:
 {
 "varName": "variables",
-"envName": "os env 72767a14-6c85-4572-a21f-0df365aa3f2c"
+"envName": "os env 41ccb794-7ac1-43af-9623-3f5c38211e89"
 "defaultName": "DefaultVarName"
 }`
 [\http_config]

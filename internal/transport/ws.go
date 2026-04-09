@@ -62,7 +62,7 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
 		return nil
 	}
 
-	dur := parser.ParseWait(c.ReadWSWait)
+	dur := parser.ParseWait(c.Timeout)
 	if dur != 0 {
 		conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(dur)))
 	} else {
@@ -104,15 +104,21 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Log
 
 	var wg sync.WaitGroup
 	wg.Go(func() {
+		<-ctx.Done()
+		conn.Close()
+		cancel()
+	})
+
+	wg.Go(func() {
 		defer cancel()
+		defer conn.Close()
 
 		for {
-			if ctx.Err() != nil {
-				return
-			}
-
 			_, msg, err := conn.ReadMessage()
 			if err != nil {
+				if ctx.Err() != nil {
+					return
+				}
 				log.Error("Failed to read message",
 					zap.String("op", op),
 					zap.Error(err))
@@ -131,10 +137,6 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Log
 
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			if ctx.Err() != nil {
-				return
-			}
-
 			input := scanner.Text()
 			if input == "exit" || input == "quit" {
 				log.Warn("Exiting while WebSocket",
@@ -142,6 +144,10 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Log
 					zap.Int("config id", cfgID),
 					zap.String("op", op))
 				cancel()
+				return
+			}
+
+			if ctx.Err() != nil {
 				return
 			}
 
