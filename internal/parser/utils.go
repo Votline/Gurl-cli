@@ -1,32 +1,37 @@
+// Package parser utils.go contains helper functions for parser.
 package parser
 
 import (
 	"bytes"
 	"math/rand"
 	"sync"
-	"unsafe"
 
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
+// chunker struct is a simple iterator
+// Used in ParseRandom, ParseExpect and others
 type chunker struct {
 	data []byte
 	done bool
 }
 
+// bufPool is a sync.Pool for bytes.Buffer
+// Used in ParseCookies and UnparseCookies.
 var bufPool = sync.Pool{
 	New: func() any {
 		return new(bytes.Buffer)
 	},
 }
 
+// fastExtract extracts data from config data by key.
 func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 	entries := *ents
 	for _, ent := range entries {
 		if bytes.Equal(data[ent.KeyStart:ent.KeyEnd], need) {
 			vS, vE := ent.ValStart, ent.ValEnd
 			tmp := data[vS:vE]
-			tp := unsafe.String(unsafe.SliceData(tmp), len(tmp))
+			tp := string(tmp)
 			return tp
 		}
 	}
@@ -34,10 +39,13 @@ func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 	return ""
 }
 
+// isSpace is a helper function for detect space or tab
 func isSpace(r byte) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\v' || r == '\f'
 }
 
+// isMetadata is a helper function for detect metadata
+// Used in UnparseCookies.
 func isMetadata(k []byte) bool {
 	switch len(k) {
 	case 4:
@@ -53,6 +61,7 @@ func isMetadata(k []byte) bool {
 	}
 }
 
+// equalFold compares case bytes with string.
 func equalFold(b []byte, lower string) bool {
 	if len(b) != len(lower) {
 		return false
@@ -65,6 +74,7 @@ func equalFold(b []byte, lower string) bool {
 	return true
 }
 
+// atoi converts []byte to int.
 func atoi(data []byte) int {
 	res := 0
 	foundDigit := false
@@ -82,6 +92,8 @@ func atoi(data []byte) int {
 	return res
 }
 
+// itoa converts int to []byte.
+// Returns length of result.
 func itoa(n int, buf *[]byte) int {
 	if n == 0 {
 		(*buf)[0] = '0'
@@ -103,6 +115,8 @@ func itoa(n int, buf *[]byte) int {
 	return length
 }
 
+// fastUUID generates UUID v4 in a fast way.
+// Accepts buffer to write UUID.
 func fastUUID(buf *[]byte) {
 	if cap(*buf) < 36 {
 		*buf = make([]byte, 36)
@@ -115,33 +129,36 @@ func fastUUID(buf *[]byte) {
 	u2 := rand.Uint64()
 
 	// 8 chars
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		b[i] = hexChars[(u1>>(i*4))&0xf]
 	}
 	b[8] = '-'
 	// 4 chars
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		b[9+i] = hexChars[(u1>>(32+i*4))&0xf]
 	}
 	b[13] = '-'
 	// Version 4
 	b[14] = '4'
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		b[15+i] = hexChars[(u1>>(48+i*4))&0xf]
 	}
 	b[18] = '-'
 	// Variant
 	b[19] = hexChars[(u2&0x3)+8]
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		b[20+i] = hexChars[(u2>>(2+i*4))&0xf]
 	}
 	b[23] = '-'
 	// 12 chars
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		b[24+i] = hexChars[(u2>>(14+i*4))&0xf]
 	}
 }
 
+// next returns next chunk from data.
+// If data is empty, returns empty slice and true.
+// If data is not empty, returns slice with next chunk and false.
 func (c *chunker) next() ([]byte, bool) {
 	if c.done {
 		return nil, false
@@ -156,6 +173,9 @@ func (c *chunker) next() ([]byte, bool) {
 	return chunk, true
 }
 
+// trimBytes trims bytes from buffer.
+// Accepts buffer and check function.
+// If check function is nil, used 'isSpace'.
 func trimBytes(buf *[]byte, check func(byte) bool) {
 	temp := *buf
 	if check == nil {

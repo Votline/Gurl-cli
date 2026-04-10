@@ -141,7 +141,7 @@ func TestParseResponse(t *testing.T) {
 func BenchmarkParseResponse(b *testing.B) {
 	var res []byte
 	for b.Loop() {
-		ParseResponse(&res, []byte(`"json": "token"`))
+		ParseResponse(&res, []byte(`"json:" "token"`))
 	}
 }
 

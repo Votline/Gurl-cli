@@ -1,3 +1,5 @@
+// Package transport http.go implemented http requests.
+// Here is preparing and send HTTP requests.
 package transport
 
 import (
@@ -8,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -17,45 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var builderPool = sync.Pool{
-	New: func() any {
-		return new(strings.Builder)
-	},
-}
-
-type Status struct {
-	Code       int
-	Message    string
-	ConfigType string
-}
-
-type Result struct {
-	Info   Status
-	CfgID  int
-	IsJSON bool
-	Raw    []byte
-	Cookie []byte
-}
-type Transport struct {
-	jar map[string]string
-	cl  *http.Client
-	log *zap.Logger
-}
-
-func NewTransport(putRes func(*Result), log *zap.Logger) *Transport {
-	for i := 0; i < 10; i++ {
-		putRes(&Result{})
-	}
-	client := &http.Client{
-		Jar: nil,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
-		},
-	}
-
-	return &Transport{jar: map[string]string{}, cl: client, log: log}
-}
-
+// DoHTTP sends HTTP request.
+// Update result by pointer.
 func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	const op = "transport.DoHTTP"
 
@@ -110,6 +74,8 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	return nil
 }
 
+// prepareRequest parses headers, content-type and body.
+// Return prepared request and error.
 func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*http.Request, error) {
 	const op = "transport.prepareRequest"
 
@@ -145,6 +111,7 @@ func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*
 	return req, nil
 }
 
+// clientDo sends request and return response and error.
 func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool, timeout time.Duration) (*http.Response, error) {
 	const op = "transport.clientDo"
 	if ic {
@@ -198,6 +165,7 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool, t
 	return res, nil
 }
 
+// updateJar updates jar by cookies.
 func (t *Transport) updateJar(cookies []string) {
 	const op = "transport.updateJar"
 
@@ -220,6 +188,8 @@ func (t *Transport) updateJar(cookies []string) {
 	}
 }
 
+// readBody reads body response body.
+// Return raw response, isJSON and error.
 func (t *Transport) readBody(body io.ReadCloser, res *http.Response) ([]byte, bool, error) {
 	const op = "transport.readBody"
 

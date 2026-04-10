@@ -1,3 +1,4 @@
+// Package parser instructions.go replace some instructions to value.
 package parser
 
 import (
@@ -5,6 +6,9 @@ import (
 	"math/rand"
 )
 
+// ParseRandom accepts instruction and buffer.
+// It parses instruction and updates buffer.
+// Random value must be like 'int' or 'uuid'.
 func ParseRandom(inst []byte, buf *[]byte) {
 	if len(inst) == 0 {
 		*buf = nil
@@ -23,8 +27,7 @@ func ParseRandom(inst []byte, buf *[]byte) {
 		randType++
 	}
 
-	haveComma := bytes.IndexByte(inst, ',')
-	if haveComma != -1 && !bytes.Equal(inst[start:randType], []byte("int")) {
+	if bytes.Contains(inst, []byte(",")) && !bytes.Equal(inst[start:randType], []byte("int")) {
 		data := inst[start:]
 		if len(data) > 0 && data[len(data)-1] == '}' {
 			data = data[:len(data)-1]
@@ -84,6 +87,10 @@ func ParseRandom(inst []byte, buf *[]byte) {
 	*buf = (*buf)[:length]
 }
 
+// GetVarKey accepts instruction and two buffers.
+// It parses instruction and updates key and default value.
+// In instruction, key must be like key=value'
+// Default must be like 'def=value' or nil.
 func GetVarKey(inst []byte, key, def *[]byte) {
 	if len(inst) == 0 {
 		*key = nil
@@ -132,6 +139,12 @@ func GetVarKey(inst []byte, key, def *[]byte) {
 	})
 }
 
+// ParseEnv accepts instruction and two buffers
+// 'from' is a insturction from config.
+// It parses instruction and updates key, default and from value.
+// In instruction, key must be like key=value'
+// Default must be like 'def=value' or nil
+// From must be like 'from=os' or 'from=file'.
 func ParseEnv(from, key, def *[]byte) {
 	if len((*from)) == 0 {
 		*key = nil
@@ -193,6 +206,8 @@ func ParseEnv(from, key, def *[]byte) {
 	nextVal(def, &inst)
 }
 
+// SearchKey accepts data, key and buffer.
+// It find key in data and update buffer.
 func SearchKey(data, key []byte, val *[]byte) {
 	if len(data) == 0 {
 		*val = nil

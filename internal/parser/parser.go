@@ -1,3 +1,5 @@
+// Package parser parser.go turns data from scanner to config objects.
+// It also set config dependencies.
 package parser
 
 import (
@@ -13,14 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type instruction struct {
-	tID   int
-	start int
-	end   int
-	key   string
-	insTp string
-}
-
+// insts is a list of instruction names.
+// Its like a macroses in C.
 var insts = [][]byte{
 	[]byte("RESPONSE"),
 	[]byte("COOKIES"),
@@ -29,6 +25,8 @@ var insts = [][]byte{
 	[]byte("ENVIRONMENT"),
 }
 
+// markers is a list of markers for config data.
+// Its used for instructions.
 var markers = [][]byte{
 	[]byte("id="),
 	[]byte("oneof="),
@@ -36,10 +34,14 @@ var markers = [][]byte{
 	[]byte("from="),
 }
 
+// ParseStream accepts result of scanner and call yield for each config.
+// It also set config dependencies
+// And replces 'replace' config type with target config
+// And replaces config data with data from replace field.
 func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger) error {
 	const op = "parser.parseStream"
 	n := len(*sData)
-	instsPos := make([]instruction, 0, 6)
+	instsPos := make([]config.Dependency, 0, 6)
 
 	log.Debug("preparing configs",
 		zap.String("op", op),
@@ -139,7 +141,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 			execCfg = cfg
 		}
 
-		if err := handleInstructions(&d, insts, func(inst instruction) {
+		if err := handleInstructions(&d, insts, func(inst config.Dependency) {
 			instsPos = append(instsPos, inst)
 		}); err != nil {
 			log.Error("check instruction execCfg failed",
@@ -150,26 +152,26 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 				op, i, err)
 		}
 		for _, inst := range instsPos {
-			if inst.tID > n {
+			if inst.TargetID > n {
 				log.Error("invalid instruction target id",
 					zap.String("op", op),
 					zap.String("name", string(d.Name)),
-					zap.Int("id", inst.tID))
+					zap.Int("id", inst.TargetID))
 				return fmt.Errorf("%s: invalid instruction target id", op)
 			}
 
 			execCfg.SetDependency(config.Dependency{
-				TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
+				TargetID: inst.TargetID, Key: inst.Key, Start: inst.Start, End: inst.End, InsTp: inst.InsTp,
 			})
 			log.Debug("set dependency",
 				zap.String("op", op),
 				zap.String("name", string(d.Name)),
 				zap.Int("id", i),
-				zap.Int("target", inst.tID),
-				zap.String("key", inst.key),
-				zap.Int("start", inst.start),
-				zap.Int("end", inst.end),
-				zap.String("type", inst.insTp))
+				zap.Int("target", inst.TargetID),
+				zap.String("key", inst.Key),
+				zap.Int("start", inst.Start),
+				zap.Int("end", inst.End),
+				zap.String("type", inst.InsTp))
 		}
 
 		tagOverhead := (len(d.Name) + 2) + (len(d.Name) + 3) + 2
@@ -202,6 +204,7 @@ func ParseStream(sData *[]gscan.Data, yield func(config.Config), log *zap.Logger
 	return nil
 }
 
+// handleRepeat extracts target id from 'repeat' config.
 func handleRepeat(d *gscan.Data) (int, error) {
 	const op = "parser.handleRepeat"
 
@@ -226,7 +229,10 @@ func handleRepeat(d *gscan.Data) (int, error) {
 	return -1, nil
 }
 
-func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instruction)) error {
+// handleInstructions extracts dependencies from config.
+// Accepts config and list of instruction names.
+// Calls yield for each dependency.
+func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst config.Dependency)) error {
 	const op = "parser.handleInstructions"
 
 	start := bytes.IndexByte(d.RawData, '{')
@@ -328,12 +334,12 @@ func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instructi
 				}
 			}
 
-			yield(instruction{
-				tID:   tID,
-				start: localStart,
-				end:   localEnd,
-				key:   instKey,
-				insTp: instTp,
+			yield(config.Dependency{
+				TargetID: tID,
+				Start:    localStart,
+				End:      localEnd,
+				Key:      instKey,
+				InsTp:    instTp,
 			})
 			curOffset = absEnd
 		}
@@ -342,6 +348,10 @@ func handleInstructions(d *gscan.Data, insts [][]byte, yield func(inst instructi
 	return nil
 }
 
+// handleType creates config object and unmrashal it.
+// Used pre-allocated config buffers to zero allocations.
+// Accepts config objet, config type and config data.
+// Into config object unmarshals config data.
 func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	const op = "parser.handleType"
 
@@ -372,6 +382,11 @@ func handleType(c *config.Config, tp *string, d *gscan.Data) error {
 	return nil
 }
 
+// ParseFindConfig accepts result of scanner and config object.
+// Its like a ParseStream but for one config.
+// It also set config dependencies
+// And replces 'repeat' config type with target config
+// And replaces config data with data from replace field.
 func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
 	const op = "parser.ParseFindConfig"
 
@@ -411,9 +426,9 @@ func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
 		}
 	}
 
-	if err := handleInstructions(&d, insts, func(inst instruction) {
+	if err := handleInstructions(&d, insts, func(inst config.Dependency) {
 		(*cfg).SetDependency(config.Dependency{
-			TargetID: inst.tID, Key: inst.key, Start: inst.start, End: inst.end, InsTp: inst.insTp,
+			TargetID: inst.TargetID, Key: inst.Key, Start: inst.Start, End: inst.End, InsTp: inst.InsTp,
 		})
 	}); err != nil {
 		return fmt.Errorf("%s: failed to handle instructions: %w", op, err)
@@ -424,6 +439,8 @@ func ParseFindConfig(sData *[]gscan.Data, cfg *config.Config, tID int) error {
 	return nil
 }
 
+// applyReplace replaces config data with data from replace field.
+// Changes will occur in original config object.
 func applyReplace(r *config.RepeatConfig) error {
 	const op = "parser.applyReplace"
 
@@ -456,6 +473,8 @@ func applyReplace(r *config.RepeatConfig) error {
 	return nil
 }
 
+// getReplaceData extracts data from replace field.
+// Accepts repeat config object, return scanner data and error.
 func getReplaceData(r *config.RepeatConfig) (gscan.Data, error) {
 	const op = "parser.getReplaceData"
 	var zero gscan.Data

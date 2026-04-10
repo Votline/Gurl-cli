@@ -1,3 +1,6 @@
+// Package buffer buffer.go contains ringbuffer implementation.
+// Used spin-lock model.
+// No mutex used.
 package buffer
 
 import (
@@ -6,21 +9,40 @@ import (
 	"time"
 )
 
+// bufSize is a max size of buffer.
 const bufSize uint64 = 10
 
+// Buffer is a interface for ringbuffer.
 type Buffer[T any] interface {
+	// Write writes value to buffer.
 	Write(val T)
+
+	// Read reads value from buffer.
 	Read() T
+
+	// Close closes buffer.
 	Close()
+
+	// IsClosed returns true if buffer is closed.
 	IsClosed() bool
 }
 
+// ringBuffer is a classic ringbuffer implementation.
 type ringBuffer[T any] struct {
+	// wPos and rPos are cursors for buffer.
 	wPos, rPos uint64
-	closed     uint32
-	buf        [bufSize]T
+	// closed is a flag for closed buffer.
+	closed uint32
+	// buf is a buffer for values.
+	buf [bufSize]T
 }
 
+// nopBuffer is a buffer for no-op.
+type nopBuffer[T any] struct {
+	buf []T
+}
+
+// NewRb accepts type and returns new ringbuffer.
 func NewRb[T any]() Buffer[T] {
 	return &ringBuffer[T]{
 		wPos: 0,
@@ -28,6 +50,14 @@ func NewRb[T any]() Buffer[T] {
 	}
 }
 
+// NewNop accepts type and returns new nopbuffer.
+func NewNop[T any]() Buffer[T] {
+	return &nopBuffer[T]{
+		buf: make([]T, 0),
+	}
+}
+
+// spin is a helper function for spin-lock.
 func spin(idx *int) {
 	*idx++
 	if *idx < 10 {
@@ -86,16 +116,6 @@ func (b *ringBuffer[T]) Close() {
 
 func (b *ringBuffer[T]) IsClosed() bool {
 	return atomic.LoadUint32(&b.closed) == 1
-}
-
-type nopBuffer[T any] struct {
-	buf []T
-}
-
-func NewNop[T any]() Buffer[T] {
-	return &nopBuffer[T]{
-		buf: make([]T, 0),
-	}
 }
 
 func (b *nopBuffer[T]) Write(val T) {

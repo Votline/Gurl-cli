@@ -1,3 +1,5 @@
+// Package core core.go contains core functions.
+// Resolves dependencies, sends configs and prints results.
 package core
 
 import (
@@ -22,13 +24,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// importConfigCode is a special value for import config.
+// It need for print ignore.
 const importConfigCode = -1000
 
+// DepBindigs is a struct for dependency bindings.
 type DepBindigs struct {
 	From func(res *transport.Result) []byte
 	To   func(cfg config.Config, start, end int, key string, val, inst []byte)
 }
 
+// depBindings is a map for dependency bindings.
 var depBindings = map[string]DepBindigs{
 	"RESPONSE": {
 		From: func(res *transport.Result) []byte { return res.Raw },
@@ -46,6 +52,8 @@ var depBindings = map[string]DepBindigs{
 	},
 }
 
+// Start accepts config type, path and create flag.
+// It entry point for Gurl-cli.
 func Start(cType, cPath string, cCreate, disablePrint bool, log *zap.Logger) error {
 	if cCreate {
 		return config.Create(cType, cPath)
@@ -55,6 +63,10 @@ func Start(cType, cPath string, cCreate, disablePrint bool, log *zap.Logger) err
 	return handleConfig(cPath, disablePrint, vars, log)
 }
 
+// handleConfig accepts config path and print flag.
+// It main processing function.
+// It scans config file, parses it, sends configs and update file.
+// Can be used recursively.
 func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *zap.Logger) error {
 	const op = "core.handleConfig"
 
@@ -336,6 +348,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 	return nil
 }
 
+// applyDeps applied dependencies for config.
 func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][]byte, log *zap.Logger) {
 	const op = "core.applyDeps"
 
@@ -577,6 +590,7 @@ func applyDeps(cfg config.Config, resHub *[]*transport.Result, vars map[string][
 	}
 }
 
+// applyVars applied vars for config.
 func applyVars(cfg config.Config, vars map[string][]byte, log *zap.Logger) bool {
 	const op = "core.applyVars"
 
@@ -600,6 +614,7 @@ func applyVars(cfg config.Config, vars map[string][]byte, log *zap.Logger) bool 
 	return true
 }
 
+// applyEnvs applied environments insturction for config.
 func applyEnvs(cfg config.Config, log *zap.Logger) bool {
 	const op = "core.applyEnvs"
 
@@ -623,6 +638,7 @@ func applyEnvs(cfg config.Config, log *zap.Logger) bool {
 	return true
 }
 
+// applyIgnrCrt check ignoreCert field and set flag to config.
 func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
 	const op = "core.applyIgnrCrt"
 
@@ -638,6 +654,7 @@ func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
 		zap.String("ignrCrt", unsafe.String(unsafe.SliceData(orig), len(orig))))
 }
 
+// applyWait parse wait field and sleep if needed.
 func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
 	const op = "core.applyWait"
 
@@ -662,6 +679,7 @@ func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
 	}
 }
 
+// sendConfig sends config to server via transport package.
 func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, log *zap.Logger) {
 	const op = "core.sendConfig"
 
@@ -699,6 +717,8 @@ func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Trans
 	}
 }
 
+// applyExpect parse expect field and return id.
+// ID is special value from parser or target id for jump to config.
 func applyExpect(cfg config.Config, execCfg config.Config, res *transport.Result, log *zap.Logger) int {
 	const op = "core.applyExpect"
 
@@ -745,6 +765,7 @@ func applyExpect(cfg config.Config, execCfg config.Config, res *transport.Result
 	return parser.ExpectDone
 }
 
+// copyTail copies tail of file to buffer.
 func copyTail(f *os.File, cPath string, buf *bytes.Buffer, pendingOffset int64, log *zap.Logger) {
 	const op = "core.copyTail"
 
@@ -769,6 +790,7 @@ func copyTail(f *os.File, cPath string, buf *bytes.Buffer, pendingOffset int64, 
 	}
 }
 
+// flush flushes buffer to file.
 func flush(buf *bytes.Buffer, f *os.File) error {
 	const op = "core.flush"
 
@@ -790,6 +812,8 @@ func flush(buf *bytes.Buffer, f *os.File) error {
 	return nil
 }
 
+// prettyPrint prints response.
+// Ignoring import config.
 func prettyPrint(res *transport.Result) error {
 	const op = "core.prettyPrint"
 
@@ -843,6 +867,8 @@ func prettyPrint(res *transport.Result) error {
 	return nil
 }
 
+// getInstructionBytes get instuction bytes from config.
+// It updated buffer by pointer.
 func getInstructionBytes(cfg config.Config, d config.Dependency, buf *[]byte, log *zap.Logger) bool {
 	const op = "core.getInstructionBytes"
 

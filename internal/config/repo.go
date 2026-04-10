@@ -1,3 +1,4 @@
+// Package config repo.go contains config repository.
 package config
 
 import (
@@ -6,88 +7,163 @@ import (
 	"github.com/Votline/Gurl-cli/internal/buffer"
 )
 
+// Special values for minimize allocations.
 const (
-	NoRepeatConfig      int    = -1
-	DataFromFile        int    = -2
-	MaxLen              int    = -3
-	RandomData          int    = -4
-	DataFromVariable    int    = -5
-	DataFromEnvironment int    = -6
-	FlagUseFileCookies  uint32 = 1
+	// NoRepeatConfig for config without repeat.
+	NoRepeatConfig int = -1
+
+	// DataFromFile for instruction with data from current config.
+	DataFromFile int = -2
+
+	// MaxLen flag for use max length of field.
+	MaxLen int = -3
+
+	// RandomData for instruction with random data.
+	RandomData int = -4
+
+	// DataFromVariable for instruction with data from variable.
+	DataFromVariable int = -5
+
+	// DataFromEnvironment for instruction with data from environment.
+	DataFromEnvironment int = -6
+
+	// FlagUseFileCookies for use cookies from current config.
+	FlagUseFileCookies uint32 = 1
 )
 
+// Dependency is a struct for config dependency.
 type Dependency struct {
+	// TargetID is a target config id.
+	// It also used to set dependency flag, like 'DataFromFile'
 	TargetID int
-	Start    int
-	End      int
-	Key      string
-	InsTp    string
+
+	// Start is a start index of dependency.
+	Start int
+
+	// End is a end index of dependency.
+	End int
+
+	// Key is a key of dependency. Like 'URL' or 'Headers'
+	Key string
+
+	// InsTp is a type of dependency. Like 'RESPONSE' or 'COOKIES'
+	InsTp string
 }
 
+// Config is a interface for config.
 type Config interface {
+	// Clone is non-allocating clone.
+	// Used pre-allocated config buffers to zero allocations.
 	Clone() Config
+
+	// Release releases config from pre-allocated buffers.
 	Release()
+
+	// ReleaseClone releases config from pre-allocated clone buffers.
 	ReleaseClone()
 
+	// GetName returns config name.
 	GetName() string
 
+	// GetID returns config id.
 	GetID() int
+
+	// SetID sets config id.
 	SetID(int)
 
+	// GetType returns config type.
 	GetType() string
 
+	// GetWait returns wait field.
 	GetWait() []byte
+
+	// SetWait sets wait field.
 	SetWait([]byte)
 
+	// GetTimeout returns timeout field.
 	GetTimeout() []byte
+
+	// SetTimeout sets timeout field.
 	SetTimeout([]byte)
 
+	// GetExpect returns expect field.
 	GetExpect() []byte
+
+	// SetExpect sets expect field.
 	SetExpect([]byte)
 
+	// GetIgnrCrt returns ignoreCert field.
 	GetIgnrCrt() []byte
+
+	// SetIgnrCrt sets ignoreCert field.
 	SetIgnrCrt([]byte)
 
+	// GetVars returns vars field. 'SetVariables' in file
 	GetVars() []byte
+
+	// GetEnvs returns envs field. 'SetEnvironments' in file
 	GetEnvs() []byte
 
+	// GetEnd returns end index of config.
 	GetEnd() int
+
+	// SetEnd sets end index of config.
 	SetEnd(int)
 
+	// Update updates config 'Response' field only.
 	Update([]byte, []byte)
+
+	// GetRaw returns raw data by key.
 	GetRaw(string) []byte
 
+	// UnwrapExec returns config for execution.
 	UnwrapExec() Config
 
+	// RangeDeps accepts callback for each dependency.
 	RangeDeps(func(d Dependency))
+
+	// GetDepsLen returns length of dependencies.
 	GetDepsLen() uint8
+
+	// SetDependency sets dependency for config.
 	SetDependency(Dependency)
 
+	// Apply accepts start, end and key of config.
+	// It updates config by key.
 	Apply(int, int, string, []byte)
 
+	// HasFlag returns true if flag is set.
 	HasFlag(uint32) bool
+
+	// SetFlag sets flag.
 	SetFlag(uint32)
 }
 
+// Pre-allocated buffers for configs.
 var (
-	hBuf    = buffer.NewRb[*HTTPConfig]()
-	gBuf    = buffer.NewRb[*GRPCConfig]()
-	rBuf    = buffer.NewRb[*RepeatConfig]()
-	iBuf    = buffer.NewRb[*ImportConfig]()
-	hItab   uintptr
-	gItab   uintptr
-	rItab   uintptr
-	iItab   uintptr
-	hClBuf  = buffer.NewRb[*HTTPConfig]()
-	gClBuf  = buffer.NewRb[*GRPCConfig]()
-	rClBuf  = buffer.NewRb[*RepeatConfig]()
-	iClBuf  = buffer.NewRb[*ImportConfig]()
+	// hBuf, gBuf, rBuf, iBuf are buffers for configs.
+	hBuf = buffer.NewRb[*HTTPConfig]()
+	gBuf = buffer.NewRb[*GRPCConfig]()
+	rBuf = buffer.NewRb[*RepeatConfig]()
+	iBuf = buffer.NewRb[*ImportConfig]()
+	// hItab, gItab, rItab, iItab are pointers to configs.
+	hItab uintptr
+	gItab uintptr
+	rItab uintptr
+	iItab uintptr
+	// hClBuf, gClBuf, rClBuf, iClBuf are clone buffers for configs.
+	hClBuf = buffer.NewRb[*HTTPConfig]()
+	gClBuf = buffer.NewRb[*GRPCConfig]()
+	rClBuf = buffer.NewRb[*RepeatConfig]()
+	iClBuf = buffer.NewRb[*ImportConfig]()
+	// hItabCl, gItabCl, rItabCl, iItabCl are pointers to clone configs.
 	hItabCl uintptr
 	gItabCl uintptr
 	rItabCl uintptr
 	iItabCl uintptr
 )
 
+// Init initializes pre-allocated buffers for configs.
 func Init() {
 	hBuf = buffer.NewRb[*HTTPConfig]()
 	gBuf = buffer.NewRb[*GRPCConfig]()
@@ -134,6 +210,8 @@ func Init() {
 	}
 }
 
+// Alloc allocates config.
+// Accepts config and returns allocated config.
 func Alloc(cfg Config) Config {
 	switch v := cfg.(type) {
 	case *HTTPConfig:
@@ -193,6 +271,7 @@ func Alloc(cfg Config) Config {
 	return nil
 }
 
+// BaseConfig is a base config for other configs.
 type BaseConfig struct {
 	ID        int `gurlf:"ID"`
 	End       int
@@ -289,6 +368,7 @@ func (c *BaseConfig) SetDependency(nDep Dependency) {
 	c.DepsLen++
 }
 
+// HTTPConfig is a config for HTTP requests.
 type HTTPConfig struct {
 	URL     []byte `gurlf:"URL"`
 	Method  []byte `gurlf:"Method,omitempty"`
@@ -383,6 +463,7 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 	}
 }
 
+// GRPCConfig is a config for gRPC requests.
 type GRPCConfig struct {
 	Target      []byte `gurlf:"Target"`
 	Endpoint    []byte `gurlf:"Endpoint"`
@@ -483,6 +564,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 	}
 }
 
+// RepeatConfig is a config for repeat.
+// It replaces config by target config.
 type RepeatConfig struct {
 	TargetID int    `gurlf:"TargetID"`
 	Replace  []byte `gurlf:"Replace,omitempty"`
@@ -597,6 +680,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 	}
 }
 
+// ImportConfig is a config for import new config file.
+// It open new file and processing it.
 type ImportConfig struct {
 	TargetPath string `gurlf:"TargetPath"`
 	BaseConfig
@@ -658,6 +743,8 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 	}
 }
 
+// splice accepts original data, new value, start and end.
+// It splices value to original data.
 func splice(orig, val []byte, start, end int) []byte {
 	if len(orig) == 0 {
 		return val
@@ -678,6 +765,7 @@ func splice(orig, val []byte, start, end int) []byte {
 	return res
 }
 
+// cloneBytes accepts bytes and returns clone.
 func cloneBytes(b []byte) []byte {
 	if b == nil {
 		return nil

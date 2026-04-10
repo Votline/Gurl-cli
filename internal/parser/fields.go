@@ -1,3 +1,5 @@
+// Package parser fields.go parse config fields.
+// It used for transport or instructions.
 package parser
 
 import (
@@ -12,15 +14,28 @@ import (
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
 
+// Special values for minimize allocations.
 const (
-	Error       = -1
-	ExpectFail  = -2
-	ExpectDone  = -3
+	// Error for errors.
+	Error = -1
+
+	// ExpectFail for detect expect fail
+	ExpectFail = -2
+
+	// ExpectDone for detect expect done
+	ExpectDone = -3
+
+	// ExpectCrash for detect expect crash
 	ExpectCrash = -4
-	WS          = -5
-	WSwhile     = -6
+
+	// WS for detect websocket connection. Need 'ws:' in URL
+	WS = -5
+
+	// WSwhile for detect websocket connection. Need 'while:ws:' in URL
+	WSwhile = -6
 )
 
+// ParseHeaders accepts headers and called yield for each header.
 func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	for len(hdrs) != 0 {
 		kS := 0
@@ -49,6 +64,8 @@ func ParseHeaders(hdrs []byte, yield func([]byte, []byte)) {
 	}
 }
 
+// ParseContentType accepts content type field from headers.
+// It update content type by pointer for minimize allocations.
 func ParseContentType(ct *string) {
 	s := *ct
 	start, end := 0, len(s)
@@ -81,6 +98,8 @@ func ParseContentType(ct *string) {
 	*ct = ""
 }
 
+// ParseBody accepts body from request.
+// It removes spaces and line breaks.
 func ParseBody(b []byte) []byte {
 	lineStart := false
 	readIdx, writeIdx := 0, 0
@@ -115,8 +134,12 @@ func ParseBody(b []byte) []byte {
 	return res
 }
 
+// ParseResponse accepts response from server.
+// It parses json response and updates response by pointer.
 func ParseResponse(res *[]byte, inst []byte) {
 	const op = "parser.parseResponse"
+
+	resInd := *res
 
 	prefix := []byte("json:")
 	jIdx := bytes.Index(inst, prefix)
@@ -133,19 +156,38 @@ func ParseResponse(res *[]byte, inst []byte) {
 		kE--
 	}
 	key := inst[kS:kE]
-	pattern := append([]byte{'"'}, append(key, '"', ':')...)
 
-	jsonStart := bytes.Index(*res, pattern)
+	jsonStart := -1
+	for i := range len(resInd) {
+		if resInd[i] != '"' {
+			continue
+		}
+
+		if i-1 > 0 && (resInd)[i] == '"' && (resInd)[i-1] == '\\' {
+			continue
+		}
+
+		if i+1+len(key) < len(resInd) &&
+			bytes.Equal(resInd[i+1:i+1+len(key)], key) &&
+			i+1+len(key) < len(resInd) &&
+			resInd[i+1+len(key)] == '"' &&
+			i+1+len(key)+1 < len(resInd) &&
+			resInd[i+1+len(key)+1] == ':' {
+			jsonStart = i + 1 + len(key) + 2 // skip key
+			break
+		}
+	}
+
 	if jsonStart == -1 {
 		(*res) = nil
 		return
 	}
-	jsonStart += len(pattern)
 
-	for jsonStart < len(*res) && isSpace((*res)[jsonStart]) {
+	for jsonStart < len(*res) && isSpace(resInd[jsonStart]) {
 		jsonStart++
 	}
-	if jsonStart >= len(*res) || (*res)[jsonStart] != '"' {
+
+	if jsonStart >= len(*res) || resInd[jsonStart] != '"' {
 		(*res) = nil
 		return
 	}
@@ -167,6 +209,8 @@ func ParseResponse(res *[]byte, inst []byte) {
 	(*res) = (*res)[jsonStart:jsonEnd]
 }
 
+// ParseCookies accepts url and cookies.
+// It make gurlf format config and appends cookies to it.
 func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 	const op = "parser.ParseCookies"
 
@@ -217,6 +261,8 @@ func ParseCookies(url *url.URL, cookies []*http.Cookie) []byte {
 	return buf.Bytes()
 }
 
+// UnparseCookies accepts gurlf format config.
+// Called yield for each cookie.
 func UnparseCookies(data []byte, yield func(string)) {
 	const op = "parser.ParseLoadCookie"
 
@@ -268,6 +314,8 @@ func UnparseCookies(data []byte, yield func(string)) {
 	yield(cksStr)
 }
 
+// ParseWait accepts wait field from config.
+// It parses wait field and returns duration.
 func ParseWait(wait []byte) time.Duration {
 	if len(wait) == 0 {
 		return 0
@@ -297,6 +345,10 @@ func ParseWait(wait []byte) time.Duration {
 
 const hexChars = "0123456789abcdef"
 
+// ParseExpect accepts expect field from config.
+// It parses expect field and returns state or target id.
+// Have four mods: done, fail, crash and id.
+// Id uses for jump to target config.
 func ParseExpect(expect []byte, resCode int) int {
 	if len(expect) == 0 {
 		return ExpectDone
@@ -356,6 +408,8 @@ func ParseExpect(expect []byte, resCode int) int {
 	return id
 }
 
+// ApplyVars accepts vars field from config.
+// It parses vars field and updates varsMap.
 func ApplyVars(vars []gscan.Data, varsMap map[string][]byte) {
 	parseWithMap(vars, func(key string, val []byte, n string) {
 		if len(key) == 0 {
@@ -365,6 +419,9 @@ func ApplyVars(vars []gscan.Data, varsMap map[string][]byte) {
 	})
 }
 
+// ApplyEnvs accepts envs field from config.
+// It parses envs field and updates os.Environ.
+// Or updates file with envs.
 func ApplyEnvs(envs []gscan.Data) {
 	type entry struct {
 		key string
@@ -431,6 +488,9 @@ func ApplyEnvs(envs []gscan.Data) {
 	}
 }
 
+// parseWithMap accepts config as scan data.
+// This config is value of SetVariables or SetEnvironments field.
+// Called yield for each key-value pair.
 func parseWithMap(data []gscan.Data, yield func(string, []byte, string)) {
 	for _, v := range data {
 		for _, ent := range v.Entries {
@@ -454,6 +514,11 @@ func parseWithMap(data []gscan.Data, yield func(string, []byte, string)) {
 	}
 }
 
+// DetectWS accepts url field from config.
+// It detects websocket connection.
+// Returns special value for minimize allocations.
+// URL must be like 'ws://localhost:8080/ws'.
+// Or 'while:ws://localhost:8080/ws'.
 func DetectWS(u *[]byte) int {
 	url := *u
 	end := bytes.Index(url, []byte("://"))

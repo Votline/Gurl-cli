@@ -1,3 +1,5 @@
+// Package transport ws.go implemented websocket requests.
+// Here is preparing and send websocket requests.
 package transport
 
 import (
@@ -17,6 +19,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// doWS sends websocket request.
+// Update result by pointer.
+// If config body not empty, send body.
+// If wsID is parser.WSwhile, handle websocket while loop.
 func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
 	const op = "transport.doWS"
 
@@ -91,6 +97,9 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
 	return nil
 }
 
+// handleWSWhile handle websocket while loop.
+// Used os.Stdin for input.
+// If input is "exit" or "quit", close connection.
 func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Logger) {
 	const op = "transport.handleWSWhile"
 

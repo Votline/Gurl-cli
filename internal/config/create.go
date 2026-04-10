@@ -1,3 +1,4 @@
+// Package config create.go contains functions for create config.
 package config
 
 import (
@@ -7,6 +8,8 @@ import (
 	"github.com/Votline/Gurlf"
 )
 
+// Create accepts config type and path.
+// It creates config file.
 func Create(cType, cPath string) error {
 	const op = "config.Create"
 
@@ -40,12 +43,14 @@ func Create(cType, cPath string) error {
 	return gurlf.Encode(f, d)
 }
 
+// cHTTP returns raw data for HTTP config.
 func cHTTP() ([]byte, error) {
 	base := defBase()
 	c := HTTPConfig{BaseConfig: *base}
 	return gurlf.Marshal(c)
 }
 
+// cGRPC returns raw data for GRPC config.
 func cGRPC() ([]byte, error) {
 	base := defBase()
 	base.Type = "grpc"
@@ -54,6 +59,7 @@ func cGRPC() ([]byte, error) {
 	return gurlf.Marshal(&c)
 }
 
+// cRepeat returns raw data for Repeat config.
 func cRepeat() ([]byte, error) {
 	base := defBase()
 	base.Type = "repeat"
@@ -62,6 +68,7 @@ func cRepeat() ([]byte, error) {
 	return gurlf.Marshal(c)
 }
 
+// cImport returns raw data for Import config.
 func cImport() ([]byte, error) {
 	base := defBase()
 	base.Type = "import"
@@ -70,6 +77,7 @@ func cImport() ([]byte, error) {
 	return gurlf.Marshal(c)
 }
 
+// cMix returns raw data for HTTP and GRPC config.
 func cMix() ([]byte, error) {
 	base := defBase()
 	httpCfg := HTTPConfig{BaseConfig: *base}

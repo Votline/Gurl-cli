@@ -1,3 +1,5 @@
+// Package transport grpc.go implemented gRPC requests.
+// Here is preparing and send gRPC requests.
 package transport
 
 import (
@@ -27,6 +29,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// DoGRPC sends gRPC request.
+// Update result by pointer.
 func (t *Transport) DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 	const op = "transport.DoGRPC"
 
@@ -52,6 +56,7 @@ func (t *Transport) DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 	return nil
 }
 
+// doReflect sends gRPC request via reflection.
 func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
 	const op = "transport.doReflect"
 
@@ -121,6 +126,7 @@ func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
 	}}, nil
 }
 
+// doProto sends gRPC request via protofiles.
 func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 	const op = "transport.doProto"
 
@@ -206,6 +212,7 @@ func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 	}}, nil
 }
 
+// getDialOpts parse dial options and yields them.
 func (t *Transport) getDialOpts(rawOpts string, ic bool, yield func(grpc.DialOption)) error {
 	const op = "transport.getDialOpts"
 
@@ -245,6 +252,8 @@ func (t *Transport) getDialOpts(rawOpts string, ic bool, yield func(grpc.DialOpt
 	return nil
 }
 
+// getConn parses target, insecureSkipVerify and dial options.
+// Return client connection and error.
 func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.ClientConn, error) {
 	const op = "transport.getConn"
 
@@ -263,12 +272,14 @@ func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.Clie
 	return conn, nil
 }
 
+// getContext parses metadata and timeout.
+// Return context and error.
 func getContext(cfgMd []byte, cfgTm []byte) (context.Context, error) {
 	const op = "transport.getContext"
 
-	timeout := parser.ParseWait(cfgTm)
-	if cfgTm == nil {
-		timeout = 10 * time.Second
+	var timeout time.Duration = 10
+	if cfgTm != nil {
+		timeout = parser.ParseWait(cfgTm)
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), timeout*time.Second)
@@ -302,6 +313,7 @@ func getContext(cfgMd []byte, cfgTm []byte) (context.Context, error) {
 	return ctx, nil
 }
 
+// getDependencyPaths parses protoPath and return dependency paths.
 func getDependencyPaths(protoPath string) []string {
 	const op = "transport.getDependencyPaths"
 
@@ -322,6 +334,7 @@ func getDependencyPaths(protoPath string) []string {
 	return paths
 }
 
+// parseEndpoint parses endpoint and return target and endpoint.
 func parseEndpoint(endp string) (string, string) {
 	const op = "transport.parseEndpoint"
 
@@ -337,6 +350,8 @@ func parseEndpoint(endp string) (string, string) {
 	return endp[:idx], endp[idx+1:]
 }
 
+// getFilesSvc parses service name and file descriptors.
+// Return service descriptor.
 func getFilesSvc(sName string, fds []*desc.FileDescriptor) *desc.ServiceDescriptor {
 	const op = "transport.getFields"
 
@@ -351,6 +366,7 @@ func getFilesSvc(sName string, fds []*desc.FileDescriptor) *desc.ServiceDescript
 	return nil
 }
 
+// parseMsg parses message and return raw message.
 func parseMsg(msg *dynamic.Message) []byte {
 	if jsonBytes, err := msg.MarshalJSON(); err == nil {
 		return jsonBytes
