@@ -161,7 +161,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 					}
 					res.Info.Code = importConfigCode
 				} else {
-					sendConfig(cfg, execCfg, trnsp, res, log)
+					sendConfig(cfg, execCfg, trnsp, res, disablePrint, log)
 				}
 
 				res.CfgID = cfg.GetID()
@@ -680,13 +680,16 @@ func applyWait(cfg config.Config, execCfg config.Config, log *zap.Logger) {
 }
 
 // sendConfig sends config to server via transport package.
-func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, log *zap.Logger) {
+// execCfg is config for execution.
+// cfg is config for debug.
+// dp is disable print flag.
+func sendConfig(cfg config.Config, execCfg config.Config, trnsp *transport.Transport, res *transport.Result, dp bool, log *zap.Logger) {
 	const op = "core.sendConfig"
 
 	var err error
 	switch v := execCfg.(type) {
 	case *config.HTTPConfig:
-		err = trnsp.DoHTTP(v, res)
+		err = trnsp.DoHTTP(v, res, dp)
 		log.Debug("send http",
 			zap.String("op", op),
 			zap.String("url", unsafe.String(unsafe.SliceData(v.URL), len(v.URL))),

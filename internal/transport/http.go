@@ -20,7 +20,7 @@ import (
 
 // DoHTTP sends HTTP request.
 // Update result by pointer.
-func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
+func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result, dp bool) error {
 	const op = "transport.DoHTTP"
 
 	if len(c.URL) == 0 {
@@ -28,7 +28,7 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result) error {
 	}
 
 	if wsID := parser.DetectWS(&c.URL); wsID != parser.Error {
-		return t.doWS(c, resObj, wsID)
+		return t.doWS(c, resObj, wsID, dp)
 	}
 
 	timeout := parser.ParseWait(c.Timeout)

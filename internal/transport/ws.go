@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -23,7 +24,8 @@ import (
 // Update result by pointer.
 // If config body not empty, send body.
 // If wsID is parser.WSwhile, handle websocket while loop.
-func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
+// If dp is true, print response.
+func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int, dp bool) error {
 	const op = "transport.doWS"
 
 	dialer := websocket.DefaultDialer
@@ -64,7 +66,7 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
 		}
 	}
 	if wsID == parser.WSwhile {
-		handleWSWhile(conn, c.GetName(), c.GetID(), t.log)
+		handleWSWhile(conn, c.GetName(), c.GetID(), dp, t.log)
 		return nil
 	}
 
@@ -100,7 +102,7 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int) error {
 // handleWSWhile handle websocket while loop.
 // Used os.Stdin for input.
 // If input is "exit" or "quit", close connection.
-func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Logger) {
+func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, dp bool, log *zap.Logger) {
 	const op = "transport.handleWSWhile"
 
 	log.Warn("Connection changed to websockets. While loop is enabled",
@@ -134,9 +136,9 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Log
 				return
 			}
 
-			log.Debug("Received message",
-				zap.String("op", op),
-				zap.String("message", unsafe.String(unsafe.SliceData(msg), len(msg))))
+			if !dp {
+				prettyPrintWS(cfgID, msg)
+			}
 		}
 	})
 
@@ -175,4 +177,19 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, log *zap.Log
 		zap.String("config name", cfgName),
 		zap.Int("config id", cfgID),
 		zap.String("op", op))
+}
+
+// prettyPrintWS prints response.
+func prettyPrintWS(cfgID int, msg []byte) {
+	const op = "transport.prettyPrintWS"
+
+	if len(msg) == 0 {
+		return
+	}
+
+	fmt.Println(strings.Repeat("-", 20))
+
+	fmt.Printf("\n\033[90m[ID %d]\033[0m", cfgID)
+	fmt.Printf("\n\033[90m[Message]\033[0m")
+	fmt.Printf("\n%s\n", unsafe.String(unsafe.SliceData(msg), len(msg)))
 }
