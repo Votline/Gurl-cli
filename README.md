@@ -1,5 +1,3 @@
-# README.md
-
 # 🚀 Gurl-cli
 
 <p align="center">
