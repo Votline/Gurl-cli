@@ -1,3 +1,5 @@
+# README.md
+
 # 🚀 Gurl-cli
 
 <p align="center">
@@ -5,11 +7,12 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/Zero--Allocation-Optimized-orange?style=for-the-badge" alt="Performance">
   <img src="https://img.shields.io/badge/gRPC-Supported-blue?style=for-the-badge" alt="gRPC">
+  <img src="https://img.shields.io/badge/WebSockets-Supported-purple?style=for-the-badge" alt="WebSockets">
 </p>
 
-**Gurl-cli** is a high-performance, stateful HTTP & gRPC client designed for the command line.
+**Gurl-cli** is a high-performance, stateful HTTP, gRPC & WebSocket client designed for the command line.
 
-Unlike standard tools (`curl`, `postman`), `gurl-cli` is engineered for **request chaining** and automated flow testing. It allows you to execute sequences of requests where the output of one (e.g., Auth Tokens, session cookies, generated UUIDs) automatically feeds into the next. Everything is defined in a single, readable file using a custom, zero-allocation configuration format (`.gurlf`) that completely eliminates JSON escaping hell.
+Unlike standard tools (`curl`, `postman`, `grpcurl`, `websocat`), `gurl-cli` is engineered for **request chaining** and automated flow testing. It allows you to execute sequences of requests where the output of one (e.g., Auth Tokens, session cookies, generated UUIDs) automatically feeds into the next. Everything is defined in a single, readable file using a custom, zero-allocation configuration format (`.gurlf`) that completely eliminates JSON escaping hell.
 
 ---
 
@@ -20,8 +23,9 @@ Unlike standard tools (`curl`, `postman`), `gurl-cli` is engineered for **reques
 * [📄 Configuration Types](#-configuration-types)
   * [1. HTTP](#1-http-stateful-requests)
   * [2. gRPC](#2-grpc-first-class-support)
-  * [3. Repeat](#3-repeat-dry-principle)
-  * [4. Import](#4-import-modular-configs)
+  * [3. WebSockets](#3-websockets-real-time-flows)
+  * [4. Repeat](#4-repeat-dry-principle)
+  * [5. Import](#5-import-modular-configs)
 * [🧩 Dynamic Macros & Flow Control](#-dynamic-macros--flow-control)
 * [🧪 Integration Testing](#-integration-testing)
 * [⚠️ Core Concepts & Constraints](#warning-core-concepts--constraints)
@@ -36,40 +40,40 @@ Unlike standard tools (`curl`, `postman`), `gurl-cli` is engineered for **reques
 
 ```bash
 # Run a specific configuration file
-gurl-cli run my_flow.gurlf
+gurl-cli run config.gurlf
 
 # Run a raw configuration directly from the terminal (no file required)
 gurl-cli run "
 [http_config]
-URL: http://localhost:8080
+URL:http://localhost:8080
 Type:http
 ID:0
 [\http_config]"
 
 # Create a template or get help
-gurl-cli create my_flow.gurlf http
+gurl-cli create config.gurlf http
 gurl-cli help
-````
+```
 
------
+---
 
 ## 🛠 Installation
 
 Ensure you have Go installed, then run:
 
 ```bash
-go install [github.com/Votline/Gurl-cli@latest](https://github.com/Votline/Gurl-cli@latest)
+go install https://github.com/Votline/Gurl-cli@latest
 ```
 
 Or download from github [Releases](https://github.com/Votline/Gurl-cli/releases)
 
------
+---
 
 ## 📄 Configuration Types
 
 Configs use the custom `.gurlf` syntax. The tool writes responses **back into the configuration file** automatically, making debugging instant.
 
-### 1\. HTTP (Stateful Requests)
+### 1. HTTP (Stateful Requests)
 
 Standard HTTP requests support automatic cookie jars, headers, and body payloads.
 
@@ -78,12 +82,12 @@ Standard HTTP requests support automatic cookie jars, headers, and body payloads
 URL:http://localhost:8080/api/users/reg
 Method:POST
 Body:`
-	{
-		"name": "Viza",
-		"email": "some@mail.com",
-		"role":"admin",
-		"password":"eightpswd"
-	}
+    {
+        "name": "Viza",
+        "email": "some@mail.com",
+        "role":"admin",
+        "password":"eightpswd"
+    }
 `
 Headers:Content-Type: application/json
 ID:0
@@ -91,7 +95,7 @@ Type:http
 [\reg]
 ```
 
-### 2\. gRPC (First-Class Support)
+### 2. gRPC (First-Class Support)
 
 Easily test your microservices by pointing directly to your `.proto` files or using reflection inside the grpc of your servers.
 
@@ -100,12 +104,12 @@ Easily test your microservices by pointing directly to your `.proto` files or us
 Target:localhost:50052
 Endpoint:courses.CoursesService/NewCourse
 Data:`
-	{
-		"user_id": "12345",
-		"name": "some_name",
-		"description": "cool desc",
-		"price": "1347"
-	}
+    {
+        "user_id": "12345",
+        "name": "some_name",
+        "description": "cool desc",
+        "price": "1347"
+    }
 `
 ProtoPath:../protos/courses.proto
 ID:0
@@ -113,7 +117,21 @@ Type:grpc
 [\new_course]
 ```
 
-### 3\. Repeat (DRY Principle)
+### 3. WebSockets (Real-Time Flows)
+
+Full support for interactive WebSocket connections natively through the HTTP type.
+* Use `ws://` to send a single configured payload.
+* Use `while:ws://` to open an interactive session and stream messages directly from your terminal's `stdin`.
+
+```text
+[chat_session]
+URL:while:ws://localhost:8080/ws
+ID:1
+Type:http
+[\chat_session]
+```
+
+### 4. Repeat (DRY Principle)
 
 Don't rewrite identical payloads. Inherit from a previous request using `TargetID` and patch only the fields you need using `Replace`.
 
@@ -123,11 +141,11 @@ TargetID:1
 Replace:`
 [rep]
 Body:`
-	{
-		"name": "a62893bc-70af-4fb3-aca6-b663ad35404f",
-		"email": "upd@mail.com",
-		"password": "updatepaswd"
-	}`
+    {
+        "name": "a62893bc-70af-4fb3-aca6-b663ad35404f",
+        "email": "upd@mail.com",
+        "password": "updatepaswd"
+    }`
 [\rep]
 `
 ID:8
@@ -135,7 +153,7 @@ Type:repeat
 [\log_upd_user]
 ```
 
-### 4\. Import (Modular Configs)
+### 5. Import (Modular Configs)
 
 Keep your configs clean by importing base templates or fallback configurations. Variables can be passed down to the imported scope.
 
@@ -152,7 +170,7 @@ UserID: FALLBACK {RANDOM oneof=uuid}
 [\import_config]
 ```
 
------
+---
 
 ## 🧩 Dynamic Macros & Flow Control
 
@@ -163,12 +181,14 @@ Extract data from previous requests or stateful fields:
 * **JSON Extraction:** `{RESPONSE id=1 json:token}` - Extracts a field from the response body of config `ID:1`.
 * **Stateful Cookies:** Use the `CookieIn` field to inject session data:
     * `{COOKIES id=1}` - Injects all cookies captured in the `CookieOut` field of config `ID:1`.
-    * `{COOKIES id=file}` - Tells the transport to use cookies defined directly within the current `CookieIn` block (often combined with `ENVIRONMENT` macros).
+    * `{COOKIES id=file}` - Tells the transport to use cookies defined directly within the current `CookieIn` block.
 
 ### 2. Environment Integration
 Manage state across different .gurlf files or system sessions. This is the heavy lifting for cross-file communication.
 * **Save State:** Use `SetEnvironments` to persist values to a local `.env_temp` file or OS env.
-* **Retrieve State:** `{ENVIRONMENT key=Token from=.env_temp}` or `{ENVIRONMENT key=USER from=os}`.
+* **Retrieve State:** `{ENVIRONMENT key=Token ; from=.env_temp}` or `{ENVIRONMENT key=USER ; from=os}`.
+* **Defaults:** You can now provide fallback values using `; default=...` if the environment or variable is missing.
+
 > Example
 > ```text
 > [config]
@@ -180,14 +200,20 @@ Manage state across different .gurlf files or system sessions. This is the heavy
 > FileEnvName:file env {RANDOM oneof=uuid}
 > [\.env]
 > `
+> Body:`
+>   {
+>     "host": "{ENVIRONMENT key=DB_HOST ; from=os ; default=localhost}" <- will be used 'localhost'
+>     "osname": "{ENVIRONMENT key=OsEnvName ; from=os ; default=nop}" <- will be used value from os.GetEnv
+>     "filename": "{ENVIRONMENT key=FileEnvName ; from=.env ; default=nop}" <- will be used value from file '.env'
+>   }
+> `
 > [\config]
 > ```
-> Note: other configs will now be able to resolve `{ENVIRONMENT key=FileEnvName from=.env}`(can be used between sessions) or `{ENVIRONMENT key=OsEnvName from=os}`(if this happens in the same session)
 
 ### 3. Variables Integration
-Variables are designed for in-memory state management during a single execution. They do not persist to disk and won't work between different gurl-cli run calls.
-* **In-Place Usage:** `{VARIABLE key=Name}` - Get a variable with the `Name` key
-* **Import config Pattern:** The primary use case is passing data into import configs. Since an import recursively calls the core engine, the variables are passed down into the new scope.
+Variables are designed for in-memory state management during a single execution. They do not persist to disk.
+* **In-Place Usage:** `{VARIABLE key=Name ; default=guest}` - Get a variable with a fallback.
+* **Import config Pattern:** The primary use case is passing data into import configs. 
 > Example
 > ```text
 > [config]
@@ -200,24 +226,28 @@ Variables are designed for in-memory state management during a single execution.
 > Type:import
 > [\config]
 > ```
-> Note: fallback.gurlf will now be able to resolve `{VARIABLE key=UserID}`.
+> Note: `fallback.gurlf` will now be able to resolve `{VARIABLE key=UserID}`.
 
-### 3. Smart Randomization
+### 4. Smart Randomization
 Generate dynamic data in `0 allocs/op`:
 * `{RANDOM oneof=uuid}` - High-speed UUID.
 * `{RANDOM oneof=user,admin}` - Random pick from a list.
 * `{RANDOM oneof=int(10,100)}` - Random integer in range.
 * `{RANDOM oneof=int}` - Random integer.
 
-
-### 4. Flow Control & Failures
+### 5. Flow Control & Failures
 * **Wait:** `Wait: 5s` - Delays execution (supports `ms, s, m, h`).
+* **Timeout:** `Timeout: 15s` - Sets a dynamic context deadline for the request (stops hanging connections).
 * **Expect:** Define success criteria and branching logic:
     * `Expect: 200;fail=crash` - Hard stop on failure.
     * `Expect: 200;fail=5` - If not 200, jump to config `ID:5` and stop.
     * `Expect: 0` - (gRPC) Expects `OK` status.
+ 
+### 6. Request settings
+* **The `IgnoreCert` Field:** Adding `IgnoreCert: true` to a config (or inherited via repeat) will skip TLS/SSL verification for that request. Use `false` or omit to enforce secure connections.
+* **Context Timeouts:** The `Timeout` field sets a timeout for the context. Automatically inherited by child `repeat` configs.
 
-----
+---
 
 ## 🧪 Integration Testing
 
@@ -246,34 +276,45 @@ Type: http
 Uses the previously saved cookies and ID.
 ```text
 [del]
-URL: http://localhost:8080/user/{ENVIRONMENT key=UserID from=.env_temp}
+URL: http://localhost:8080/user/{ENVIRONMENT key=UserID ; from=.env_temp}
 CookieIn: `
     {COOKIES id=file}
-    {ENVIRONMENT key=Cookies from=.env_temp}
+    {ENVIRONMENT key=Cookies ; from=.env_temp}
 `
 Type: http
 [\del]
 ```
 
-**Step 3: `check.sh`**
+**Step 3: `check.gurlf`**
+Combine two files into one for easy startup.
 ```bash
-# Execute login and save state
-gurl-cli run auth.gurlf
+[import_login]
+TargetPath:auth.gurlf
+ID:0
+Type:import
+[\import_login]
 
-# Run business logic using the saved state
-gurl-cli run delete_account.gurlf
+[import_delete]
+TargetPath:delete_account.gurlf
+ID:1
+Type:import
+[\import_delete]
 ```
 
+**Step 4: run it**
+```bash
+gcli run check.gurlf
+```
+
+---
 
 ## :warning: Core Concepts & Constraints
-
-This section covers critical technical details and syntax rules for `gurl-cli`. Understanding these will help you avoid common pitfalls when building complex request chains.
 
 ### 1. The Backtick & Newline Rule (Nesting)
 The `.gurlf` parser uses a high-speed, zero-allocation scanning logic. It identifies the end of a multi-line field by looking for a backtick strictly surrounded by newlines (`\n` + \` + `\n`).
 
 > [!CAUTION]
-> **A backtick on a new line always terminates the top-level block.** > When nesting configs (e.g., inside a `Replace` or `Body`), ensure the inner backticks do not mimic this pattern.
+> **A backtick on a new line always terminates the top-level block.** When nesting configs, ensure the inner backticks do not mimic this pattern.
 
 * **CORRECT:** Keep the inner closing backtick on the same line as your data.
 * **INCORRECT:** Putting the inner closing backtick on a new line will break the outer parser.
@@ -296,32 +337,18 @@ The `.gurlf` parser uses a high-speed, zero-allocation scanning logic. It identi
 > [\inner_cfg]
 > ` <- end of 'GlobalKey'. Syntax: '\n`\n'
 > [config]
-----
+
 
 ### 2. Configuration Field Rules
 
-> [!NOTE]
-> **The `Replace` Field** > This field is strictly **exclusive** to the `repeat` configuration type. It is used to patch fields from a `TargetID` without rewriting the entire request.
+* **The `Replace` Field:** Strictly exclusive to the `repeat` configuration type. Used to patch fields from a `TargetID`.
+* **gRPC Reflection vs. ProtoPath:** Omit `ProtoPath` to use Server Reflection. If provided, it parses the local `.proto` file.
 
-> [!NOTE]
-> **gRPC Reflection vs. ProtoPath** > `gurl-cli` supports both. If you want to use **Server Reflection**, simply omit the `ProtoPath` field. If `ProtoPath` is provided, the CLI will parse the local `.proto` file instead.
 
-> [!NOTE]
-> **The `ID` Field** > While the `ID` field is visible in the config, it is **immutable** and managed by the internal cache. You don't need to manually increment it when creating new blocks; the CLI handles indexing during execution.
+### 3. Syntax Upgrades
+Macros now use `;` as a separator to allow for clean default fallbacks (e.g., `{ENVIRONMENT key=API_KEY ; from=os ; default=12345}`). You can escape semicolons inside values if needed.
 
-----
-
-## 3. Execution Flow Control
-
-* **Wait & Delays:** You can use `ms`, `s`, `m`, and `h`.
-    * *Example:* `Wait: 1s` or `Wait: 1h`.
-* **File rewrite:** By default, the CLI writes the response body back into the config file. If you run a raw config string (without a file), this step is automatically skipped to prevent errors.
-* **Expect Actions:** Both gRPC and HTTP codes are supported.
-    * `Expect: 200`: Validates status code. This will output an error to the terminal during execution, but it will not stop working.
-    * `Expect: 200;fail=crash`: Validates and terminates the entire process in case on failure.
-    * `Expect: 0;fail=1`: Validates and switches to the config with id=1, and then shuts down the entire process in case on failure.
-
-----
+---
 
 ## 🏗 Architecture & Performance
 
@@ -348,13 +375,14 @@ Tested on **AMD Ryzen 7 5800U** (`linux/amd64`). The hot paths are garbage-free.
 | **HandleType** | **~274 ns/op** | **0 allocs/op** | `unsafe` interface casting + mapping. |
 | **HandleInstructions** | **~106 ns/op** | **0 allocs/op** | Finds macros (aka instructions) |
 | **ParseFindConfig** | **~317 ns/op** | **0 allocs/op** | Finds config by target id, anmarshall it (import configs logic) |
-| `fastExtract` | ~12.6 ns/op | 0 allocs/op | Rapid field extraction. |
-| `fastUUID` | ~48 ns/op | 0 allocs/op | Generate UUID (libraries allocate memory) |
+| **fastExtract** | **~12.6 ns/op** | **0 allocs/op** | Rapid field extraction. |
+| **fastUUID** | **~48 ns/op** | **0 allocs/op** | Generate UUID (libraries allocate memory) |
 > for 0 alloc in ParseStream, you need to comment out log.Debug
 
------
+---
 
 ## 📜 License
 
-  - **License:** This project is licensed under [MIT](https://www.google.com/search?q=LICENSE).
+  - **License:** This project is licensed under [MIT](https://www.google.com/search?q=LICENSE)
   - **Third-party Licenses:** Third-party [licenses/](https://www.google.com/search?q=licenses/).
+
