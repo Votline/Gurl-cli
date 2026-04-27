@@ -1,5 +1,3 @@
-# README.md
-
 # 🚀 Gurl-cli
 
 <p align="center">
@@ -383,6 +381,6 @@ Tested on **AMD Ryzen 7 5800U** (`linux/amd64`). The hot paths are garbage-free.
 
 ## 📜 License
 
-  - **License:** This project is licensed under [MIT](https://www.google.com/search?q=LICENSE)
-  - **Third-party Licenses:** Third-party [licenses/](https://www.google.com/search?q=licenses/).
+  - **License:** This project is licensed under [MIT](LICENSE)
+  - **Third-party Licenses:** Third-party [licenses/](licenses/).
 
