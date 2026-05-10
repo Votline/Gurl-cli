@@ -61,12 +61,17 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int, dp bool
 	defer conn.Close()
 
 	if len(c.Body) > 0 {
+		t.log.Debug("Sending body",
+			zap.String("op", op),
+			zap.String("name", c.GetName()),
+			zap.Int("id", c.GetID()),
+			zap.String("body", unsafe.String(unsafe.SliceData(c.Body), len(c.Body))))
 		if err := conn.WriteMessage(websocket.TextMessage, c.Body); err != nil {
 			return fmt.Errorf("%s: write: %w", op, err)
 		}
 	}
 	if wsID == parser.WSwhile {
-		handleWSWhile(conn, c.GetName(), c.GetID(), dp, t.log)
+		t.handleWSWhile(conn, c.GetName(), c.GetID(), dp, t.log)
 		return nil
 	}
 
@@ -102,7 +107,7 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int, dp bool
 // handleWSWhile handle websocket while loop.
 // Used os.Stdin for input.
 // If input is "exit" or "quit", close connection.
-func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, dp bool, log *zap.Logger) {
+func (t *Transport) handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, dp bool, log *zap.Logger) {
 	const op = "transport.handleWSWhile"
 
 	log.Warn("Connection changed to websockets. While loop is enabled",
@@ -162,7 +167,13 @@ func handleWSWhile(conn *websocket.Conn, cfgName string, cfgID int, dp bool, log
 				return
 			}
 
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(input)); err != nil {
+			inputBytes := unsafe.Slice(unsafe.StringData(input), len(input))
+			t.log.Debug("Sending body",
+				zap.String("op", op),
+				zap.String("name", cfgName),
+				zap.Int("id", cfgID),
+				zap.String("body", input))
+			if err := conn.WriteMessage(websocket.TextMessage, inputBytes); err != nil {
 				log.Error("Failed to write message",
 					zap.String("op", op),
 					zap.Error(err))
