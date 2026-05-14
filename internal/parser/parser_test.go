@@ -97,10 +97,10 @@ func TestHandleInstructions(t *testing.T) {
 		{&d[0]},
 		{&d[1]},
 	}
-	instsPos := make([]instruction, 0, len(d))
+	instsPos := make([]config.Dependency, 0, len(d))
 
 	for _, tt := range tests {
-		if err := handleInstructions(tt.input, insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
+		if err := handleInstructions(tt.input, insts, func(inst config.Dependency) { instsPos = append(instsPos, inst) }); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -109,11 +109,11 @@ func TestHandleInstructions(t *testing.T) {
 func BenchmarkHandleInstructions(b *testing.B) {
 	d, _ := gurlf.Scan(repRaw)
 
-	instsPos := make([]instruction, 0, len(d))
+	instsPos := make([]config.Dependency, 0, len(d))
 
 	for b.Loop() {
 		instsPos = instsPos[:0]
-		if err := handleInstructions(&d[1], insts, func(inst instruction) { instsPos = append(instsPos, inst) }); err != nil {
+		if err := handleInstructions(&d[1], insts, func(inst config.Dependency) { instsPos = append(instsPos, inst) }); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}

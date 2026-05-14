@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"math/rand"
 	"sync"
+	"unsafe"
 
 	gscan "github.com/Votline/Gurlf/pkg/scanner"
 )
@@ -31,7 +32,7 @@ func fastExtract(data []byte, ents *[]gscan.Entry, need []byte) string {
 		if bytes.Equal(data[ent.KeyStart:ent.KeyEnd], need) {
 			vS, vE := ent.ValStart, ent.ValEnd
 			tmp := data[vS:vE]
-			tp := string(tmp)
+			tp := unsafe.String(unsafe.SliceData(tmp), vE-vS)
 			return tp
 		}
 	}
