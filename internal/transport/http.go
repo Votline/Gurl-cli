@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 	"unsafe"
@@ -48,12 +50,7 @@ func (t *Transport) DoHTTP(c *config.HTTPConfig, resObj *Result, dp bool) error 
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	ic := c.GetIgnrCrt() != nil
-	if bytes.Equal(c.GetIgnrCrt(), []byte("false")) {
-		ic = false
-	}
-
-	res, err := t.clientDo(req, c, ic, timeout)
+	res, err := t.clientDo(req, c, timeout)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -112,9 +109,9 @@ func (t *Transport) prepareRequest(c *config.HTTPConfig, ctx context.Context) (*
 }
 
 // clientDo sends request and return response and error.
-func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool, timeout time.Duration) (*http.Response, error) {
+func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, timeout time.Duration) (*http.Response, error) {
 	const op = "transport.clientDo"
-	if ic {
+	if c.GetCerts() == nil || parser.EqualFold(c.GetCerts(), "ignore") {
 		t.cl.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -122,9 +119,26 @@ func (t *Transport) clientDo(req *http.Request, c *config.HTTPConfig, ic bool, t
 			zap.String("op", op),
 			zap.String("url", req.URL.String()))
 	} else {
-		t.cl.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
+		path := unsafe.String(unsafe.SliceData(c.GetCerts()), len(c.GetCerts()))
+		caCert, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("%s: read certificate: %w", op, err)
 		}
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+			return nil, fmt.Errorf("%s: append certificate: %w", op, err)
+		}
+		t.cl.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: false,
+				RootCAs:            caCertPool,
+			},
+		}
+		t.log.Debug("Certs",
+			zap.String("op", op),
+			zap.String("name", c.GetName()),
+			zap.Int("id", c.GetID()),
+			zap.String("certs path", path))
 	}
 
 	t.cl.Timeout = timeout

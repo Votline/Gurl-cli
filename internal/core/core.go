@@ -642,13 +642,13 @@ func applyEnvs(cfg config.Config, log *zap.Logger) bool {
 func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
 	const op = "core.applyIgnrCrt"
 
-	orig := cfg.GetIgnrCrt()
+	orig := cfg.GetCerts()
 
 	if orig != nil {
-		execCfg.SetIgnrCrt(orig)
+		execCfg.SetCerts(orig)
 	}
 
-	log.Debug("IgnoreCert",
+	log.Debug("Certs",
 		zap.String("op", op),
 		zap.String("name", execCfg.GetName()),
 		zap.String("ignrCrt", unsafe.String(unsafe.SliceData(orig), len(orig))))

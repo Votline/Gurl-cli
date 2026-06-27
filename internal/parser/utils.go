@@ -50,20 +50,20 @@ func isSpace(r byte) bool {
 func isMetadata(k []byte) bool {
 	switch len(k) {
 	case 4:
-		return equalFold(k, "path")
+		return EqualFold(k, "path")
 	case 6:
-		return equalFold(k, "domain") || equalFold(k, "secure")
+		return EqualFold(k, "domain") || EqualFold(k, "secure")
 	case 7:
-		return equalFold(k, "expires") || equalFold(k, "max-age")
+		return EqualFold(k, "expires") || EqualFold(k, "max-age")
 	case 8:
-		return equalFold(k, "httponly") || equalFold(k, "samesite")
+		return EqualFold(k, "httponly") || EqualFold(k, "samesite")
 	default:
 		return false
 	}
 }
 
-// equalFold compares case bytes with string.
-func equalFold(b []byte, lower string) bool {
+// EqualFold compares case bytes with string.
+func EqualFold(b []byte, lower string) bool {
 	if len(b) != len(lower) {
 		return false
 	}
@@ -191,4 +191,29 @@ func trimBytes(buf *[]byte, check func(byte) bool) {
 	}
 
 	*buf = temp
+}
+
+// RangeByByte iterates over a slice by separator byte.
+func RangeByByte(b []byte, sep byte, yield func(start, end int)) {
+	start, end, sepIdx := 0, len(b)-1, 0
+
+	for start < end {
+		sepIdx = bytes.IndexByte(b[start:], sep)
+		if sepIdx == -1 {
+			break
+		}
+		start += sepIdx + 1 // jump to separator and skip it
+
+		sepIdx = bytes.IndexByte(b[start:], sep)
+		if sepIdx == -1 {
+			break
+		}
+		end = start + sepIdx
+
+		if start == end {
+			break
+		}
+
+		yield(start, end)
+	}
 }

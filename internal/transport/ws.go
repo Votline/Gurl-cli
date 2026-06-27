@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
@@ -30,13 +31,26 @@ func (t *Transport) doWS(c *config.HTTPConfig, resObj *Result, wsID int, dp bool
 
 	dialer := websocket.DefaultDialer
 
-	if c.GetIgnrCrt() != nil {
+	certsPath := c.GetCerts()
+
+	if certsPath == nil || parser.EqualFold(certsPath, "ignore") {
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		t.log.Warn("InsecureSkipVerify is true",
 			zap.String("op", op),
 			zap.String("url", unsafe.String(unsafe.SliceData(c.URL), len(c.URL))))
 	} else {
-		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
+		caCert, err := os.ReadFile(unsafe.String(unsafe.SliceData(certsPath), len(certsPath)))
+		if err != nil {
+			return fmt.Errorf("%s: read certificate: %w", op, err)
+		}
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+			return fmt.Errorf("%s: append certificate: %w", op, err)
+		}
+		dialer.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: false,
+			RootCAs:            caCertPool,
+		}
 	}
 
 	h := make(http.Header)

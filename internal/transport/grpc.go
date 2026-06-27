@@ -3,10 +3,11 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -36,15 +37,10 @@ func (t *Transport) DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 
 	var res Result
 	var err error
-	ic := c.GetIgnrCrt() != nil
-	if bytes.Equal(c.GetIgnrCrt(), []byte("false")) {
-		ic = false
-	}
-
 	if len(c.ProtoPath) == 0 {
-		res, err = t.doReflect(c, ic)
+		res, err = t.doReflect(c)
 	} else {
-		res, err = t.doProto(c, ic)
+		res, err = t.doProto(c)
 	}
 
 	if err != nil {
@@ -57,20 +53,20 @@ func (t *Transport) DoGRPC(c *config.GRPCConfig, resObj *Result) error {
 }
 
 // doReflect sends gRPC request via reflection.
-func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
+func (t *Transport) doReflect(c *config.GRPCConfig) (Result, error) {
 	const op = "transport.doReflect"
 
 	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
 	endpoint := unsafe.String(unsafe.SliceData(c.Endpoint), len(c.Endpoint))
 	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
 
-	conn, err := t.getConn(target, ic, dialOpts)
+	conn, err := t.getConn(target, dialOpts, c.GetCerts())
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
 	defer conn.Close()
 
-	if ic {
+	if c.GetCerts() == nil || parser.EqualFold(c.GetCerts(), "ignore") {
 		t.log.Warn("Applied InsecureSkipVerify",
 			zap.String("op", op),
 			zap.String("target", target))
@@ -127,7 +123,7 @@ func (t *Transport) doReflect(c *config.GRPCConfig, ic bool) (Result, error) {
 }
 
 // doProto sends gRPC request via protofiles.
-func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
+func (t *Transport) doProto(c *config.GRPCConfig) (Result, error) {
 	const op = "transport.doProto"
 
 	target := unsafe.String(unsafe.SliceData(c.Target), len(c.Target))
@@ -136,13 +132,13 @@ func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 	importPaths := unsafe.String(unsafe.SliceData(c.ImportPaths), len(c.ImportPaths))
 	dialOpts := unsafe.String(unsafe.SliceData(c.DialOpts), len(c.DialOpts))
 
-	conn, err := t.getConn(target, ic, dialOpts)
+	conn, err := t.getConn(target, dialOpts, c.GetCerts())
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", op, err)
 	}
 	defer conn.Close()
 
-	if ic {
+	if c.GetCerts() == nil || parser.EqualFold(c.GetCerts(), "ignore") {
 		t.log.Warn("Applied InsecureSkipVerify",
 			zap.String("op", op),
 			zap.String("target", target))
@@ -212,53 +208,13 @@ func (t *Transport) doProto(c *config.GRPCConfig, ic bool) (Result, error) {
 	}}, nil
 }
 
-// getDialOpts parse dial options and yields them.
-func (t *Transport) getDialOpts(rawOpts string, ic bool, yield func(grpc.DialOption)) error {
-	const op = "transport.getDialOpts"
-
-	if len(rawOpts) == 0 {
-		if ic {
-			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
-		} else {
-			yield(grpc.WithInsecure())
-		}
-		return nil
-	}
-
-	cfgOpts := strings.SplitSeq(rawOpts, ";")
-	for opt := range cfgOpts {
-		switch opt {
-		case "insecure":
-			yield(grpc.WithInsecure())
-		case "tls":
-			if ic {
-				t.log.Warn("InsecureSkipVerify is true",
-					zap.String("op", op))
-				yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-					InsecureSkipVerify: ic,
-				})))
-			}
-		case "tls_insecure":
-			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
-		case "block":
-			yield(grpc.WithBlock())
-		case "timeout":
-			yield(grpc.WithTimeout(time.Second))
-		default:
-			return fmt.Errorf("%s: unknown dial option %q", op, opt)
-		}
-	}
-
-	return nil
-}
-
 // getConn parses target, insecureSkipVerify and dial options.
 // Return client connection and error.
-func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.ClientConn, error) {
+func (t *Transport) getConn(target string, dialOpts string, certsPath []byte) (*grpc.ClientConn, error) {
 	const op = "transport.getConn"
 
 	opts := make([]grpc.DialOption, 0, strings.Count(dialOpts, ";"))
-	if err := t.getDialOpts(dialOpts, ic, func(opt grpc.DialOption) {
+	if err := t.getDialOpts(dialOpts, certsPath, func(opt grpc.DialOption) {
 		opts = append(opts, opt)
 	}); err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
@@ -270,6 +226,73 @@ func (t *Transport) getConn(target string, ic bool, dialOpts string) (*grpc.Clie
 	}
 
 	return conn, nil
+}
+
+// getDialOpts parse dial options and yields them.
+func (t *Transport) getDialOpts(rawOpts string, certsPath []byte, yield func(grpc.DialOption)) error {
+	const op = "transport.getDialOpts"
+
+	if rawOpts == "" {
+		tlsCfg, err := getTLSConfig(certsPath)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		yield(grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+		return nil
+	}
+
+	cfgOpts := unsafe.Slice(unsafe.StringData(rawOpts), len(rawOpts))
+
+	var err error
+	parser.RangeByByte(cfgOpts, ';', func(start, end int) {
+		optBytes := cfgOpts[start:end]
+		opt := unsafe.String(unsafe.SliceData(optBytes), len(optBytes))
+		switch opt {
+		case "insecure":
+			yield(grpc.WithInsecure())
+		case "tls":
+			tlsCfg, err := getTLSConfig(certsPath)
+			if err != nil {
+				err = fmt.Errorf("%s: %w", op, err)
+				return
+			}
+			yield(grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+		case "tls_insecure":
+			yield(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
+		case "block":
+			yield(grpc.WithBlock())
+		case "timeout":
+			yield(grpc.WithTimeout(time.Second))
+		default:
+			err = fmt.Errorf("%s: unknown dial option %q", op, opt)
+			return
+		}
+	})
+
+	return err
+}
+
+func getTLSConfig(certsPath []byte) (*tls.Config, error) {
+	const op = "transport.getTLSConfig"
+
+	if certsPath == nil || parser.EqualFold(certsPath, "ignore") {
+		return &tls.Config{InsecureSkipVerify: true}, nil
+	}
+
+	path := unsafe.String(unsafe.SliceData(certsPath), len(certsPath))
+	caCert, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s: read certificate: %w", op, err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+		return nil, fmt.Errorf("%s: append certificate: %w", op, err)
+	}
+	return &tls.Config{
+		InsecureSkipVerify: false,
+		RootCAs:            caCertPool,
+	}, nil
 }
 
 // getContext parses metadata and timeout.

@@ -110,16 +110,16 @@ func TsetEqualFold(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		if equalFold(tt.input, "path") != tt.expected {
+		if EqualFold(tt.input, "path") != tt.expected {
 			t.Errorf("[%d]: expected %t, but got %t",
-				i, tt.expected, equalFold(tt.input, "path"))
+				i, tt.expected, EqualFold(tt.input, "path"))
 		}
 	}
 }
 
 func BenchmarkEqualFold(b *testing.B) {
 	for b.Loop() {
-		equalFold([]byte("path"), "path")
+		EqualFold([]byte("path"), "path")
 	}
 }
 

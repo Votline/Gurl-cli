@@ -92,11 +92,11 @@ type Config interface {
 	// SetExpect sets expect field.
 	SetExpect([]byte)
 
-	// GetIgnrCrt returns ignoreCert field.
-	GetIgnrCrt() []byte
+	// GetCerts returns certs field.
+	GetCerts() []byte
 
-	// SetIgnrCrt sets ignoreCert field.
-	SetIgnrCrt([]byte)
+	// SetCerts sets certs field.
+	SetCerts([]byte)
 
 	// GetVars returns vars field. 'SetVariables' in file
 	GetVars() []byte
@@ -226,7 +226,7 @@ func Alloc(cfg Config) Config {
 		cp.CookieOut = cloneBytes(v.CookieOut)
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
-		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
+		cp.Certs = cloneBytes(v.Certs)
 		cp.Vars = cloneBytes(v.Vars)
 		cp.Envs = cloneBytes(v.Envs)
 		return cp
@@ -242,7 +242,7 @@ func Alloc(cfg Config) Config {
 		cp.DialOpts = cloneBytes(v.DialOpts)
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Expect = cloneBytes(v.Expect)
-		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
+		cp.Certs = cloneBytes(v.Certs)
 		cp.Vars = cloneBytes(v.Vars)
 		cp.Envs = cloneBytes(v.Envs)
 		return cp
@@ -252,7 +252,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Timeout = cloneBytes(v.Timeout)
 		cp.Expect = cloneBytes(v.Expect)
-		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
+		cp.Certs = cloneBytes(v.Certs)
 		cp.Vars = cloneBytes(v.Vars)
 		cp.Envs = cloneBytes(v.Envs)
 		return cp
@@ -262,7 +262,7 @@ func Alloc(cfg Config) Config {
 		cp.Wait = cloneBytes(v.Wait)
 		cp.Timeout = cloneBytes(v.Timeout)
 		cp.Expect = cloneBytes(v.Expect)
-		cp.IgnrCrt = cloneBytes(v.IgnrCrt)
+		cp.Certs = cloneBytes(v.Certs)
 		cp.TargetPath = v.TargetPath
 		cp.Vars = cloneBytes(v.Vars)
 		cp.Envs = cloneBytes(v.Envs)
@@ -281,7 +281,7 @@ type BaseConfig struct {
 	Wait      []byte `gurlf:"Wait,omitempty"`
 	Timeout   []byte `gurlf:"Timeout,omitempty"`
 	Expect    []byte `gurlf:"Expect,omitempty"`
-	IgnrCrt   []byte `gurlf:"IgnoreCert,omitempty"`
+	Certs     []byte `gurlf:"Certs,omitempty"`
 	Vars      []byte `gurlf:"SetVariables,omitempty"`
 	Envs      []byte `gurlf:"SetEnvironments,omitempty"`
 	Resp      []byte `gurlf:"Response,omitempty"`
@@ -311,8 +311,8 @@ func (c *BaseConfig) GetTimeout() []byte             { return c.Timeout }
 func (c *BaseConfig) SetTimeout(nTimeout []byte)     { c.Timeout = nTimeout }
 func (c *BaseConfig) GetExpect() []byte              { return c.Expect }
 func (c *BaseConfig) SetExpect(nExpect []byte)       { c.Expect = nExpect }
-func (c *BaseConfig) GetIgnrCrt() []byte             { return c.IgnrCrt }
-func (c *BaseConfig) SetIgnrCrt(nIgnrCrt []byte)     { c.IgnrCrt = nIgnrCrt }
+func (c *BaseConfig) GetCerts() []byte               { return c.Certs }
+func (c *BaseConfig) SetCerts(nCerts []byte)         { c.Certs = nCerts }
 func (c *BaseConfig) GetVars() []byte                { return c.Vars }
 func (c *BaseConfig) GetEnvs() []byte                { return c.Envs }
 func (c *BaseConfig) SetID(nID int)                  { c.ID = nID }
@@ -328,7 +328,7 @@ func (c *BaseConfig) Clone() Config {
 	cp.Wait = cloneBytes(c.Wait)
 	cp.Timeout = cloneBytes(c.Timeout)
 	cp.Expect = cloneBytes(c.Expect)
-	cp.IgnrCrt = cloneBytes(c.IgnrCrt)
+	cp.Certs = cloneBytes(c.Certs)
 	cp.Vars = cloneBytes(c.Vars)
 	cp.Envs = cloneBytes(c.Envs)
 	return &cp
@@ -397,7 +397,7 @@ func (c *HTTPConfig) Clone() Config {
 	newCfg.CookieOut = cloneBytes(c.CookieOut)
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
-	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
+	newCfg.Certs = cloneBytes(c.Certs)
 	newCfg.Vars = cloneBytes(c.Vars)
 	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
@@ -454,8 +454,8 @@ func (c *HTTPConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
-	case "IgnoreCert":
-		c.IgnrCrt = splice(c.IgnrCrt, val, start, end)
+	case "Certs":
+		c.Certs = splice(c.Certs, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
 	case "SetEnvironments":
@@ -491,7 +491,7 @@ func (c *GRPCConfig) Clone() Config {
 	newCfg.DialOpts = cloneBytes(c.DialOpts)
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Expect = cloneBytes(c.Expect)
-	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
+	newCfg.Certs = cloneBytes(c.Certs)
 	newCfg.Vars = cloneBytes(c.Vars)
 	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
@@ -555,8 +555,8 @@ func (c *GRPCConfig) Apply(start, end int, key string, val []byte) {
 		c.Wait = splice(c.Wait, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
-	case "IgnoreCert":
-		c.IgnrCrt = splice(c.IgnrCrt, val, start, end)
+	case "Certs":
+		c.Certs = splice(c.Certs, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
 	case "SetEnvironments":
@@ -617,7 +617,7 @@ func (c *RepeatConfig) Clone() Config {
 	newCfg.Wait = cloneBytes(c.Wait)
 	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.Expect = cloneBytes(c.Expect)
-	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
+	newCfg.Certs = cloneBytes(c.Certs)
 	newCfg.Vars = cloneBytes(c.Vars)
 	newCfg.Envs = cloneBytes(c.Envs)
 
@@ -667,8 +667,8 @@ func (c *RepeatConfig) Apply(start, end int, key string, val []byte) {
 		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
-	case "IgnoreCert":
-		c.IgnrCrt = splice(c.IgnrCrt, val, start, end)
+	case "Certs":
+		c.Certs = splice(c.Certs, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
 	case "SetEnvironments":
@@ -697,7 +697,7 @@ func (c *ImportConfig) Clone() Config {
 	newCfg.Timeout = cloneBytes(c.Timeout)
 	newCfg.Expect = cloneBytes(c.Expect)
 	newCfg.TargetPath = c.TargetPath
-	newCfg.IgnrCrt = cloneBytes(c.IgnrCrt)
+	newCfg.Certs = cloneBytes(c.Certs)
 	newCfg.Vars = cloneBytes(c.Vars)
 	newCfg.Envs = cloneBytes(c.Envs)
 	return newCfg
@@ -734,8 +734,8 @@ func (c *ImportConfig) Apply(start, end int, key string, val []byte) {
 		c.Timeout = splice(c.Timeout, val, start, end)
 	case "Expect":
 		c.Expect = splice(c.Expect, val, start, end)
-	case "IgnoreCert":
-		c.IgnrCrt = splice(c.IgnrCrt, val, start, end)
+	case "Certs":
+		c.Certs = splice(c.Certs, val, start, end)
 	case "SetVariables":
 		c.Vars = splice(c.Vars, val, start, end)
 	case "SetEnvironments":
