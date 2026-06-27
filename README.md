@@ -242,7 +242,7 @@ Generate dynamic data in `0 allocs/op`:
     * `Expect: 0` - (gRPC) Expects `OK` status.
  
 ### 6. Request settings
-* **The `IgnoreCert` Field:** Adding `IgnoreCert: true` to a config (or inherited via repeat) will skip TLS/SSL verification for that request. Use `false` or omit to enforce secure connections.
+* **The `Certs` Field:** Adding `Certs: ignore` or empty value `Certs:` to a config (or inherited via repeat) will skip TLS/SSL verification for that request. Use path to the certificate to use it: `Certs: gateway/ssl/ca.crt`
 * **Context Timeouts:** The `Timeout` field sets a timeout for the context. Automatically inherited by child `repeat` configs.
 
 ---
