@@ -233,11 +233,7 @@ func (t *Transport) getDialOpts(rawOpts string, certsPath []byte, yield func(grp
 	const op = "transport.getDialOpts"
 
 	if rawOpts == "" {
-		tlsCfg, err := getTLSConfig(certsPath)
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
-		}
-		yield(grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+		yield(grpc.WithInsecure())
 		return nil
 	}
 
