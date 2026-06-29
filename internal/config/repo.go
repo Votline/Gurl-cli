@@ -428,6 +428,8 @@ func (c *HTTPConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "Certs":
+		return c.Certs
 	case "SetVariables":
 		return c.Vars
 	case "SetEnvironments":
@@ -525,6 +527,8 @@ func (c *GRPCConfig) GetRaw(key string) []byte {
 		return c.Wait
 	case "Expect":
 		return c.Expect
+	case "Certs":
+		return c.Certs
 	case "SetVariables":
 		return c.Vars
 	case "SetEnvironments":
@@ -645,6 +649,8 @@ func (c *RepeatConfig) GetRaw(key string) []byte {
 		return c.Timeout
 	case "Expect":
 		return c.Expect
+	case "Certs":
+		return c.Certs
 	case "SetVariables":
 		return c.Vars
 	case "SetEnvironments":
@@ -718,6 +724,8 @@ func (c *ImportConfig) GetRaw(key string) []byte {
 		return c.Timeout
 	case "Expect":
 		return c.Expect
+	case "Certs":
+		return c.Certs
 	case "SetVariables":
 		return c.Vars
 	case "SetEnvironments":

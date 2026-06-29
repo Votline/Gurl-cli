@@ -135,7 +135,7 @@ func handleConfig(cPath string, disablePrint bool, vars map[string][]byte, log *
 					break
 				}
 
-				applyIgnrCrt(cfg, execCfg, log)
+				applyCerts(cfg, execCfg, log)
 
 				applyWait(cfg, execCfg, log)
 
@@ -638,9 +638,9 @@ func applyEnvs(cfg config.Config, log *zap.Logger) bool {
 	return true
 }
 
-// applyIgnrCrt check ignoreCert field and set flag to config.
-func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
-	const op = "core.applyIgnrCrt"
+// applyCerts check ignoreCert field and set flag to config.
+func applyCerts(cfg, execCfg config.Config, log *zap.Logger) {
+	const op = "core.applyCerts"
 
 	orig := cfg.GetCerts()
 
@@ -651,7 +651,7 @@ func applyIgnrCrt(cfg, execCfg config.Config, log *zap.Logger) {
 	log.Debug("Certs",
 		zap.String("op", op),
 		zap.String("name", execCfg.GetName()),
-		zap.String("ignrCrt", unsafe.String(unsafe.SliceData(orig), len(orig))))
+		zap.String("Certs", unsafe.String(unsafe.SliceData(orig), len(orig))))
 }
 
 // applyWait parse wait field and sleep if needed.

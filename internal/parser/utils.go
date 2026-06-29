@@ -195,25 +195,16 @@ func trimBytes(buf *[]byte, check func(byte) bool) {
 
 // RangeByByte iterates over a slice by separator byte.
 func RangeByByte(b []byte, sep byte, yield func(start, end int)) {
-	start, end, sepIdx := 0, len(b)-1, 0
+	start := 0
 
-	for start < end {
-		sepIdx = bytes.IndexByte(b[start:], sep)
-		if sepIdx == -1 {
-			break
+	for start < len(b) {
+		end := bytes.IndexByte(b[start:], sep)
+		if end == -1 {
+			end = len(b)
+		} else {
+			end += start
 		}
-		start += sepIdx + 1 // jump to separator and skip it
-
-		sepIdx = bytes.IndexByte(b[start:], sep)
-		if sepIdx == -1 {
-			break
-		}
-		end = start + sepIdx
-
-		if start == end {
-			break
-		}
-
 		yield(start, end)
+		start = end + 1
 	}
 }

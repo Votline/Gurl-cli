@@ -232,14 +232,24 @@ func (t *Transport) getConn(target string, dialOpts string, certsPath []byte) (*
 func (t *Transport) getDialOpts(rawOpts string, certsPath []byte, yield func(grpc.DialOption)) error {
 	const op = "transport.getDialOpts"
 
-	if rawOpts == "" {
+	if rawOpts == "" && certsPath == nil {
 		yield(grpc.WithInsecure())
+		return nil
+	}
+
+	if rawOpts == "" && certsPath != nil {
+		tlsCfg, err := getTLSConfig(certsPath)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		yield(grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
 		return nil
 	}
 
 	cfgOpts := unsafe.Slice(unsafe.StringData(rawOpts), len(rawOpts))
 
 	var err error
+	var tlsCfg *tls.Config
 	parser.RangeByByte(cfgOpts, ';', func(start, end int) {
 		optBytes := cfgOpts[start:end]
 		opt := unsafe.String(unsafe.SliceData(optBytes), len(optBytes))
@@ -247,7 +257,7 @@ func (t *Transport) getDialOpts(rawOpts string, certsPath []byte, yield func(grp
 		case "insecure":
 			yield(grpc.WithInsecure())
 		case "tls":
-			tlsCfg, err := getTLSConfig(certsPath)
+			tlsCfg, err = getTLSConfig(certsPath)
 			if err != nil {
 				err = fmt.Errorf("%s: %w", op, err)
 				return
